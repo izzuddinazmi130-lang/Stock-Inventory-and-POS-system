@@ -1,0 +1,92 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useBusiness } from '../context/BusinessContext';
+import {
+  LayoutDashboard, Package, QrCode, Camera, Users,
+  FileBarChart, History, Building2, AlertTriangle, Store,
+  ShieldCheck, ArrowLeftRight
+} from 'lucide-react';
+
+const SECTION_LABEL = 'px-4 mb-1 mt-5 text-[10px] font-semibold tracking-widest uppercase text-slate-400';
+
+function NavItem({ to, icon: Icon, label, count }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === '/dashboard'}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium mx-2 transition-colors ${
+          isActive
+            ? 'bg-[#DCE8FB] text-slate-900 font-semibold'
+            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+        }`
+      }
+    >
+      <Icon className="w-4 h-4 flex-shrink-0" />
+      <span className="flex-1 truncate">{label}</span>
+      {count !== undefined && count !== null && (
+        <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{count}</span>
+      )}
+    </NavLink>
+  );
+}
+
+export default function Sidebar() {
+  const { user } = useAuth();
+  const { selectedBusiness } = useBusiness();
+  if (!user) return null;
+
+  const isSuperAdmin = user.role === 'super_admin';
+  const scopeLabel = selectedBusiness ? selectedBusiness.name.toUpperCase() : 'ALL BUSINESSES';
+
+  return (
+    <aside className="w-56 bg-white border-r border-slate-200 flex-shrink-0 min-h-[calc(100vh-64px)] flex flex-col py-3">
+      <div className="flex-1">
+        {isSuperAdmin ? (
+          <>
+            {/* Section 1 — Business scoped */}
+            <div className={SECTION_LABEL}>{scopeLabel} · SCOPE</div>
+            <nav className="space-y-0.5">
+              <NavItem to="/dashboard" icon={LayoutDashboard} label="Overview" />
+              <NavItem to="/businesses" icon={Building2} label="Businesses" />
+              <NavItem to="/products" icon={Package} label="Products" />
+              <NavItem to="/reports" icon={ArrowLeftRight} label="Stock Movements" />
+            </nav>
+
+            {/* Section 2 — HQ Controls */}
+            <div className={SECTION_LABEL}>HQ CONTROLS</div>
+            <nav className="space-y-0.5">
+              <NavItem to="/users" icon={Users} label="Users & Roles" />
+              <NavItem to="/damage" icon={AlertTriangle} label="Damage Records" />
+              <NavItem to="/reports" icon={FileBarChart} label="Reports" />
+              <NavItem to="/audit" icon={History} label="Audit Log" />
+            </nav>
+          </>
+        ) : (
+          <>
+            <div className={SECTION_LABEL}>MY BRANCH</div>
+            <nav className="space-y-0.5">
+              <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+              <NavItem to="/products" icon={Package} label="Products" />
+              <NavItem to="/qr/generate" icon={QrCode} label="QR Generator" />
+              <NavItem to="/qr/scan" icon={Camera} label="QR Scanner" />
+              <NavItem to="/reports" icon={FileBarChart} label="Reports" />
+            </nav>
+          </>
+        )}
+      </div>
+
+      {/* Footer health card */}
+      <div className="mx-3 mb-3 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          <div>
+            <div className="text-[12px] font-semibold text-slate-800">System healthy</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wide">LAST SYNC · just now</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}

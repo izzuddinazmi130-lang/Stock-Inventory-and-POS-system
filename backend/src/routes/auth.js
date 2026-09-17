@@ -1,0 +1,196 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const pool = require('../config/db');
+const { authenticateToken, recordAuditLog, JWT_SECRET } = require('../middleware/auth');
+
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please enter both email/username and password.' });
+    }
+
+    const inputClean = email.trim();
+
+    // Query user by email or username
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ? OR username = ?',
+      [inputClean, inputClean]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    }
+
+    const user = users[0];
+
+    // Check account status
+    if (user.status === 'suspended') {
+      return res.status(403).json({ success: false, message: 'Your account has been suspended. Please contact HQ administration.' });
+    }
+    if (user.status === 'pending' || user.is_active === 0) {
+      return res.status(403).json({
+        success: false,
+        code: 'pending_approval',
+        message: 'Your account registration is currently pending Super Admin review.'
+      });
+    }
+
+    if (user.status === 'declined' || user.is_active === 2) {
+      return res.status(403).json({
+        success: false,
+        code: 'account_declined',
+        message: 'Your account registration was declined. Please contact HQ administration.'
+      });
+    }
+
+    // Verify password
+    let passwordMatch = false;
+    if (user.password_hash.startsWith('$2y$') || user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$')) {
+      // Modern bcrypt standard ($2y$ converted to $2a$ for bcryptjs compatibility if needed)
+      const formattedHash = user.password_hash.replace(/^\$2y\$/, '$2a$');
+      passwordMatch = await bcrypt.compare(password, formattedHash);
+    } else {
+      passwordMatch = (password === user.password_hash);
+    }
+
+    if (!passwordMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    }
+
+    // Update last_login
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+
+    // Generate JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Set HTTP cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false, // set true in production HTTPS
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // Record audit log
+    await recordAuditLog(user.id, user.role, 'LOGIN', 'users', user.id, null, { email: user.email }, req);
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role
+      }
+    });
+
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ success: false, message: 'Server error during login: ' + err.message });
+  }
+});
+
+// GET /api/auth/me
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const [users] = await pool.query(`
+      SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active,
+             u.business_id, u.branch_id,
+             b.name AS branch_name,
+             biz.name AS business_name
+      FROM users u
+      LEFT JOIN branches b ON u.branch_id = b.id
+      LEFT JOIN businesses biz ON u.business_id = biz.id
+      WHERE u.id = ? AND u.is_active = 1
+    `, [req.user.id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      user: users[0]
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/auth/logout
+router.post('/logout', authenticateToken, async (req, res) => {
+  if (req.user) {
+    await recordAuditLog(req.user.id, req.user.role, 'LOGOUT', 'users', req.user.id, null, null, req);
+  }
+  res.clearCookie('token');
+  return res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// POST /api/auth/register (Public Self-Registration)
+router.post('/register', async (req, res) => {
+  try {
+    const { full_name, email, password, business_id, branch_id } = req.body;
+
+    if (!full_name || !email || !password || !business_id || !branch_id) {
+      return res.status(400).json({ success: false, message: 'Full name, email, password, business, and branch are required.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    const emailClean = email.toLowerCase().trim();
+
+    // Verify branch belongs to business
+    const [branchRows] = await pool.query(
+      'SELECT id FROM branches WHERE id = ? AND business_id = ?',
+      [branch_id, business_id]
+    );
+    if (branchRows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid business/branch combination.' });
+    }
+
+    // Check duplicate email
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [emailClean]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+    }
+
+    const username = emailClean.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const [result] = await pool.query(
+      `INSERT INTO users (email, username, password_hash, full_name, role, business_id, branch_id, is_active, created_at)
+       VALUES (?, ?, ?, ?, 'admin', ?, ?, 0, NOW())`,
+      [emailClean, username, passwordHash, full_name, business_id, branch_id]
+    );
+
+    await recordAuditLog(result.insertId, 'admin', 'REGISTER_PENDING', 'users', result.insertId, null, { email: emailClean, full_name, business_id, branch_id }, req);
+
+    return res.json({
+      success: true,
+      message: 'Registration submitted successfully! Your account is pending Super Admin review.'
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    return res.status(500).json({ success: false, message: 'Registration failed: ' + err.message });
+  }
+});
+
+module.exports = router;

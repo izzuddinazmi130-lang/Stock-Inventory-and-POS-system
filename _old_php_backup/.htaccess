@@ -1,0 +1,5 @@
+Options -Indexes
+RewriteEngine On
+
+RewriteRule ^$ public/index.php [L]
+RewriteRule ^(config|includes|logs|temp|vendor|database)(/|$) - [F,L]
