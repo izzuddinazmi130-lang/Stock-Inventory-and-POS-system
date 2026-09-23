@@ -39,15 +39,28 @@ function generateQrToken(branchCode, sku) {
   return `HQ-${branchCode.toUpperCase()}-${sku}-${ts}`;
 }
 
-// ─── GET /api/products/variant-attributes ────────────────────────────────────
+// ─── GET /api/products/form-config ──────────────────────────────────────────
+router.get('/form-config', authenticateToken, async (req, res) => {
+  try {
+    const businessId = req.user.role === 'super_admin'
+      ? req.query.business_id
+      : req.user.business_id;
+    if (!businessId) return res.status(400).json({ success: false, message: 'business_id is required' });
+    const [[categories], [attributes]] = await Promise.all([
+      pool.query('SELECT * FROM business_form_categories WHERE business_id = ? ORDER BY sort_order, name', [businessId]),
+      pool.query('SELECT * FROM business_form_fields WHERE business_id = ? ORDER BY sort_order, label', [businessId])
+    ]);
+    res.json({ success: true, categories, attributes });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/products/variant-attributes (legacy compatibility) ────────────
 router.get('/variant-attributes', authenticateToken, async (req, res) => {
   try {
     const { business_id } = req.query;
-    let query = 'SELECT * FROM product_variant_attributes';
-    const params = [];
-    if (business_id) { query += ' WHERE business_id = ?'; params.push(business_id); }
-    query += ' ORDER BY sort_order ASC';
-    const [rows] = await pool.query(query, params);
+    const [rows] = await pool.query('SELECT * FROM business_form_fields WHERE business_id = ? ORDER BY sort_order, label', [business_id || req.user.business_id]);
     res.json({ success: true, attributes: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

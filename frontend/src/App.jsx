@@ -12,6 +12,7 @@ import UserManagement from './pages/users/UserManagement';
 import ReportsAnalytics from './pages/reports/ReportsAnalytics';
 import AuditLogs from './pages/audit/AuditLogs';
 import BusinessList from './pages/businesses/BusinessList';
+import BusinessFormManager from './pages/businesses/BusinessFormManager';
 import BranchList from './pages/businesses/BranchList';
 import BranchDetail from './pages/branches/BranchDetail';
 import StoreList from './pages/branches/StoreList';
@@ -129,6 +130,7 @@ export default function App() {
               }
             />
             <Route path="/businesses" element={<ProtectedRoute allowedRoles={['super_admin']}><BusinessList /></ProtectedRoute>} />
+            <Route path="/businesses/:id/forms" element={<ProtectedRoute allowedRoles={['super_admin']}><BusinessFormManager /></ProtectedRoute>} />
             <Route path="/businesses/:id/branches" element={<ProtectedRoute allowedRoles={['super_admin']}><BranchList /></ProtectedRoute>} />
             <Route path="/branches/:id" element={<ProtectedRoute allowedRoles={['super_admin']}><BranchDetail /></ProtectedRoute>} />
             <Route path="/branches/:id/stores" element={<ProtectedRoute><StoreList /></ProtectedRoute>} />

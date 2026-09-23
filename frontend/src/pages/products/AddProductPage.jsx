@@ -4,15 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import {
-  Package, ChevronRight, ChevronLeft, Building, Store, Tag, Palette,
-  Ruler, Hash, DollarSign, ShoppingBag, Users, Briefcase, CheckCircle,
-  QrCode, Sparkles, X, AlertTriangle, RefreshCw, Plus, Minus, ArrowLeft
+  Package, ChevronRight, ChevronLeft, Building, Store, Hash, DollarSign,
+  ShoppingBag, Users, Briefcase, CheckCircle, QrCode, Sparkles, X,
+  AlertTriangle, RefreshCw, Plus, Minus, ArrowLeft, Layers
 } from 'lucide-react';
-
-// ─── Business-type field schemas ─────────────────────────────────────────────
-const FASHION_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size', 'Custom'];
-const FASHION_CATEGORIES = ['Abaya', 'Kaftan', 'Jubah', 'Blouse', 'Dress', 'Scarf', 'Accessories', 'Other'];
-const TECH_CATEGORIES   = ['Keyboard', 'Mouse', 'Monitor', 'CPU', 'RAM', 'SSD', 'HDD', 'Laptop', 'Headset', 'Accessories', 'Other'];
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 function StepBar({ step }) {
@@ -63,19 +58,16 @@ export default function AddProductPage() {
   const [selectedBiz, setSelectedBiz] = useState('');
   const [selectedBizObj, setSelectedBizObj] = useState(null);
   const [selectedBranches, setSelectedBranches] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [variantAttributes, setVariantAttributes] = useState([]);
 
   // Step 2 state — product form
   const [form, setForm] = useState({
     item_name:       '',
     category:        '',
-    customCategory:  '',
     variants:        {},
     mark_as_new:     false,
     new_duration_days: 14,
-    variant_color:   '',
-    size:            '',
-    model:           '',
     quantity:        0,
     minimum_quantity: 5,
     unit_price:      0,
@@ -96,6 +88,10 @@ export default function AddProductPage() {
         if (r.data.success) setBusinesses(r.data.businesses || r.data.data || []);
       }).catch(() => {});
     } else if (user?.branch_id) {
+      if (user.business_id) {
+        setSelectedBiz(String(user.business_id));
+        setSelectedBizObj({ id: user.business_id, name: user.business_name });
+      }
       // Non-super_admin: load own branch info
       api.get(`/branches/${user.branch_id}`).then(r => {
         if (r.data.success) {
@@ -107,7 +103,7 @@ export default function AddProductPage() {
           if (br.business_id) {
             api.get('/businesses').then(rb => {
               if (rb.data.success) {
-                const biz = (rb.data.businesses || rb.data.data || []).find(b => b.id === br.business_id);
+                const biz = (rb.data.businesses || rb.data.data || []).find(b => String(b.id) === String(br.business_id));
                 if (biz) { setSelectedBizObj(biz); setSelectedBiz(String(biz.id)); }
               }
             }).catch(() => {});
@@ -117,9 +113,10 @@ export default function AddProductPage() {
     }
   }, [user, isSuperAdmin]);
 
-  // Load branches when biz changes
+  // Load branches and configurable product form when business changes
   useEffect(() => {
     if (!selectedBiz) {
+      setCategories([]);
       setVariantAttributes([]);
       if (isSuperAdmin) {
         setBranches([]);
@@ -128,9 +125,13 @@ export default function AddProductPage() {
       return;
     }
     
-    api.get('/products/variant-attributes', { params: { business_id: selectedBiz } })
+    api.get('/products/form-config', { params: { business_id: selectedBiz } })
       .then(r => {
-        if (r.data.success) setVariantAttributes(r.data.attributes);
+        if (r.data.success) {
+          setCategories(r.data.categories || []);
+          setVariantAttributes(r.data.attributes || []);
+          setForm(prev => ({ ...prev, category: '', variants: {} }));
+        }
       })
       .catch(() => {});
 
@@ -149,20 +150,13 @@ export default function AddProductPage() {
   // Preview SKU whenever branch / category changes
   useEffect(() => {
     const branchId = selectedBranches[0];
-    const cat = form.category === 'Other' ? form.customCategory : form.category;
+    const cat = form.category;
     if (!branchId || !cat) { setPreviewSku(''); setPreviewQr(''); return; }
     api.get('/products/preview-sku', { params: { branch_id: branchId, category: cat } })
       .then(r => {
         if (r.data.success) { setPreviewSku(r.data.sku); setPreviewQr(r.data.qr_code); }
       }).catch(() => {});
-  }, [selectedBranches, form.category, form.customCategory]);
-
-  const bizType = selectedBizObj?.industry || 'general';
-  const isFashion = bizType === 'fashion';
-  const isTech    = bizType === 'technology';
-
-  const effectiveCategory = form.category === 'Other' ? form.customCategory : form.category;
-  const effectiveSize     = form.size && !FASHION_SIZES.includes(form.size) ? form.size : form.size;
+  }, [selectedBranches, form.category]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -184,7 +178,7 @@ export default function AddProductPage() {
 
   const goStep3 = () => {
     if (!form.item_name.trim())    { setError('Product name is required.'); return; }
-    if (!effectiveCategory.trim()) { setError('Category is required.'); return; }
+    if (!form.category.trim()) { setError('Category is required.'); return; }
     setError('');
     setStep(3);
   };
@@ -194,15 +188,9 @@ export default function AddProductPage() {
     setLoading(true);
     setError('');
     try {
-      // Build variants object from individual fields
-      const variants = { ...form.variants };
-      if (form.variant_color) variants.colour = form.variant_color;
-      if (effectiveSize) variants.size = effectiveSize;
-      if (form.model) variants.model = form.model;
-
       const payload = {
         item_name:        form.item_name.trim(),
-        category:         effectiveCategory,
+        category:         form.category,
         quantity:         parseInt(form.quantity) || 0,
         minimum_quantity: parseInt(form.minimum_quantity) || 5,
         unit_price:       parseFloat(form.unit_price) || 0,
@@ -211,7 +199,7 @@ export default function AddProductPage() {
         price_staff:      parseFloat(form.price_staff) || 0,
         branch_ids:       selectedBranches,
         branch_id:        selectedBranches[0],
-        variants:         variants,
+        variants:         form.variants,
         mark_as_new:      form.mark_as_new,
         new_duration_days: form.new_duration_days
       };
@@ -378,7 +366,7 @@ export default function AddProductPage() {
               <Package className="w-5 h-5 text-indigo-600" />
               <h3 className="font-bold text-slate-900">Product Details</h3>
               <span className="ml-auto text-[11px] text-slate-500 capitalize">
-                {selectedBizObj?.name} · {bizType} type
+                {selectedBizObj?.name}
               </span>
             </div>
 
@@ -407,7 +395,7 @@ export default function AddProductPage() {
                   type="text"
                   name="item_name"
                   required
-                  placeholder={isFashion ? 'e.g. Abaya Zehra - Black' : 'e.g. Mechanical Keyboard RGB'}
+                  placeholder="e.g. Product name"
                   className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
                   value={form.item_name}
                   onChange={handleFormChange}
@@ -415,83 +403,19 @@ export default function AddProductPage() {
               </div>
 
               {/* Category */}
-              <div className="grid grid-cols-2 gap-3">
+              <div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                   <select name="category" value={form.category} onChange={handleFormChange} className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full">
                     <option value="">-- Select --</option>
-                    {(isFashion ? FASHION_CATEGORIES : isTech ? TECH_CATEGORIES : [...FASHION_CATEGORIES, ...TECH_CATEGORIES]).map(c => (
-                      <option key={c} value={c}>{c}</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.name}>{category.name}</option>
                     ))}
                   </select>
                 </div>
-                {form.category === 'Other' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Custom Category *</label>
-                    <input type="text" name="customCategory" placeholder="Type category..."
-                      className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full" value={form.customCategory} onChange={handleFormChange} />
-                  </div>
-                )}
               </div>
 
               {/* Product Variants */}
-              {isFashion ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1"><Palette className="w-3.5 h-3.5 inline mr-1 text-pink-500" />Colour / Variant</label>
-                      <input
-                        type="text"
-                        name="variant_color"
-                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                        placeholder="e.g. Black, Mint Green"
-                        value={form.variant_color}
-                        onChange={handleFormChange}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1"><Ruler className="w-3.5 h-3.5 inline mr-1 text-amber-500" />Size</label>
-                      <select
-                        name="size"
-                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                        value={form.size}
-                        onChange={handleFormChange}
-                      >
-                        <option value="">-- Select --</option>
-                        {FASHION_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                        <option value={form.size && !FASHION_SIZES.includes(form.size) ? form.size : ''}>
-                          {form.size && !FASHION_SIZES.includes(form.size) ? form.size : 'Other'}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1"><Tag className="w-3.5 h-3.5 inline mr-1 text-purple-600" />Style / Model</label>
-                    <input
-                      type="text"
-                      name="model"
-                      className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                      placeholder="e.g. Modern, Classic"
-                      value={form.model}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Model / Part Number</label>
-                  <input
-                    type="text"
-                    name="model"
-                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                    placeholder="e.g. WH-1000XM5"
-                    value={form.model}
-                    onChange={handleFormChange}
-                  />
-                </div>
-              )}
-
-              {/* Dynamic Variants */}
               {variantAttributes.length > 0 ? (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -502,28 +426,19 @@ export default function AddProductPage() {
                     <div key={attr.attribute_key} className="mb-3">
                       <label className="block text-sm font-medium text-slate-700 mb-1">{attr.label}</label>
                       {attr.input_type === 'select' ? (
-                        <select
-                          value={form.variants?.[attr.attribute_key] || ''}
-                          onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
-                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
+                        <select value={form.variants?.[attr.attribute_key] || ''} onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                           <option value="">Select {attr.label}</option>
-                          {(attr.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          {(Array.isArray(attr.options) ? attr.options : []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                       ) : (
-                        <input
-                          type="text"
-                          value={form.variants?.[attr.attribute_key] || ''}
-                          onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
-                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          placeholder={attr.label}
-                        />
+                        <input type="text" value={form.variants?.[attr.attribute_key] || ''} onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder={attr.label} />
                       )}
                     </div>
                   ))}
                 </div>
-              ) : null}
-
+              ) : (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">No extra product fields are configured for this business.</div>
+              )}
               {/* Stock */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -622,7 +537,7 @@ export default function AddProductPage() {
 
               {/* Cost Price (optional) */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1 text-slate-500">
+                <label className="block text-sm font-medium text-slate-500 mb-1">
                   Cost / Purchase Price (internal use, optional)
                 </label>
                 <div className="relative">
@@ -663,12 +578,9 @@ export default function AddProductPage() {
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-5">
               <h4 className="font-bold text-slate-900 text-base mb-1">{form.item_name}</h4>
               <div className="flex flex-wrap gap-2 mb-4">
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{effectiveCategory}</span>
-                {form.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{form.variant_color}</span>}
-                {effectiveSize && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{effectiveSize}</span>}
-                {form.model && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600">{form.model}</span>}
+                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{form.category}</span>
                 {Object.entries(form.variants || {}).map(([key, value]) => (
-                  value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{value}</span>
+                  value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{key}: {value}</span>
                 ))}
               </div>
 
@@ -750,12 +662,9 @@ export default function AddProductPage() {
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-lg">{createdProduct.item.item_name}</h3>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{createdProduct.item.category}</span>
-                      {createdProduct.item.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{createdProduct.item.variant_color}</span>}
-                      {createdProduct.item.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{createdProduct.item.size}</span>}
-                      {createdProduct.item.model && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600">{createdProduct.item.model}</span>}
-                      {Object.entries(createdProduct.item.variants || {}).map(([key, value]) => (
-                        value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{value}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{form.category}</span>
+                      {Object.entries(form.variants || {}).map(([key, value]) => (
+                        value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{key}: {value}</span>
                       ))}
                     </div>
                   </div>
@@ -817,7 +726,7 @@ export default function AddProductPage() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => { setStep(isSuperAdmin ? 1 : 2); setForm({ item_name:'', category:'', customCategory:'', variants:{}, mark_as_new:false, new_duration_days:14, variant_color:'', size:'', model:'', quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); setError(''); }}
+                onClick={() => { setStep(isSuperAdmin ? 1 : 2); setForm({ item_name:'', category:'', variants:{}, mark_as_new:false, new_duration_days:14, quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); setError(''); }}
                 className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center"
               >
                 <Plus className="w-4 h-4" /> Add Another Product

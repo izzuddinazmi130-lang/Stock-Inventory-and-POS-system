@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Plus, ArrowRight, Edit3, Trash2, X, CheckCircle, AlertCircle, Phone, Mail, FileText } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Edit3, Trash2, X, CheckCircle, AlertCircle, Phone, Mail, FileText, SlidersHorizontal } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 
@@ -231,12 +231,14 @@ export default function BusinessList() {
                     <span className="text-sm text-slate-500">
                       <strong className="text-slate-900 font-bold">{activeBranches}</strong> active branches
                     </span>
-                    <button
-                      onClick={() => navigate(`/businesses/${b.id}/branches`)}
-                      className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors"
-                    >
-                      View Branches <ArrowRight size={16} />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => navigate(`/businesses/${b.id}/forms`)} className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors" title="Manage Product Form">
+                        <SlidersHorizontal size={14} /> Manage Form
+                      </button>
+                      <button onClick={() => navigate(`/businesses/${b.id}/branches`)} className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors">
+                        Branches <ArrowRight size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -277,9 +279,15 @@ export default function BusinessList() {
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-slate-700">Industry / Category</label>
-                    <input type="text" placeholder="e.g. Fashion & Retail, Technology"
+                    <select
                       className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.industry} onChange={(e) => setAddForm({ ...addForm, industry: e.target.value })} />
+                      value={addForm.industry} onChange={(e) => setAddForm({ ...addForm, industry: e.target.value })}>
+                      <option value="">-- Select --</option>
+                      <option value="fashion">Fashion &amp; Apparel</option>
+                      <option value="technology">Technology &amp; Electronics</option>
+                      <option value="general">General / Other</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">Determines the Add Product form shown to this business's branches.</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -356,9 +364,15 @@ export default function BusinessList() {
                   </div>
                   <div>
                     <label className="block mb-1.5 text-sm font-medium text-slate-700">Industry</label>
-                    <input type="text"
+                    <select
                       className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} />
+                      value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}>
+                      <option value="">-- Select --</option>
+                      <option value="fashion">Fashion &amp; Apparel</option>
+                      <option value="technology">Technology &amp; Electronics</option>
+                      <option value="general">General / Other</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">Determines the Add Product form shown to this business's branches.</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -94,10 +94,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const [prodStats] = await pool.query(`
       SELECT 
         COUNT(*) as totalItems,
-        COALESCE(SUM(quantity), 0) as totalStock,
-        SUM(CASE WHEN quantity <= minimum_quantity THEN 1 ELSE 0 END) as lowStockCount
-      FROM stock_items 
-      WHERE branch_id = ? AND is_active = 1
+        COALESCE(SUM(pbs.quantity), 0) as totalStock,
+        SUM(CASE WHEN pbs.quantity <= p.min_quantity THEN 1 ELSE 0 END) as lowStockCount
+      FROM product_branch_stock pbs
+      JOIN products p ON p.id = pbs.product_id
+      WHERE pbs.branch_id = ? AND p.status != 'discontinued'
     `, [req.params.id]);
 
     branch.stats = {
@@ -120,9 +121,9 @@ router.get('/:id/report', authenticateToken, async (req, res) => {
     }
 
     const [report] = await pool.query(`
-      SELECT sm.*, si.item_code, si.item_name, si.category, b.name AS branch_name, u.full_name AS performed_by_name 
+      SELECT sm.*, p.sku AS item_code, p.name AS item_name, p.category, b.name AS branch_name, u.full_name AS performed_by_name 
       FROM stock_movements sm 
-      JOIN stock_items si ON sm.item_id = si.id 
+      JOIN products p ON sm.item_id = p.id 
       JOIN branches b ON sm.branch_id = b.id 
       LEFT JOIN users u ON sm.performed_by = u.id 
       WHERE sm.branch_id = ? 

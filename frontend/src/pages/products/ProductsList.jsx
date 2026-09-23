@@ -28,7 +28,7 @@ export default function ProductsList() {
 
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStockStatus, setSelectedStockStatus] = useState('all');
   const [selectedProductStatus, setSelectedProductStatus] = useState('active');
