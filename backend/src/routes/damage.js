@@ -341,4 +341,122 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
   }
 });
 
+// --- DELETE /api/damage-reports/:id -------------------------------------------
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const reportId = parseInt(req.params.id, 10);
+    if (isNaN(reportId)) {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'Invalid damage report ID.' });
+    }
+
+    const [reports] = await connection.query(
+      'SELECT * FROM damage_reports WHERE id = ?',
+      [reportId]
+    );
+    if (reports.length === 0) {
+      connection.release();
+      return res.status(404).json({ success: false, message: 'Damage report not found.' });
+    }
+    const report = reports[0];
+
+    // Branch-scoped admins may only delete records from their own branch
+    if (req.user.role === 'admin' && report.branch_id !== req.user.branch_id) {
+      connection.release();
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete a damage report from another branch.' });
+    }
+
+    // Grab photo paths before delete so we can remove the files from disk afterwards
+    const [photos] = await connection.query(
+      'SELECT photo_path FROM damage_report_photos WHERE damage_report_id = ?',
+      [reportId]
+    );
+
+    await connection.beginTransaction();
+
+    // Restore the deducted stock back to the branch
+    const [stocks] = await connection.query(
+      'SELECT * FROM product_branch_stock WHERE product_id = ? AND branch_id = ? FOR UPDATE',
+      [report.product_id, report.branch_id]
+    );
+
+    let curQty = 0;
+    let newQty = 0;
+    if (stocks.length > 0) {
+      curQty = parseInt(stocks[0].quantity || 0, 10);
+      newQty = curQty + parseInt(report.quantity, 10);
+      await connection.query(
+        'UPDATE product_branch_stock SET quantity = ? WHERE product_id = ? AND branch_id = ?',
+        [newQty, report.product_id, report.branch_id]
+      );
+
+      // If stock was auto-marked out_of_stock because of this damage, bring it back
+      if (curQty === 0 && newQty > 0) {
+        await connection.query(
+          "UPDATE products SET status = 'active' WHERE id = ? AND status = 'out_of_stock'",
+          [report.product_id]
+        );
+      }
+    }
+
+    // Remove the damage stock movement created for this damage report so reports & analytics stay consistent
+    await connection.query(
+      `DELETE FROM stock_movements
+       WHERE branch_id = ? AND item_id = ? AND (note LIKE ? OR note LIKE ?)`,
+      [
+        report.branch_id,
+        report.product_id,
+        `Damage Report #${reportId}:%`,
+        `Damage Report #${reportId} %`
+      ]
+    );
+
+    // damage_report_photos rows cascade-delete automatically via FK, but delete explicitly for clarity
+    await connection.query('DELETE FROM damage_report_photos WHERE damage_report_id = ?', [reportId]);
+    await connection.query('DELETE FROM damage_reports WHERE id = ?', [reportId]);
+
+    await connection.commit();
+    connection.release();
+
+    // Remove evidence photo files from disk (best-effort, after commit)
+    photos.forEach(p => {
+      const filePath = path.join(__dirname, '../..', p.photo_path);
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.error('Failed to delete damage photo file:', filePath, err.message);
+        }
+      });
+    });
+
+    await recordAuditLog(
+      req.user.id,
+      req.user.role,
+      'DELETE_DAMAGE_REPORT',
+      'damage_reports',
+      reportId,
+      { product_id: report.product_id, quantity: report.quantity, total_value: report.total_value },
+      null,
+      req
+    );
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('inventory_updated', { branch_id: report.branch_id, item_id: report.product_id, new_qty: newQty });
+      io.emit('damage_deleted', { report_id: reportId, branch_id: report.branch_id, product_id: report.product_id });
+    }
+
+    return res.json({
+      success: true,
+      message: `Damage report #${reportId} deleted and ${report.quantity} unit(s) restored to branch stock.`
+    });
+
+  } catch (err) {
+    await connection.rollback();
+    connection.release();
+    console.error('Delete damage report error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete damage report: ' + err.message });
+  }
+});
+
 module.exports = router;

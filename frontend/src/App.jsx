@@ -7,8 +7,7 @@ import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Login';
 import Dashboard from './pages/dashboard/Dashboard';
 import ProductsList from './pages/products/ProductsList';
-import QrGenerator from './pages/qr/QrGenerator';
-import QrScanner from './pages/qr/QrScanner';
+import QrHub from './pages/qr/QrHub';
 import UserManagement from './pages/users/UserManagement';
 import ReportsAnalytics from './pages/reports/ReportsAnalytics';
 import AuditLogs from './pages/audit/AuditLogs';
@@ -16,6 +15,7 @@ import BusinessList from './pages/businesses/BusinessList';
 import BranchList from './pages/businesses/BranchList';
 import BranchDetail from './pages/branches/BranchDetail';
 import StoreList from './pages/branches/StoreList';
+import FloorReport from './pages/branches/FloorReport';
 import StoreReport from './pages/stores/StoreReport';
 import AddProductPage from './pages/products/AddProductPage';
 import DamageProducts from './pages/products/DamageProducts';
@@ -80,7 +80,7 @@ export default function App() {
               path="/qr/generate"
               element={
                 <ProtectedRoute>
-                  <QrGenerator />
+                  <QrHub />
                 </ProtectedRoute>
               }
             />
@@ -88,7 +88,7 @@ export default function App() {
               path="/qr/scan"
               element={
                 <ProtectedRoute>
-                  <QrScanner />
+                  <QrHub />
                 </ProtectedRoute>
               }
             />
@@ -131,7 +131,8 @@ export default function App() {
             <Route path="/businesses" element={<ProtectedRoute allowedRoles={['super_admin']}><BusinessList /></ProtectedRoute>} />
             <Route path="/businesses/:id/branches" element={<ProtectedRoute allowedRoles={['super_admin']}><BranchList /></ProtectedRoute>} />
             <Route path="/branches/:id" element={<ProtectedRoute allowedRoles={['super_admin']}><BranchDetail /></ProtectedRoute>} />
-            <Route path="/branches/:id/stores" element={<ProtectedRoute allowedRoles={['super_admin']}><StoreList /></ProtectedRoute>} />
+            <Route path="/branches/:id/stores" element={<ProtectedRoute><StoreList /></ProtectedRoute>} />
+            <Route path="/branches/:id/floor-report" element={<ProtectedRoute><FloorReport /></ProtectedRoute>} />
             <Route path="/stores/:id/report" element={<ProtectedRoute><StoreReport /></ProtectedRoute>} />
             <Route path="/damage" element={<ProtectedRoute><DamageProducts /></ProtectedRoute>} />
 

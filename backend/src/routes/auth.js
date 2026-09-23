@@ -16,11 +16,17 @@ router.post('/login', async (req, res) => {
 
     const inputClean = email.trim();
 
-    // Query user by email or username
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [inputClean, inputClean]
-    );
+    // Query user by email or username joined with branch and business
+    const [users] = await pool.query(`
+      SELECT u.*,
+             b.name AS branch_name,
+             b.branch_code AS branch_code,
+             biz.name AS business_name
+      FROM users u
+      LEFT JOIN branches b ON u.branch_id = b.id
+      LEFT JOIN businesses biz ON u.business_id = biz.id
+      WHERE u.email = ? OR u.username = ?
+    `, [inputClean, inputClean]);
 
     if (users.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
@@ -70,7 +76,9 @@ router.post('/login', async (req, res) => {
       {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        branch_id: user.branch_id,
+        business_id: user.business_id
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -96,7 +104,12 @@ router.post('/login', async (req, res) => {
         email: user.email,
         username: user.username,
         full_name: user.full_name,
-        role: user.role
+        role: user.role,
+        branch_id: user.branch_id,
+        branch_name: user.branch_name,
+        branch_code: user.branch_code,
+        business_id: user.business_id,
+        business_name: user.business_name
       }
     });
 
@@ -113,6 +126,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active,
              u.business_id, u.branch_id,
              b.name AS branch_name,
+             b.branch_code AS branch_code,
              biz.name AS business_name
       FROM users u
       LEFT JOIN branches b ON u.branch_id = b.id

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Building, Plus, Store, Edit3, Trash2, X, CheckCircle, AlertCircle, FileBarChart, ExternalLink } from 'lucide-react';
+import { Building, Plus, Store, Edit3, Trash2, X, CheckCircle, AlertCircle, FileBarChart, ExternalLink, Search, CheckSquare, Square, Layers, RefreshCw } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 
@@ -24,6 +24,13 @@ export default function BranchList() {
     contact_person: '', contact_phone: '', contact_email: '', operating_hours: '', opening_date: '', is_active: 1
   });
 
+  // Stock existing products into the new branch at creation time
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [stockSelections, setStockSelections] = useState({}); // { [productId]: quantity }
+  const [creatingBranch, setCreatingBranch] = useState(false);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -44,25 +51,85 @@ export default function BranchList() {
     fetchData();
   }, [id]);
 
+  const openAddModal = async () => {
+    setStockSelections({});
+    setCatalogSearch('');
+    setShowAddModal(true);
+    try {
+      setCatalogLoading(true);
+      const res = await api.get('/products/catalog', { params: { business_id: id } });
+      if (res.data.success) setCatalogProducts(res.data.products || []);
+    } catch (err) {
+      setMessage({ type: 'danger', text: 'Failed to load the business product catalog.' });
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const toggleProductSelection = (productId) => {
+    setStockSelections(prev => {
+      const next = { ...prev };
+      if (productId in next) {
+        delete next[productId];
+      } else {
+        next[productId] = 0;
+      }
+      return next;
+    });
+  };
+
+  const updateProductQuantity = (productId, qty) => {
+    setStockSelections(prev => ({ ...prev, [productId]: Math.max(0, parseInt(qty, 10) || 0) }));
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    setCreatingBranch(true);
     try {
       const res = await api.post('/branches', { ...addForm, business_id: id });
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        const newBranchId = res.data.data?.id;
+        const selectedIds = Object.keys(stockSelections);
+
+        let stockMsg = '';
+        if (newBranchId && selectedIds.length > 0) {
+          const results = await Promise.allSettled(
+            selectedIds.map(pid =>
+              api.post('/products/add-to-branch', {
+                product_ids: [parseInt(pid, 10)],
+                branch_ids: [newBranchId],
+                initial_quantity: stockSelections[pid] || 0
+              })
+            )
+          );
+          const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.data.success).length;
+          const failed = results.length - succeeded;
+          stockMsg = failed > 0
+            ? ` ${succeeded} existing product(s) stocked, ${failed} failed to add.`
+            : ` ${succeeded} existing product(s) stocked into this branch.`;
+        }
+
+        setMessage({ type: 'success', text: `${res.data.message}${stockMsg}` });
         setShowAddModal(false);
         setAddForm({
           name: '', branch_code: '', address: '', city: '', state: '', postcode: '',
           contact_person: '', contact_phone: '', contact_email: '', operating_hours: '', opening_date: ''
         });
+        setStockSelections({});
         fetchData();
       } else {
         setMessage({ type: 'danger', text: res.data.message || 'Failed to add branch' });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to add branch' });
+    } finally {
+      setCreatingBranch(false);
     }
   };
+
+  const filteredCatalogProducts = catalogProducts.filter(p =>
+    !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase())
+  );
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -142,7 +209,7 @@ export default function BranchList() {
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{business ? business.name : 'Branches'}</h1>
           <p className="text-sm text-slate-500 mt-1">Operational branch locations under {business ? business.name : 'this business'}. Click any branch to enter its dashboard.</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4 sm:mt-0">
+        <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4 sm:mt-0">
           <Plus size={18} />
           Add Branch
         </button>
@@ -155,7 +222,7 @@ export default function BranchList() {
           <Building className="w-12 h-12 text-slate-300 mb-3" />
           <p className="text-slate-600 font-medium">No branches yet</p>
           <p className="text-sm text-slate-500 mb-4">No branches registered under {business ? business.name : 'this business'} yet.</p>
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+          <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             <Plus size={16} /> Add Branch
           </button>
         </div>
@@ -337,9 +404,68 @@ export default function BranchList() {
                       value={addForm.opening_date} onChange={(e) => setAddForm({ ...addForm, opening_date: e.target.value })} />
                   </div>
                 </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between mt-4 mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700">Stock Existing Products (optional)</label>
+                    <span className="text-xs text-slate-400">{Object.keys(stockSelections).length} selected</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-2">Map products already used elsewhere in {business ? business.name : 'this business'} into this new branch as soon as it's created.</p>
+
+                  <div className="relative mb-2">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search catalog by SKU or product name..."
+                      value={catalogSearch}
+                      onChange={e => setCatalogSearch(e.target.value)}
+                      className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {catalogLoading ? (
+                    <div className="py-6 text-center text-xs text-slate-400 font-mono">Loading product catalog...</div>
+                  ) : filteredCatalogProducts.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-400 italic">No products found in this business catalog yet.</div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
+                      {filteredCatalogProducts.map(p => {
+                        const isChecked = p.id in stockSelections;
+                        return (
+                          <div key={p.id} className={`p-2.5 flex items-center justify-between gap-3 transition-colors text-xs ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
+                            <div
+                              onClick={() => toggleProductSelection(p.id)}
+                              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
+                            >
+                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                              <div className="truncate">
+                                <span className="font-semibold text-slate-900">{p.name}</span>
+                                <span className="font-mono text-[11px] text-indigo-600 ml-2 font-bold">{p.sku}</span>
+                              </div>
+                            </div>
+                            {isChecked && (
+                              <input
+                                type="number"
+                                min="0"
+                                value={stockSelections[p.id]}
+                                onChange={e => updateProductQuantity(p.id, e.target.value)}
+                                onClick={e => e.stopPropagation()}
+                                placeholder="Qty"
+                                className="h-8 w-20 flex-shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
                   <button type="button" onClick={() => setShowAddModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Branch</button>
+                  <button type="submit" disabled={creatingBranch} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                    {creatingBranch ? (<><RefreshCw size={14} className="animate-spin" /> Saving...</>) : 'Save Branch'}
+                  </button>
                 </div>
               </form>
             </div>

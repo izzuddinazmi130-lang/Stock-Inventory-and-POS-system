@@ -202,6 +202,7 @@ router.get('/preview-sku', authenticateToken, async (req, res) => {
 
 // ─── GET /api/products/catalog ──────────────────────────────────────────────
 // Returns all unique products across business catalog (used for Add Existing to Branch)
+// For branch admins, excludes products already in their branch
 router.get('/catalog', authenticateToken, async (req, res) => {
   try {
     const { business_id } = req.query;
@@ -227,7 +228,22 @@ router.get('/catalog', authenticateToken, async (req, res) => {
     }
     query += ' GROUP BY p.id ORDER BY p.name ASC';
     const [rows] = await pool.query(query, params);
-    return res.json({ success: true, products: rows });
+
+    // For branch admins, filter out products that already exist in their branch
+    let filteredRows = rows;
+    if (req.user.role !== 'super_admin' && req.user.branch_id) {
+      const userBranchId = parseInt(req.user.branch_id, 10);
+      // Get product IDs that already exist in the user's branch
+      const [existingStock] = await pool.query(
+        'SELECT DISTINCT product_id FROM product_branch_stock WHERE branch_id = ?',
+        [userBranchId]
+      );
+      const existingProductIds = new Set(existingStock.map(row => row.product_id));
+      // Filter out products that are already in the user's branch
+      filteredRows = rows.filter(row => !existingProductIds.has(row.id));
+    }
+
+    return res.json({ success: true, products: filteredRows });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -282,11 +298,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/add-to-branch', authenticateToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    const { product_ids, branch_ids, initial_quantity = 0 } = req.body;
+    const { product_ids, branch_ids, product_quantities, initial_quantity = 0 } = req.body;
 
     const pIds = (Array.isArray(product_ids) ? product_ids : [req.body.product_id]).filter(Boolean).map(id => parseInt(id, 10));
-    const bIds = (Array.isArray(branch_ids) ? branch_ids : [req.body.branch_id]).filter(Boolean).map(id => parseInt(id, 10));
-    const initQty = Math.max(0, parseInt(initial_quantity, 10) || 0);
+    let bIds = (Array.isArray(branch_ids) ? branch_ids : [req.body.branch_id]).filter(Boolean).map(id => parseInt(id, 10));
+
+    // For branch admins, auto-select their branch if not provided
+    if (req.user.role !== 'super_admin' && req.user.branch_id && bIds.length === 0) {
+      bIds = [parseInt(req.user.branch_id, 10)];
+    }
 
     if (pIds.length === 0 || bIds.length === 0) {
       connection.release();
@@ -311,6 +331,10 @@ router.post('/add-to-branch', authenticateToken, async (req, res) => {
       const [pRows] = await connection.query('SELECT * FROM products WHERE id = ?', [pId]);
       if (pRows.length === 0) continue;
       const product = pRows[0];
+      const qtyForProduct = Math.max(0, parseInt(
+        (product_quantities && (product_quantities[pId] ?? product_quantities[String(pId)])) ?? initial_quantity,
+        10
+      ) || 0);
 
       for (const bId of bIds) {
         const [bRows] = await connection.query('SELECT * FROM branches WHERE id = ?', [bId]);
@@ -330,14 +354,14 @@ router.post('/add-to-branch', authenticateToken, async (req, res) => {
         if (existing.length === 0) {
           await connection.query(
             'INSERT INTO product_branch_stock (product_id, branch_id, quantity, created_at) VALUES (?, ?, ?, NOW())',
-            [pId, bId, initQty]
+            [pId, bId, qtyForProduct]
           );
 
-          if (initQty > 0) {
+          if (qtyForProduct > 0) {
             await connection.query(
               `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at)
                VALUES (?, ?, 'in', ?, 0, ?, ?, ?, 'Stock Added to Branch', ?, NOW())`,
-              [bId, pId, initQty, initQty, product.cost_price, product.price_customer, req.user.id]
+              [bId, pId, qtyForProduct, qtyForProduct, product.cost_price, product.price_customer, req.user.id]
             );
           }
 

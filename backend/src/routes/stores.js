@@ -3,16 +3,65 @@ const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
 
+// Helper to normalize date/time input to 'YYYY-MM-DD HH:mm:ss'
+function normalizeDateTime(val, isEnd = false) {
+  if (!val) return null;
+  let str = String(val).trim();
+  // Handle 'YYYY-MM-DDTHH:mm' or 'YYYY-MM-DDTHH:mm:ss'
+  str = str.replace('T', ' ');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return isEnd ? `${str} 23:59:59` : `${str} 00:00:00`;
+  }
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(str)) {
+    return `${str}:00`;
+  }
+  return str;
+}
+
+// Auto-sync store statuses based on current timestamp
+async function syncStoreStatuses() {
+  try {
+    // 1. Mark ended if past end_date and not already ended
+    await pool.query(`
+      UPDATE stores 
+      SET status = 'ended', ended_at = COALESCE(ended_at, end_date, NOW())
+      WHERE status != 'ended' AND end_date IS NOT NULL AND end_date < NOW()
+    `);
+    // 2. Mark active if current time is within [start_date, end_date]
+    await pool.query(`
+      UPDATE stores
+      SET status = 'active'
+      WHERE status = 'upcoming' 
+        AND start_date IS NOT NULL 
+        AND start_date <= NOW() 
+        AND (end_date IS NULL OR end_date >= NOW())
+    `);
+    // 3. Mark upcoming if start_date is in future
+    await pool.query(`
+      UPDATE stores
+      SET status = 'upcoming'
+      WHERE status = 'active' 
+        AND start_date IS NOT NULL 
+        AND start_date > NOW()
+    `);
+  } catch (err) {
+    console.error('Error syncing store statuses:', err);
+  }
+}
+
 // GET /:id - get store detail
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    await syncStoreStatuses();
+
     const [stores] = await pool.query(`
-      SELECT s.*, b.name as branch_name, biz.name as business_name
+      SELECT s.*, b.name as branch_name, biz.name as business_name, biz.id as business_id
       FROM stores s
       JOIN branches b ON s.branch_id = b.id
       LEFT JOIN businesses biz ON b.business_id = biz.id
       WHERE s.id = ?
     `, [req.params.id]);
+
     if (stores.length === 0) return res.status(404).json({ success: false, message: 'Store not found' });
     return res.json({ success: true, data: stores[0], store: stores[0] });
   } catch (err) {
@@ -20,7 +69,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST / - create store event
+// POST / - create store event with exact date and time
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
@@ -28,7 +77,9 @@ router.post('/', authenticateToken, async (req, res) => {
       name,
       venue,
       start_date,
+      start_time,
       end_date,
+      end_time,
       person_in_charge,
       contact_phone,
       notes
@@ -48,13 +99,30 @@ router.post('/', authenticateToken, async (req, res) => {
     const [branches] = await pool.query('SELECT id FROM branches WHERE id = ?', [branch_id]);
     if (branches.length === 0) return res.status(400).json({ success: false, message: 'Branch does not exist' });
 
-    // Determine initial status based on start/end dates
-    const today = new Date().toISOString().split('T')[0];
+    // Combine date + time if provided separately, or normalize
+    let finalStart = normalizeDateTime(start_time ? `${start_date} ${start_time}` : start_date, false);
+    let finalEnd   = normalizeDateTime(end_time ? `${end_date} ${end_time}` : end_date, true);
+
+    const sTime = new Date(finalStart).getTime();
+    const eTime = new Date(finalEnd).getTime();
+
+    if (isNaN(sTime) || isNaN(eTime)) {
+      return res.status(400).json({ success: false, message: 'Invalid start or end date/time format' });
+    }
+
+    if (eTime < sTime) {
+      return res.status(400).json({ success: false, message: 'End date and time cannot be earlier than start date and time' });
+    }
+
+    // Determine initial status based on exact current timestamp
+    const now = Date.now();
     let initialStatus = 'upcoming';
-    if (start_date <= today && end_date >= today) {
-      initialStatus = 'active';
-    } else if (end_date < today) {
+    if (now > eTime) {
       initialStatus = 'ended';
+    } else if (now >= sTime && now <= eTime) {
+      initialStatus = 'active';
+    } else {
+      initialStatus = 'upcoming';
     }
 
     const [result] = await pool.query(`
@@ -66,17 +134,21 @@ router.post('/', authenticateToken, async (req, res) => {
       branch_id,
       name.trim(),
       venue || null,
-      start_date,
-      end_date,
+      finalStart,
+      finalEnd,
       person_in_charge || null,
       contact_phone || null,
       notes || null,
       initialStatus
     ]);
 
-    await recordAuditLog(req.user.id, req.user.role, 'CREATE_STORE', 'stores', result.insertId, null, { branch_id, name, start_date, end_date }, req);
+    await recordAuditLog(req.user.id, req.user.role, 'CREATE_STORE', 'stores', result.insertId, null, { branch_id, name, start_date: finalStart, end_date: finalEnd, status: initialStatus }, req);
 
-    return res.json({ success: true, message: `Store event '${name.trim()}' created successfully!`, data: { id: result.insertId } });
+    return res.json({
+      success: true,
+      message: `Store event '${name.trim()}' scheduled successfully! Status: ${initialStatus.toUpperCase()}`,
+      data: { id: result.insertId, status: initialStatus }
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -96,20 +168,22 @@ router.put('/:id/close', authenticateToken, async (req, res) => {
     
     await recordAuditLog(req.user.id, req.user.role, 'CLOSE_STORE', 'stores', req.params.id, { status: stores[0].status }, { status: 'ended' }, req);
 
-    return res.json({ success: true, message: `Store event '${stores[0].name}' marked as ended.` });
+    return res.json({ success: true, message: `Store event '${stores[0].name}' closed and marked as ended.` });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// PUT /:id - update store details
+// PUT /:id - update store details & exact datetime
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const {
       name,
       venue,
       start_date,
+      start_time,
       end_date,
+      end_time,
       person_in_charge,
       contact_phone,
       notes,
@@ -125,7 +199,31 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    const newStatus = status || existing[0].status;
+    let finalStart = normalizeDateTime(start_time ? `${start_date} ${start_time}` : start_date, false) || existing[0].start_date;
+    let finalEnd   = normalizeDateTime(end_time ? `${end_date} ${end_time}` : end_date, true) || existing[0].end_date;
+
+    const sTime = new Date(finalStart).getTime();
+    const eTime = new Date(finalEnd).getTime();
+
+    if (eTime < sTime) {
+      return res.status(400).json({ success: false, message: 'End date and time cannot be earlier than start date and time' });
+    }
+
+    // Determine status automatically if not manually forced
+    let newStatus = status;
+    const now = Date.now();
+    if (!newStatus || newStatus === 'auto') {
+      if (existing[0].ended_at && new Date(existing[0].ended_at).getTime() <= now) {
+        newStatus = 'ended';
+      } else if (now > eTime) {
+        newStatus = 'ended';
+      } else if (now >= sTime && now <= eTime) {
+        newStatus = 'active';
+      } else {
+        newStatus = 'upcoming';
+      }
+    }
+
     const endedAt = newStatus === 'ended' && existing[0].status !== 'ended' ? new Date() : existing[0].ended_at;
 
     await pool.query(`
@@ -136,8 +234,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     `, [
       name.trim(),
       venue || null,
-      start_date || null,
-      end_date || null,
+      finalStart,
+      finalEnd,
       person_in_charge || null,
       contact_phone || null,
       notes || null,
@@ -146,26 +244,35 @@ router.put('/:id', authenticateToken, async (req, res) => {
       req.params.id
     ]);
 
-    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_STORE', 'stores', req.params.id, existing[0], { name }, req);
+    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_STORE', 'stores', req.params.id, existing[0], { name, status: newStatus }, req);
 
-    return res.json({ success: true, message: 'Store event details updated successfully!' });
+    return res.json({ success: true, message: 'Store event details updated successfully!', status: newStatus });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// DELETE /:id - delete store (only if status === 'ended')
-router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req, res) => {
+// DELETE /:id - delete store (only if ended or upcoming, blocked if currently active)
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const storeId = req.params.id;
+
+    await syncStoreStatuses();
 
     const [existing] = await pool.query('SELECT * FROM stores WHERE id = ?', [storeId]);
     if (existing.length === 0) return res.status(404).json({ success: false, message: 'Store not found' });
     
-    if (existing[0].status !== 'ended') {
+    if (req.user.role !== 'super_admin') {
+      if (req.user.role !== 'admin' || parseInt(req.user.branch_id, 10) !== parseInt(existing[0].branch_id, 10)) {
+        return res.status(403).json({ success: false, message: 'Access denied: You can only delete stores for your assigned branch.' });
+      }
+    }
+
+    // Disallow deleting while currently active / in progress
+    if (existing[0].status === 'active') {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete store event '${existing[0].name}': Only ended store events can be deleted. Please mark the store event as ended first.`
+        message: `Cannot delete store event '${existing[0].name}': It is currently active/in progress. Please end the event first.`
       });
     }
 
@@ -182,6 +289,8 @@ router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req,
 // GET /:id/report - store sales & movement report with payment method breakdown
 router.get('/:id/report', authenticateToken, async (req, res) => {
   try {
+    await syncStoreStatuses();
+
     const [movements] = await pool.query(`
       SELECT sm.*, 
         COALESCE(p.sku, si.item_code) as item_code, 
@@ -247,3 +356,4 @@ router.get('/:id/payment-breakdown', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.syncStoreStatuses = syncStoreStatuses;

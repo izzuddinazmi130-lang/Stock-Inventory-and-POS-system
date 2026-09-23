@@ -47,37 +47,11 @@ function StepBar({ step }) {
   );
 }
 
-// ─── Price Input Row ─────────────────────────────────────────────────────────
-function PriceRow({ label, icon: Icon, color, value, onChange, name }) {
-  return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border ${color} bg-white`}>
-      <div className={`p-2 rounded-lg ${color.replace('border-', 'bg-').replace('-200', '-50')}`}>
-        <Icon className={`w-4 h-4 ${color.replace('border-', 'text-').replace('-200', '-600')}`} />
-      </div>
-      <div className="flex-1">
-        <label className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block mb-1">{label}</label>
-        <div className="relative">
-          <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">RM</span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            name={name}
-            value={value}
-            onChange={onChange}
-            className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 font-mono"
-            placeholder="0.00"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AddProductPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -101,7 +75,6 @@ export default function AddProductPage() {
     new_duration_days: 14,
     variant_color:   '',
     size:            '',
-    customSize:      '',
     model:           '',
     quantity:        0,
     minimum_quantity: 5,
@@ -118,7 +91,7 @@ export default function AddProductPage() {
 
   // ── Init: load businesses (super_admin) or get own branch
   useEffect(() => {
-    if (user?.role === 'super_admin') {
+    if (isSuperAdmin) {
       api.get('/businesses').then(r => {
         if (r.data.success) setBusinesses(r.data.businesses || r.data.data || []);
       }).catch(() => {});
@@ -129,6 +102,7 @@ export default function AddProductPage() {
           const br = r.data.data || r.data.branch;
           setBranches([br]);
           setSelectedBranches([br.id]);
+          setStep(2);
           // Also load business
           if (br.business_id) {
             api.get('/businesses').then(rb => {
@@ -141,11 +115,18 @@ export default function AddProductPage() {
         }
       }).catch(() => {});
     }
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   // Load branches when biz changes
   useEffect(() => {
-    if (!selectedBiz) { setBranches([]); setSelectedBranches([]); setVariantAttributes([]); return; }
+    if (!selectedBiz) {
+      setVariantAttributes([]);
+      if (isSuperAdmin) {
+        setBranches([]);
+        setSelectedBranches([]);
+      }
+      return;
+    }
     
     api.get('/products/variant-attributes', { params: { business_id: selectedBiz } })
       .then(r => {
@@ -153,17 +134,17 @@ export default function AddProductPage() {
       })
       .catch(() => {});
 
-    api.get(`/businesses/${selectedBiz}/branches`).then(r => {
-      if (r.data.success) {
-        const brs = r.data.branches || r.data.data || [];
-        setBranches(brs);
-        // Auto-select all branches for non-super_admin
-        if (user?.role !== 'super_admin') setSelectedBranches(brs.map(b => b.id));
-      }
-    }).catch(() => {});
+    if (isSuperAdmin) {
+      api.get(`/businesses/${selectedBiz}/branches`).then(r => {
+        if (r.data.success) {
+          const brs = r.data.branches || r.data.data || [];
+          setBranches(brs);
+        }
+      }).catch(() => {});
+    }
     const obj = businesses.find(b => String(b.id) === String(selectedBiz));
     setSelectedBizObj(obj || null);
-  }, [selectedBiz]);
+  }, [selectedBiz, businesses, isSuperAdmin]);
 
   // Preview SKU whenever branch / category changes
   useEffect(() => {
@@ -181,7 +162,7 @@ export default function AddProductPage() {
   const isTech    = bizType === 'technology';
 
   const effectiveCategory = form.category === 'Other' ? form.customCategory : form.category;
-  const effectiveSize     = form.size === 'Custom' ? form.customSize : form.size;
+  const effectiveSize     = form.size && !FASHION_SIZES.includes(form.size) ? form.size : form.size;
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -213,6 +194,12 @@ export default function AddProductPage() {
     setLoading(true);
     setError('');
     try {
+      // Build variants object from individual fields
+      const variants = { ...form.variants };
+      if (form.variant_color) variants.colour = form.variant_color;
+      if (effectiveSize) variants.size = effectiveSize;
+      if (form.model) variants.model = form.model;
+
       const payload = {
         item_name:        form.item_name.trim(),
         category:         effectiveCategory,
@@ -224,7 +211,7 @@ export default function AddProductPage() {
         price_staff:      parseFloat(form.price_staff) || 0,
         branch_ids:       selectedBranches,
         branch_id:        selectedBranches[0],
-        variants:         form.variants,
+        variants:         variants,
         mark_as_new:      form.mark_as_new,
         new_duration_days: form.new_duration_days
       };
@@ -262,7 +249,7 @@ export default function AddProductPage() {
       </div>
 
       <div className="max-w-2xl mx-auto">
-        {step < 4 && <StepBar step={step} />}
+        {step < 4 && isSuperAdmin && <StepBar step={step} />}
 
         {/* Global error */}
         {error && (
@@ -273,7 +260,7 @@ export default function AddProductPage() {
         )}
 
         {/* ── STEP 1: Select Branches ──────────────────────────────────── */}
-        {step === 1 && (
+        {step === 1 && isSuperAdmin && (
           <div className="bg-white border border-slate-200 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-100">
               <Building className="w-5 h-5 text-indigo-600" />
@@ -283,39 +270,37 @@ export default function AddProductPage() {
               )}
             </div>
 
-            {user?.role === 'super_admin' && (
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Select Business *</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {businesses.map(biz => (
-                    <button
-                      key={biz.id}
-                      type="button"
-                      onClick={() => { setSelectedBiz(String(biz.id)); setSelectedBranches([]); }}
-                      className={`p-4 rounded-xl border text-left transition-all ${
-                        String(selectedBiz) === String(biz.id)
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Briefcase className="w-4 h-4 text-indigo-600" />
-                        <span className="font-bold text-sm">{biz.name}</span>
-                      </div>
-                      <span className="text-[11px] text-slate-500 capitalize">
-                        {biz.industry || 'General'} business
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Select Business *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {businesses.map(biz => (
+                  <button
+                    key={biz.id}
+                    type="button"
+                    onClick={() => { setSelectedBiz(String(biz.id)); setSelectedBranches([]); }}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      String(selectedBiz) === String(biz.id)
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Briefcase className="w-4 h-4 text-indigo-600" />
+                      <span className="font-bold text-sm">{biz.name}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 capitalize">
+                      {biz.industry || 'General'} business
+                    </span>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             {selectedBiz && branches.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    {user?.role === 'super_admin' ? 'Select Branches (multi-select)' : 'Branch'} *
+                    Select Branches (multi-select) *
                   </label>
                   {user?.role === 'super_admin' && (
                     <div className="flex gap-2">
@@ -334,12 +319,12 @@ export default function AddProductPage() {
                       <button
                         key={br.id}
                         type="button"
-                        onClick={() => user?.role === 'super_admin' ? toggleBranch(br.id) : null}
+                        onClick={() => toggleBranch(br.id)}
                         className={`w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all ${
                           isChecked
                             ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
                             : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                        } ${user?.role !== 'super_admin' ? 'cursor-default' : 'cursor-pointer'}`}
+                        } cursor-pointer`}
                       >
                         <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
                           isChecked ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 bg-slate-100'
@@ -367,10 +352,6 @@ export default function AddProductPage() {
               </div>
             )}
 
-            {!selectedBiz && user?.role !== 'super_admin' && (
-              <div className="text-center py-8 text-slate-500 text-xs">Loading your branch information...</div>
-            )}
-
             <div className="flex justify-end mt-6 pt-4 border-t border-slate-100">
               <button
                 onClick={goStep2}
@@ -380,6 +361,13 @@ export default function AddProductPage() {
                 Next: Product Details <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        )}
+
+        {step === 1 && !isSuperAdmin && (
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-sm">
+            <RefreshCw className="w-6 h-6 animate-spin text-indigo-500 mx-auto mb-3" />
+            Loading your branch product form...
           </div>
         )}
 
@@ -446,33 +434,94 @@ export default function AddProductPage() {
                 )}
               </div>
 
-              {/* Dynamic Variants */}
-              {variantAttributes.length > 0 ? (
-                variantAttributes.map(attr => (
-                  <div key={attr.attribute_key}>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{attr.label}</label>
-                    {attr.input_type === 'select' ? (
-                      <select
-                        value={form.variants?.[attr.attribute_key] || ''}
-                        onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
-                        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">Select {attr.label}</option>
-                        {(attr.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    ) : (
+              {/* Product Variants */}
+              {isFashion ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1"><Palette className="w-3.5 h-3.5 inline mr-1 text-pink-500" />Colour / Variant</label>
                       <input
                         type="text"
-                        value={form.variants?.[attr.attribute_key] || ''}
-                        onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
-                        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder={attr.label}
+                        name="variant_color"
+                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
+                        placeholder="e.g. Black, Mint Green"
+                        value={form.variant_color}
+                        onChange={handleFormChange}
                       />
-                    )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1"><Ruler className="w-3.5 h-3.5 inline mr-1 text-amber-500" />Size</label>
+                      <select
+                        name="size"
+                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
+                        value={form.size}
+                        onChange={handleFormChange}
+                      >
+                        <option value="">-- Select --</option>
+                        {FASHION_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                        <option value={form.size && !FASHION_SIZES.includes(form.size) ? form.size : ''}>
+                          {form.size && !FASHION_SIZES.includes(form.size) ? form.size : 'Other'}
+                        </option>
+                      </select>
+                    </div>
                   </div>
-                ))
-              ) : selectedBiz ? (
-                <p className="text-sm text-slate-400 italic">No variant attributes defined for this business yet.</p>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1"><Tag className="w-3.5 h-3.5 inline mr-1 text-purple-600" />Style / Model</label>
+                    <input
+                      type="text"
+                      name="model"
+                      className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
+                      placeholder="e.g. Modern, Classic"
+                      value={form.model}
+                      onChange={handleFormChange}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Model / Part Number</label>
+                  <input
+                    type="text"
+                    name="model"
+                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
+                    placeholder="e.g. WH-1000XM5"
+                    value={form.model}
+                    onChange={handleFormChange}
+                  />
+                </div>
+              )}
+
+              {/* Dynamic Variants */}
+              {variantAttributes.length > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Additional Custom Attributes</label>
+                  </div>
+                  {variantAttributes.map(attr => (
+                    <div key={attr.attribute_key} className="mb-3">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">{attr.label}</label>
+                      {attr.input_type === 'select' ? (
+                        <select
+                          value={form.variants?.[attr.attribute_key] || ''}
+                          onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
+                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Select {attr.label}</option>
+                          {(attr.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={form.variants?.[attr.attribute_key] || ''}
+                          onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))}
+                          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder={attr.label}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : null}
 
               {/* Stock */}
@@ -496,8 +545,8 @@ export default function AddProductPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> Low Stock Threshold
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-amber-500" />Low Stock Threshold
                   </label>
                   <input type="number" name="minimum_quantity" min="0"
                     className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full font-mono"
@@ -541,26 +590,33 @@ export default function AddProductPage() {
 
               {/* 3-Tier Pricing */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-1 mb-2">
                   <DollarSign className="w-4 h-4 text-indigo-600" />
-                  <label className="block text-sm font-medium text-slate-700 mb-1">3-Tier Pricing</label>
+                  <label className="block text-sm font-medium text-slate-700">3-Tier Pricing</label>
                 </div>
                 <div className="space-y-2">
-                  <PriceRow
-                    label="Customer Price" name="selling_price"
-                    icon={ShoppingBag} color="border-emerald-200"
-                    value={form.selling_price} onChange={handleFormChange}
-                  />
-                  <PriceRow
-                    label="Dealer / Reseller Price" name="price_dealer"
-                    icon={Briefcase} color="border-indigo-200"
-                    value={form.price_dealer} onChange={handleFormChange}
-                  />
-                  <PriceRow
-                    label="Staff Price" name="price_staff"
-                    icon={Users} color="border-purple-200"
-                    value={form.price_staff} onChange={handleFormChange}
-                  />
+                  {[
+                    { label: 'Customer Price', key: 'selling_price', icon: ShoppingBag, color: 'text-emerald-600' },
+                    { label: 'Dealer Price',   key: 'price_dealer',  icon: Briefcase,   color: 'text-indigo-600'  },
+                    { label: 'Staff Price',    key: 'price_staff',   icon: Users,       color: 'text-purple-600'  },
+                  ].map(p => (
+                    <div key={p.key} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <p.icon className={`w-4 h-4 flex-shrink-0 ${p.color}`} />
+                      <span className="text-xs text-slate-600 w-32 flex-shrink-0">{p.label}</span>
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">RM</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          name={p.key}
+                          className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 font-mono"
+                          value={form[p.key]}
+                          onChange={handleFormChange}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -572,16 +628,22 @@ export default function AddProductPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">RM</span>
                   <input type="number" step="0.01" min="0" name="unit_price"
-                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 text-slate-600"
+                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 font-mono"
                     placeholder="0.00" value={form.unit_price} onChange={handleFormChange} />
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-              <button onClick={() => { setStep(1); setError(''); }} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-                <ChevronLeft className="w-4 h-4" /> Back
-              </button>
+              {isSuperAdmin ? (
+                <button onClick={() => { setStep(1); setError(''); }} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+                  <ChevronLeft className="w-4 h-4" /> Back
+                </button>
+              ) : (
+                <Link to="/products" className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+                  <ChevronLeft className="w-4 h-4" /> Back to Products
+                </Link>
+              )}
               <button onClick={goStep3} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                 Review & Confirm <ChevronRight className="w-4 h-4" />
               </button>
@@ -605,6 +667,9 @@ export default function AddProductPage() {
                 {form.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{form.variant_color}</span>}
                 {effectiveSize && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{effectiveSize}</span>}
                 {form.model && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600">{form.model}</span>}
+                {Object.entries(form.variants || {}).map(([key, value]) => (
+                  value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{value}</span>
+                ))}
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs mb-4">
@@ -620,15 +685,16 @@ export default function AddProductPage() {
               </div>
 
               {/* Pricing */}
-              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200">
+              <div className="space-y-2 pt-3 border-t border-slate-200">
                 {[
-                  { label: 'Customer', value: form.selling_price, color: 'text-emerald-600' },
-                  { label: 'Dealer', value: form.price_dealer, color: 'text-indigo-600' },
-                  { label: 'Staff', value: form.price_staff, color: 'text-purple-600' },
+                  { label: 'Customer Price', key: 'selling_price', icon: ShoppingBag, color: 'text-emerald-600' },
+                  { label: 'Dealer Price',   key: 'price_dealer',  icon: Briefcase,   color: 'text-indigo-600'  },
+                  { label: 'Staff Price',    key: 'price_staff',   icon: Users,       color: 'text-purple-600'  },
                 ].map(p => (
-                  <div key={p.label} className="text-center">
-                    <div className="text-[11px] font-semibold tracking-wide uppercase text-slate-400">{p.label}</div>
-                    <div className={`font-mono font-bold text-sm ${p.color}`}>RM {parseFloat(p.value || 0).toFixed(2)}</div>
+                  <div key={p.key} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    <p.icon className={`w-4 h-4 flex-shrink-0 ${p.color}`} />
+                    <span className="text-xs text-slate-600 w-32 flex-shrink-0">{p.label}</span>
+                    <div className="font-mono font-bold text-sm text-slate-900">RM {parseFloat(form[p.key] || 0).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
@@ -688,6 +754,9 @@ export default function AddProductPage() {
                       {createdProduct.item.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{createdProduct.item.variant_color}</span>}
                       {createdProduct.item.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{createdProduct.item.size}</span>}
                       {createdProduct.item.model && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600">{createdProduct.item.model}</span>}
+                      {Object.entries(createdProduct.item.variants || {}).map(([key, value]) => (
+                        value && <span key={key} className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-teal-50 text-teal-700">{value}</span>
+                      ))}
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 flex items-center gap-1">
@@ -748,7 +817,7 @@ export default function AddProductPage() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => { setStep(1); setForm({ item_name:'', category:'', customCategory:'', variant_color:'', size:'', customSize:'', model:'', quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); }}
+                onClick={() => { setStep(isSuperAdmin ? 1 : 2); setForm({ item_name:'', category:'', customCategory:'', variants:{}, mark_as_new:false, new_duration_days:14, variant_color:'', size:'', model:'', quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); setError(''); }}
                 className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center"
               >
                 <Plus className="w-4 h-4" /> Add Another Product

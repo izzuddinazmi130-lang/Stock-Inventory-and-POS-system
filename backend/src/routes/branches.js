@@ -74,6 +74,10 @@ router.post('/', authenticateToken, requireRole('super_admin'), async (req, res)
 // GET /:id - get branch detail + admins + stats
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' && req.user.branch_id !== parseInt(req.params.id)) {
+      return res.status(403).json({ success: false, message: 'Access denied: not your branch' });
+    }
+
     const [branches] = await pool.query(`
       SELECT b.*, biz.name AS business_name 
       FROM branches b 
@@ -111,6 +115,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // GET /:id/report - movement report for this branch
 router.get('/:id/report', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' && req.user.branch_id !== parseInt(req.params.id)) {
+      return res.status(403).json({ success: false, message: 'Access denied: not your branch' });
+    }
+
     const [report] = await pool.query(`
       SELECT sm.*, si.item_code, si.item_name, si.category, b.name AS branch_name, u.full_name AS performed_by_name 
       FROM stock_movements sm 
@@ -129,8 +137,87 @@ router.get('/:id/report', authenticateToken, async (req, res) => {
 // GET /:id/stores - list stores for this branch
 router.get('/:id/stores', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' && req.user.branch_id !== parseInt(req.params.id)) {
+      return res.status(403).json({ success: false, message: 'Access denied: not your branch' });
+    }
+
+    // Auto-sync dynamic store statuses based on current timestamp
+    await pool.query(`
+      UPDATE stores 
+      SET status = 'ended', ended_at = COALESCE(ended_at, end_date, NOW())
+      WHERE status != 'ended' AND end_date IS NOT NULL AND end_date < NOW()
+    `);
+    await pool.query(`
+      UPDATE stores
+      SET status = 'active'
+      WHERE status = 'upcoming' 
+        AND start_date IS NOT NULL 
+        AND start_date <= NOW() 
+        AND (end_date IS NULL OR end_date >= NOW())
+    `);
+    await pool.query(`
+      UPDATE stores
+      SET status = 'upcoming'
+      WHERE status = 'active' 
+        AND start_date IS NOT NULL 
+        AND start_date > NOW()
+    `);
+
     const [stores] = await pool.query('SELECT * FROM stores WHERE branch_id = ? ORDER BY created_at DESC', [req.params.id]);
     return res.json({ success: true, data: stores, stores });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /:id/floor-report - "Branch Floor (Main)" walk-in sales (store_id IS NULL)
+router.get('/:id/floor-report', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role === 'admin' && req.user.branch_id !== parseInt(req.params.id)) {
+      return res.status(403).json({ success: false, message: 'Access denied: not your branch' });
+    }
+    const paymentMethod = req.query.payment_method || null;
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+    const sort = req.query.sort || 'date_desc';
+
+    let query = `
+      SELECT sm.*, p.sku AS item_code, p.name AS item_name, p.category AS category,
+             u.full_name AS performed_by_name
+      FROM stock_movements sm
+      LEFT JOIN products p ON sm.item_id = p.id
+      LEFT JOIN users u ON sm.performed_by = u.id
+      WHERE sm.branch_id = ? AND sm.store_id IS NULL AND sm.movement_type = 'out'
+    `;
+    const params = [req.params.id];
+    if (paymentMethod && paymentMethod !== 'all') { query += ' AND sm.payment_method = ?'; params.push(paymentMethod); }
+    if (startDate) { query += ' AND DATE(sm.created_at) >= ?'; params.push(startDate); }
+    if (endDate) { query += ' AND DATE(sm.created_at) <= ?'; params.push(endDate); }
+
+    const sortMap = {
+      date_desc: 'sm.created_at DESC', date_asc: 'sm.created_at ASC',
+      amount_desc: '(COALESCE(sm.selling_price,0) * sm.quantity) DESC',
+      amount_asc: '(COALESCE(sm.selling_price,0) * sm.quantity) ASC',
+      qty_desc: 'sm.quantity DESC', qty_asc: 'sm.quantity ASC'
+    };
+    query += ` ORDER BY ${sortMap[sort] || sortMap.date_desc} LIMIT 500`;
+
+    const [movements] = await pool.query(query, params);
+    let totalCash = 0, totalQr = 0, totalOnline = 0, totalItemsSold = 0;
+    movements.forEach(m => {
+      const val = (m.selling_price || 0) * m.quantity;
+      totalItemsSold += m.quantity;
+      if (m.payment_method === 'cash') totalCash += val;
+      else if (m.payment_method === 'qr') totalQr += val;
+      else if (m.payment_method === 'online_banking') totalOnline += val;
+    });
+
+    return res.json({
+      success: true, data: movements, movements,
+      summary: { total_cash: totalCash, total_qr: totalQr, total_online: totalOnline,
+        total_sales: totalCash + totalQr + totalOnline, total_items_sold: totalItemsSold,
+        total_transactions: movements.length }
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

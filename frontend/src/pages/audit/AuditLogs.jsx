@@ -158,12 +158,12 @@ function parseAuditRecord(log) {
     }
   } else if (action === 'STOCK_OUT' || action === 'QR_SCAN_DEDUCT') {
     category = 'inventory';
-    badgeLabel = action === 'QR_SCAN_DEDUCT' ? 'QR Dispatch' : 'Stock Outward';
+    badgeLabel = action === 'QR_SCAN_DEDUCT' ? 'QR Stock Out' : 'Stock Out';
     badgeClass = 'bg-sky-50 text-sky-700 border-sky-200';
     ActionIcon = Boxes;
     summary = action === 'QR_SCAN_DEDUCT' 
-      ? `Dispatched inventory via QR scanner scan` 
-      : `Dispatched items for order fulfillment or sale`;
+      ? `Stocked out inventory via QR scanner scan`
+      : `Stocked out items for order fulfillment or sale`;
     targetLabel = `Item #${log.entity_id}`;
     if (oldData?.old_qty !== undefined && newData?.new_qty !== undefined) {
       detailsBadges.push({ label: 'Balance', value: `${oldData.old_qty} → ${newData.new_qty} units` });

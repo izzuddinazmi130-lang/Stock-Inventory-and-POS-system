@@ -32,7 +32,7 @@ export default function MovementReport() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Stock Movement Audit Report</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Detailed history of stock additions, dispatches, and inventory adjustments</p>
+          <p className="text-sm text-slate-500 mt-0.5">Detailed history of stock additions, stock outs, and inventory adjustments</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={fetchMovements} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
@@ -48,7 +48,7 @@ export default function MovementReport() {
           <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="all">All Movement Types</option>
             <option value="in">Stock Additions (STOCK IN)</option>
-            <option value="out">Dispatches (STOCK OUT)</option>
+            <option value="out">Stock Out</option>
             <option value="adjust">Stock Adjustments</option>
             <option value="damage">Damage Write-offs</option>
           </select>
@@ -102,7 +102,7 @@ export default function MovementReport() {
                       {m.movement_type === 'in' ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700"><ArrowDownLeft className="w-3 h-3" /> STOCK IN</span>
                       ) : m.movement_type === 'out' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700"><ArrowUpRight className="w-3 h-3" /> DISPATCH</span>
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700"><ArrowUpRight className="w-3 h-3" /> STOCK OUT</span>
                       ) : m.movement_type === 'damage' ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">DAMAGE</span>
                       ) : (

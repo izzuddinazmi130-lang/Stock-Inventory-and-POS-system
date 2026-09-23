@@ -3,7 +3,7 @@ import {
   AlertTriangle, Plus, RefreshCw, Search, Eye, Camera, X, 
   DollarSign, PackageX, Calendar, Filter, Building2, 
   Upload, AlertCircle, CheckCircle, ExternalLink, Image as ImageIcon,
-  Layers, User
+  Layers, User, Trash2
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
@@ -65,6 +65,10 @@ export default function DamageProducts() {
   // View Details Modal states
   const [viewReport, setViewReport] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+
+  // Delete Confirmation Modal states
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
 
@@ -130,6 +134,27 @@ export default function DamageProducts() {
     }, 250);
     return () => clearTimeout(timer);
   }, [filterBusiness, filterBranch, startDate, endDate, searchQuery]);
+
+  // Delete a damage report
+  const handleDeleteReport = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      const res = await api.delete(`/damage-reports/${deleteTarget.id}`);
+      if (res.data.success) {
+        setMessage({ type: 'success', text: res.data.message || `Damage report #${deleteTarget.id} deleted.` });
+        setDeleteTarget(null);
+        fetchDamageReports();
+      } else {
+        setMessage({ type: 'danger', text: res.data.message || 'Failed to delete damage report.' });
+      }
+    } catch (err) {
+      console.error('Error deleting damage report:', err);
+      setMessage({ type: 'danger', text: err.response?.data?.message || 'Error connecting to damage records API.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Load products when modal branch changes
   useEffect(() => {
@@ -670,14 +695,24 @@ export default function DamageProducts() {
 
                       {/* Action */}
                       <td className="px-4 py-3 border-b border-slate-100 text-center">
-                        <button
-                          onClick={() => setViewReport(r)}
-                          className="inline-flex items-center gap-1 h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors"
-                          title="View Full Report & Photos"
-                        >
-                          <Eye size={13} />
-                          <span>View</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            onClick={() => setViewReport(r)}
+                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors"
+                            title="View Full Report & Photos"
+                          >
+                            <Eye size={13} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(r)}
+                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-lg transition-colors"
+                            title="Delete Damage Report"
+                          >
+                            <Trash2 size={13} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1149,6 +1184,62 @@ export default function DamageProducts() {
                 className="h-10 px-5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DELETE CONFIRMATION MODAL                                                 */}
+      {/* ========================================================================= */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-full bg-rose-50 text-rose-600">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 text-sm">Delete Damage Report?</h3>
+                <p className="text-xs text-slate-400">#DR-{deleteTarget.id}</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-2">
+              This will permanently delete this damage record for{' '}
+              <span className="font-medium text-slate-900">{deleteTarget.item_name}</span> and any
+              attached evidence photos.
+            </p>
+            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 mb-5">
+              {deleteTarget.quantity} unit(s) will be restored back to {deleteTarget.branch_name}'s stock.
+              This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteReport}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Delete Report</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

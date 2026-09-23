@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBusiness } from '../context/BusinessContext';
 import {
-  LayoutDashboard, Package, QrCode, Camera, Users,
+  LayoutDashboard, Package, Camera, Users,
   FileBarChart, History, Building2, AlertTriangle, Store,
   ShieldCheck, ArrowLeftRight
 } from 'lucide-react';
@@ -69,8 +69,9 @@ export default function Sidebar() {
             <nav className="space-y-0.5">
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem to="/products" icon={Package} label="Products" />
-              <NavItem to="/qr/generate" icon={QrCode} label="QR Generator" />
-              <NavItem to="/qr/scan" icon={Camera} label="QR Scanner" />
+              <NavItem to={`/branches/${user?.branch_id}/stores`} icon={Store} label="Stores" />
+              <NavItem to="/qr/scan" icon={Camera} label="QR & POS" />
+              <NavItem to="/damage" icon={AlertTriangle} label="Damage Records" />
               <NavItem to="/reports" icon={FileBarChart} label="Reports" />
             </nav>
           </>

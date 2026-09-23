@@ -30,8 +30,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    if (res.data.success) {
+    if (res.data.success && res.data.user) {
       setUser(res.data.user);
+      try {
+        const meRes = await api.get('/auth/me');
+        if (meRes.data.success && meRes.data.user) {
+          setUser(meRes.data.user);
+        }
+      } catch (e) {}
     }
     return res.data;
   };

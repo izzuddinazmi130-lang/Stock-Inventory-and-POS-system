@@ -7,7 +7,7 @@ const STATUS_MAP = {
   critical: { bg: '#FEF2F2', text: '#DC2626', label: 'Critical' },
   // Movement
   in:       { bg: '#ECFDF5', text: '#059669', label: 'STOCK IN' },
-  out:      { bg: '#FEF2F2', text: '#DC2626', label: 'DISPATCH' },
+  out:      { bg: '#FEF2F2', text: '#DC2626', label: 'STOCK OUT' },
   damage:   { bg: '#FEF2F2', text: '#DC2626', label: 'DAMAGE' },
   adjust:   { bg: '#F5F3FF', text: '#7C3AED', label: 'ADJUST' },
   // User status

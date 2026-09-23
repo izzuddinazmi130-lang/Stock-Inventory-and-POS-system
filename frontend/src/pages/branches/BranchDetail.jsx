@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Package, Boxes, AlertTriangle, ArrowDownLeft, RefreshCw,
-  QrCode, Building, Users, Store, Edit3, X, Plus, Phone, Mail, Clock, MapPin, CheckCircle, AlertCircle
+  QrCode, Building, Users, Store, Edit3, X, Plus, Phone, Mail, Clock, MapPin, CheckCircle, AlertCircle,
+  Search, CheckSquare, Square, Layers
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import KpiCard from '../../components/KpiCard';
@@ -20,6 +21,14 @@ export default function BranchDetail() {
     name: '', branch_code: '', address: '', city: '', state: '', postcode: '',
     contact_person: '', contact_phone: '', contact_email: '', operating_hours: ''
   });
+
+  // Add Existing Product to this Branch
+  const [showAddExistingModal, setShowAddExistingModal] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [stockSelections, setStockSelections] = useState({}); // { [productId]: quantity }
+  const [addingExisting, setAddingExisting] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -68,6 +77,86 @@ export default function BranchDetail() {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update branch' });
     }
   };
+
+  // Products already stocked at this branch (so we don't list duplicates in the catalog picker)
+  const stockedProductIds = new Set(items.map(it => it.id));
+
+  const openAddExistingModal = async () => {
+    setStockSelections({});
+    setCatalogSearch('');
+    setShowAddExistingModal(true);
+    try {
+      setCatalogLoading(true);
+      const res = await api.get('/products/catalog', { params: { business_id: branch.business_id } });
+      if (res.data.success) setCatalogProducts(res.data.products || []);
+    } catch (err) {
+      setMessage({ type: 'danger', text: 'Failed to load the business product catalog.' });
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const toggleProductSelection = (productId) => {
+    setStockSelections(prev => {
+      const next = { ...prev };
+      if (productId in next) {
+        delete next[productId];
+      } else {
+        next[productId] = 0;
+      }
+      return next;
+    });
+  };
+
+  const updateProductQuantity = (productId, qty) => {
+    setStockSelections(prev => ({ ...prev, [productId]: Math.max(0, parseInt(qty, 10) || 0) }));
+  };
+
+  const handleAddExistingSubmit = async (e) => {
+    e.preventDefault();
+    const selectedIds = Object.keys(stockSelections);
+    if (selectedIds.length === 0) {
+      setMessage({ type: 'danger', text: 'Please select at least one product to add to this branch.' });
+      return;
+    }
+
+    setAddingExisting(true);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map(pid =>
+          api.post('/products/add-to-branch', {
+            product_ids: [parseInt(pid, 10)],
+            branch_ids: [parseInt(id, 10)],
+            initial_quantity: stockSelections[pid] || 0
+          })
+        )
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.data.success).length;
+      const failed = results.length - succeeded;
+
+      if (succeeded > 0) {
+        setMessage({
+          type: failed > 0 ? 'danger' : 'success',
+          text: failed > 0
+            ? `${succeeded} product(s) added to ${branch.name}, but ${failed} failed.`
+            : `${succeeded} product(s) successfully added to ${branch.name}'s stock.`
+        });
+        setShowAddExistingModal(false);
+        fetchData();
+      } else {
+        setMessage({ type: 'danger', text: 'Failed to add the selected product(s) to this branch.' });
+      }
+    } catch (err) {
+      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to add products to this branch.' });
+    } finally {
+      setAddingExisting(false);
+    }
+  };
+
+  const availableCatalogProducts = catalogProducts
+    .filter(p => !stockedProductIds.has(p.id))
+    .filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase()));
 
   if (loading) {
     return (
@@ -138,6 +227,9 @@ export default function BranchDetail() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button onClick={openAddExistingModal} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
+            <Layers size={14} className="text-indigo-600" /> Add Existing Product
+          </button>
           <Link to={`/products/add`} className="inline-flex items-center gap-2 h-9 px-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             <Plus size={16} /> Add Product
           </Link>
@@ -386,6 +478,108 @@ export default function BranchDetail() {
                 <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ADD EXISTING PRODUCT TO THIS BRANCH MODAL                                 */}
+      {/* ========================================================================= */}
+      {showAddExistingModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between mb-1 pb-4 border-b border-slate-100 px-6 pt-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Add Existing Product to {branch.name}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Map a product already used elsewhere in {branch.business_name} into this branch's own stock.</p>
+              </div>
+              <button onClick={() => setShowAddExistingModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="px-6 pb-6 pt-4">
+              <form onSubmit={handleAddExistingSubmit} className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700">Choose Products from Catalog *</label>
+                    <span className="text-xs text-slate-400">{Object.keys(stockSelections).length} selected</span>
+                  </div>
+
+                  <div className="relative mb-2">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search catalog by SKU or product name..."
+                      value={catalogSearch}
+                      onChange={e => setCatalogSearch(e.target.value)}
+                      className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {catalogLoading ? (
+                    <div className="py-8 text-center text-xs text-slate-400 font-mono">Loading product catalog...</div>
+                  ) : availableCatalogProducts.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400 italic">
+                      {catalogProducts.length === 0
+                        ? 'No products found in this business catalog yet.'
+                        : 'Every catalog product is already stocked at this branch.'}
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
+                      {availableCatalogProducts.map(p => {
+                        const isChecked = p.id in stockSelections;
+                        return (
+                          <div key={p.id} className={`p-2.5 flex items-center justify-between gap-3 transition-colors text-xs ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
+                            <div
+                              onClick={() => toggleProductSelection(p.id)}
+                              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
+                            >
+                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                              <div className="truncate">
+                                <span className="font-semibold text-slate-900">{p.name}</span>
+                                <span className="font-mono text-[11px] text-indigo-600 ml-2 font-bold">{p.sku}</span>
+                                <div className="text-[11px] text-slate-400">
+                                  {p.category} · Already in {p.branch_count} branch{p.branch_count === 1 ? '' : 'es'}
+                                </div>
+                              </div>
+                            </div>
+                            {isChecked && (
+                              <input
+                                type="number"
+                                min="0"
+                                value={stockSelections[p.id]}
+                                onChange={e => updateProductQuantity(p.id, e.target.value)}
+                                onClick={e => e.stopPropagation()}
+                                placeholder="Qty"
+                                className="h-8 w-20 flex-shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-400 mt-1">Leave quantity at 0 to just map the product to this branch without any starting stock.</p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button type="button" onClick={() => setShowAddExistingModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                  <button
+                    type="submit"
+                    disabled={Object.keys(stockSelections).length === 0 || addingExisting}
+                    className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {addingExisting ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" /> Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Layers size={14} /> Add to Branch
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

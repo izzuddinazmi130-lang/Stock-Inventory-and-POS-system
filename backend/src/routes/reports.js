@@ -67,6 +67,16 @@ router.get('/movement', authenticateToken, async (req, res) => {
       params.push(endDate);
     }
 
+    // Exclude any movements from deleted damage reports or obsolete deletion reversal adjustments
+    query += `
+      AND (
+        m.movement_type != 'damage' 
+        OR m.note NOT LIKE 'Damage Report #%'
+        OR CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(m.note, ':', 1), '#', -1) AS UNSIGNED) IN (SELECT id FROM damage_reports)
+      )
+      AND (m.note NOT LIKE 'Damage Report #% deleted%')
+    `;
+
     query += ` ORDER BY m.created_at DESC LIMIT 300`;
 
     const [movements] = await pool.query(query, params);
@@ -126,6 +136,12 @@ router.get('/summary', authenticateToken, async (req, res) => {
       JOIN products p ON m.item_id = p.id
       JOIN branches b ON m.branch_id = b.id
       ${whereClause}
+      AND (
+        m.movement_type != 'damage' 
+        OR m.note NOT LIKE 'Damage Report #%'
+        OR CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(m.note, ':', 1), '#', -1) AS UNSIGNED) IN (SELECT id FROM damage_reports)
+      )
+      AND (m.note NOT LIKE 'Damage Report #% deleted%')
     `, params);
 
     const summary = summaryRows[0] || {};

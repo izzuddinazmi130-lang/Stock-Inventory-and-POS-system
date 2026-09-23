@@ -2,10 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { QrCode, Printer, Camera, Package, RefreshCw, Building } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { QrCode, Printer, Camera, Package, RefreshCw, Building, ArrowLeftRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export default function QrGenerator() {
+export default function QrGenerator({ embedded = false }) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const Wrap = embedded ? React.Fragment : Layout;
   const [searchParams] = useSearchParams();
   const initialProductId = searchParams.get('product_id') || '';
 
@@ -50,7 +54,7 @@ export default function QrGenerator() {
   }, [selectedId]);
 
   return (
-    <Layout>
+    <Wrap>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -58,10 +62,17 @@ export default function QrGenerator() {
           <p className="text-sm text-slate-500 mt-0.5">Generate high-density asset barcode labels for shelf inventory &amp; POS scanning</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/qr/scan" className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-            <Camera className="w-4 h-4" />
-            <span>Open QR Scanner</span>
-          </Link>
+          {!isSuperAdmin ? (
+            <Link to="/qr/scan" className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+              <Camera className="w-4 h-4" />
+              <span>Open POS Scanner</span>
+            </Link>
+          ) : (
+            <Link to="/reports" className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+              <ArrowLeftRight className="w-4 h-4 text-indigo-500" />
+              <span>View Stock Movements</span>
+            </Link>
+          )}
           {qrData && (
             <button onClick={() => window.print()} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
               <Printer className="w-4 h-4" />
@@ -169,6 +180,6 @@ export default function QrGenerator() {
           </div>
         </div>
       </div>
-    </Layout>
+    </Wrap>
   );
 }

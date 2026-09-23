@@ -15,6 +15,7 @@ const FASHION_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size', 'C
 
 export default function ProductsList() {
   const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [searchParams, setSearchParams] = useSearchParams();
 
   const queryBusinessId = searchParams.get('business_id') || '';
@@ -63,7 +64,7 @@ export default function ProductsList() {
     business_id: '',
     branch_ids: [],
     product_ids: [],
-    initial_quantity: 0
+    product_quantities: {}
   });
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading]   = useState(false);
@@ -316,12 +317,19 @@ export default function ProductsList() {
 
   // ── Add Existing Product to Branch Flow ──
   const openAddToBranchModal = async () => {
-    const defaultBiz = filterBusiness || (businesses[0]?.id ? String(businesses[0].id) : '');
+    const defaultBiz = isSuperAdmin
+      ? (filterBusiness || (businesses[0]?.id ? String(businesses[0].id) : ''))
+      : String(user?.business_id || '');
+    
+    const defaultBranchIds = isSuperAdmin 
+      ? (filterBranch ? [parseInt(filterBranch)] : [])
+      : (user?.branch_id ? [parseInt(user.branch_id)] : []);
+    
     setAddToBranchForm({
       business_id: defaultBiz,
-      branch_ids: filterBranch ? [parseInt(filterBranch)] : [],
+      branch_ids: defaultBranchIds,
       product_ids: [],
-      initial_quantity: 0
+      product_quantities: {}
     });
     setShowAddToBranchModal(true);
     if (defaultBiz) {
@@ -352,7 +360,7 @@ export default function ProductsList() {
       setError('Please choose at least one product.');
       return;
     }
-    if (addToBranchForm.branch_ids.length === 0) {
+    if (isSuperAdmin && addToBranchForm.branch_ids.length === 0) {
       setError('Please select at least one branch.');
       return;
     }
@@ -448,30 +456,32 @@ export default function ProductsList() {
           </div>
 
           {/* View Toggle: By Branch vs All Branches Combined */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto justify-center">
-            <button
-              onClick={() => setViewMode('by_branch')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                viewMode === 'by_branch'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building className="w-3.5 h-3.5 text-indigo-600" />
-              <span>By Branch</span>
-            </button>
-            <button
-              onClick={() => setViewMode('combined')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                viewMode === 'combined'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-indigo-600" />
-              <span>All Branches Combined</span>
-            </button>
-          </div>
+          {user?.role === 'super_admin' && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto justify-center">
+              <button
+                onClick={() => setViewMode('by_branch')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'by_branch'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5 text-indigo-600" />
+                <span>By Branch</span>
+              </button>
+              <button
+                onClick={() => setViewMode('combined')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  viewMode === 'combined'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <span>All Branches Combined</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Filter Dropdowns Row */}
@@ -578,7 +588,9 @@ export default function ProductsList() {
                 <tr className="bg-slate-50">
                   <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">SKU &amp; Product</th>
                   <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Category / Variant</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Branch</th>
+                  {user?.role === 'super_admin' && (
+                    <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Branch</th>
+                  )}
                   <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Stock Status</th>
                   <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Pricing</th>
                   <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-right">Actions</th>
@@ -586,10 +598,10 @@ export default function ProductsList() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="6" className="px-4 py-12 text-center text-slate-400 font-mono text-xs">Loading inventory catalog...</td></tr>
+                  <tr><td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-12 text-center text-slate-400 font-mono text-xs">Loading inventory catalog...</td></tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-12 text-center">
+                    <td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-12 text-center">
                       <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                       <p className="text-slate-500 text-sm font-medium">No products found matching criteria.</p>
                       <Link to="/products/add" className="text-indigo-600 hover:text-indigo-700 text-xs font-semibold mt-1 inline-block">
@@ -640,12 +652,14 @@ export default function ProductsList() {
                             {item.model && <span className="text-[10px] text-slate-500 block mt-1 font-mono">{item.model}</span>}
                           </div>
                         </td>
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-700 w-fit">
-                            <Building className="w-3 h-3 text-slate-500" />
-                            {item.branch_name || 'Main Branch'}
-                          </span>
-                        </td>
+                        {user?.role === 'super_admin' && (
+                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-700 w-fit">
+                              <Building className="w-3 h-3 text-slate-500" />
+                              {item.branch_name || 'Main Branch'}
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
                           <div className="flex items-center gap-2 font-mono font-bold">
                             <span className={stockBadgeClass}>
@@ -1259,21 +1273,25 @@ export default function ProductsList() {
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div>
                 <h5 className="font-bold text-slate-900 text-base">Add Existing Product to Branch</h5>
-                <p className="text-xs text-slate-500 mt-0.5">Allocate an existing product from the business catalog into one or more operational branches</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {isSuperAdmin 
+                    ? 'Allocate an existing product from the business catalog into one or more operational branches'
+                    : 'Add products from your business catalog to your branch inventory'}
+                </p>
               </div>
               <button onClick={() => setShowAddToBranchModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
 
             <form onSubmit={handleAddToBranchSubmit} className="space-y-5">
               {/* Business Selector */}
-              {user?.role === 'super_admin' && (
+              {user?.role === 'super_admin' ? (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Select Business *</label>
                   <select
                     value={addToBranchForm.business_id}
                     onChange={e => {
                       const bid = e.target.value;
-                      setAddToBranchForm({ ...addToBranchForm, business_id: bid, branch_ids: [], product_ids: [] });
+                      setAddToBranchForm({ ...addToBranchForm, business_id: bid, branch_ids: [], product_ids: [], product_quantities: {} });
                       loadCatalogForBusiness(bid);
                     }}
                     required
@@ -1283,54 +1301,71 @@ export default function ProductsList() {
                     {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Business</label>
+                  <div className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
+                    {businesses.find(b => String(b.id) === String(user?.business_id))?.name || 'Your Business'}
+                  </div>
+                </div>
               )}
 
               {/* Target Branches Checkboxes */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-slate-700">Target Branch(es) *</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (addToBranchForm.branch_ids.length === branches.length) {
-                        setAddToBranchForm(f => ({ ...f, branch_ids: [] }));
-                      } else {
-                        setAddToBranchForm(f => ({ ...f, branch_ids: branches.map(b => b.id) }));
-                      }
-                    }}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
-                  >
-                    {addToBranchForm.branch_ids.length === branches.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                </div>
-                {branches.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">Please select a business above to view its branches.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
-                    {branches.map(br => {
-                      const isChecked = addToBranchForm.branch_ids.includes(br.id);
-                      return (
-                        <button
-                          key={br.id}
-                          type="button"
-                          onClick={() => {
-                            setAddToBranchForm(f => ({
-                              ...f,
-                              branch_ids: isChecked ? f.branch_ids.filter(id => id !== br.id) : [...f.branch_ids, br.id]
-                            }));
-                          }}
-                          className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs ${
-                            isChecked ? 'bg-indigo-50 text-indigo-900 font-semibold border border-indigo-200' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                          <span className="truncate">{br.name}</span>
-                        </button>
-                      );
-                    })}
+              {user?.role === 'super_admin' ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700">Target Branch(es) *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (addToBranchForm.branch_ids.length === branches.length) {
+                          setAddToBranchForm(f => ({ ...f, branch_ids: [] }));
+                        } else {
+                          setAddToBranchForm(f => ({ ...f, branch_ids: branches.map(b => b.id) }));
+                        }
+                      }}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                    >
+                      {addToBranchForm.branch_ids.length === branches.length ? 'Deselect All' : 'Select All'}
+                    </button>
                   </div>
-                )}
-              </div>
+                  {branches.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">Please select a business above to view its branches.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
+                      {branches.map(br => {
+                        const isChecked = addToBranchForm.branch_ids.includes(br.id);
+                        return (
+                          <button
+                            key={br.id}
+                            type="button"
+                            onClick={() => {
+                              setAddToBranchForm(f => ({
+                                ...f,
+                                branch_ids: isChecked ? f.branch_ids.filter(id => id !== br.id) : [...f.branch_ids, br.id]
+                              }));
+                            }}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs ${
+                              isChecked ? 'bg-indigo-50 text-indigo-900 font-semibold border border-indigo-200' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                            <span className="truncate">{br.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Branch</label>
+                  <div className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
+                    {branches.find(b => String(b.id) === String(user?.branch_id))?.name || 'Your Branch'}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Products will be added to your assigned branch</p>
+                </div>
+              )}
 
               {/* Product Catalog Selector */}
               <div>
@@ -1366,7 +1401,10 @@ export default function ProductsList() {
                             onClick={() => {
                               setAddToBranchForm(f => ({
                                 ...f,
-                                product_ids: isChecked ? f.product_ids.filter(id => id !== p.id) : [...f.product_ids, p.id]
+                                product_ids: isChecked ? f.product_ids.filter(id => id !== p.id) : [...f.product_ids, p.id],
+                                product_quantities: isChecked
+                                  ? Object.fromEntries(Object.entries(f.product_quantities || {}).filter(([id]) => String(id) !== String(p.id)))
+                                  : { ...(f.product_quantities || {}), [p.id]: f.product_quantities?.[p.id] ?? 1 }
                               }));
                             }}
                             className={`p-2.5 flex items-center justify-between cursor-pointer transition-colors text-xs ${
@@ -1381,6 +1419,26 @@ export default function ProductsList() {
                               </div>
                             </div>
                             <div className="flex items-center gap-3 text-right flex-shrink-0">
+                              {isChecked && (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={addToBranchForm.product_quantities?.[p.id] ?? 1}
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={e => {
+                                    const value = e.target.value;
+                                    setAddToBranchForm(f => ({
+                                      ...f,
+                                      product_quantities: {
+                                        ...(f.product_quantities || {}),
+                                        [p.id]: value
+                                      }
+                                    }));
+                                  }}
+                                  className="h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                                  aria-label={`Initial stock for ${p.name}`}
+                                />
+                              )}
                               <span className="text-[11px] text-slate-400">{p.category}</span>
                               <span className="font-mono font-semibold text-slate-800">RM {parseFloat(p.price_customer || 0).toFixed(2)}</span>
                             </div>
@@ -1389,20 +1447,6 @@ export default function ProductsList() {
                       })}
                   </div>
                 )}
-              </div>
-
-              {/* Initial Quantity */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Initial Stock Quantity (Per Selected Branch)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={addToBranchForm.initial_quantity}
-                  onChange={e => setAddToBranchForm({ ...addToBranchForm, initial_quantity: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                  placeholder="0"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">Defaults to 0. You can adjust stock levels later via normal Stock In adjustments.</p>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
@@ -1415,7 +1459,7 @@ export default function ProductsList() {
                 </button>
                 <button
                   type="submit"
-                  disabled={addToBranchForm.product_ids.length === 0 || addToBranchForm.branch_ids.length === 0}
+                  disabled={addToBranchForm.product_ids.length === 0 || (isSuperAdmin && addToBranchForm.branch_ids.length === 0)}
                   className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
                   Confirm Allocation

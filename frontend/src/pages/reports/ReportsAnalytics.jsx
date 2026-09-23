@@ -1,14 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { useSocket } from '../../context/SocketContext';
 import {
   FileBarChart, Filter, ArrowUpRight, ArrowDownLeft, RefreshCw,
-  Layers, AlertTriangle, RotateCcw
+  Layers, AlertTriangle, RotateCcw, Calendar, Clock
 } from 'lucide-react';
+
+const TIMELINE_OPTIONS = [
+  { id: 'all', label: 'All Time' },
+  { id: 'today', label: 'Today' },
+  { id: '7days', label: '1 Week' },
+  { id: '30days', label: '30 Days' },
+  { id: '90days', label: '90 Days' }
+];
+
+const TIMELINE_LABELS = {
+  all: 'All Time',
+  today: 'Today',
+  '7days': 'Last 7 Days',
+  '30days': 'Last 30 Days',
+  '90days': 'Last 90 Days'
+};
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeParams = (range) => {
+  const today = new Date();
+  const todayStr = formatLocalDate(today);
+
+  if (range === 'today') {
+    return { startDate: todayStr, endDate: todayStr };
+  } else if (range === '7days') {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return { startDate: formatLocalDate(d), endDate: todayStr };
+  } else if (range === '30days') {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return { startDate: formatLocalDate(d), endDate: todayStr };
+  } else if (range === '90days') {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return { startDate: formatLocalDate(d), endDate: todayStr };
+  }
+  return { startDate: '', endDate: '' };
+};
 
 export default function ReportsAnalytics() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { socket } = useSocket();
 
   const queryBusinessId = searchParams.get('business_id') || '';
   const queryBranchId = searchParams.get('branch_id') || '';
@@ -30,7 +77,7 @@ export default function ReportsAnalytics() {
   const [branchId, setBranchId] = useState(queryBranchId);
   const [storeId, setStoreId] = useState(queryStoreId);
   const [movementType, setMovementType] = useState('all');
-  const [dateRange, setDateRange] = useState('all'); // all, today, 7days, 30days
+  const [dateRange, setDateRange] = useState('all'); // all, today, 7days, 30days, 90days
 
   // Options dropdowns
   const [businesses, setBusinesses] = useState([]);
@@ -90,32 +137,17 @@ export default function ReportsAnalytics() {
     }
   }, [branchId]);
 
-  // Helper to get start date string for date range filter
-  const getStartDateParam = () => {
-    if (dateRange === 'today') {
-      return new Date().toISOString().split('T')[0];
-    } else if (dateRange === '7days') {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      return d.toISOString().split('T')[0];
-    } else if (dateRange === '30days') {
-      const d = new Date();
-      d.setDate(d.getDate() - 30);
-      return d.toISOString().split('T')[0];
-    }
-    return '';
-  };
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const startDate = getStartDateParam();
+      const { startDate, endDate } = getDateRangeParams(dateRange);
       
       let queryParams = `movement_type=${movementType}`;
       if (businessId) queryParams += `&business_id=${businessId}`;
       if (branchId) queryParams += `&branch_id=${branchId}`;
       if (storeId) queryParams += `&store_id=${storeId}`;
       if (startDate) queryParams += `&start_date=${startDate}`;
+      if (endDate) queryParams += `&end_date=${endDate}`;
 
       const [movRes, sumRes] = await Promise.all([
         api.get(`/reports/movement?${queryParams}`),
@@ -133,11 +165,33 @@ export default function ReportsAnalytics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [businessId, branchId, storeId, movementType, dateRange]);
 
   useEffect(() => {
     fetchReports();
-  }, [businessId, branchId, storeId, movementType, dateRange]);
+  }, [fetchReports]);
+
+  // Real-time synchronization via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+    const handleRefresh = () => {
+      fetchReports();
+    };
+
+    socket.on('inventory_updated', handleRefresh);
+    socket.on('product_deleted', handleRefresh);
+    socket.on('damage_reported', handleRefresh);
+    socket.on('damage_deleted', handleRefresh);
+    socket.on('branch_updated', handleRefresh);
+
+    return () => {
+      socket.off('inventory_updated', handleRefresh);
+      socket.off('product_deleted', handleRefresh);
+      socket.off('damage_reported', handleRefresh);
+      socket.off('damage_deleted', handleRefresh);
+      socket.off('branch_updated', handleRefresh);
+    };
+  }, [socket, fetchReports]);
 
   const handleResetFilters = () => {
     setBusinessId('');
@@ -175,6 +229,7 @@ export default function ReportsAnalytics() {
             <span>
               Filtered Report Scope: <strong className="font-bold">{activeBusinessName || 'Selected Business'}</strong>
               {activeBranchName && <> &rarr; <strong className="font-bold">{activeBranchName}</strong></>}
+              {dateRange !== 'all' && <> &bull; Timeline: <strong className="font-bold">{TIMELINE_LABELS[dateRange]}</strong></>}
             </span>
           </div>
           <button
@@ -186,49 +241,88 @@ export default function ReportsAnalytics() {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden p-4 flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
-            <Layers className="w-6 h-6" />
+      {/* Key Metrics Section with Timeline Control */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">Key Performance Metrics</h2>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                  <Clock className="w-3 h-3" />
+                  {TIMELINE_LABELS[dateRange] || 'All Time'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">Aggregate stock activity and write-off metrics for the selected timeline</p>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-500 font-medium block">Total Transactions</span>
-            <span className="text-xl font-bold text-slate-900">{summary.total_transactions}</span>
-            <span className="text-[11px] text-slate-400 block">Activity records</span>
+
+          {/* Timeline Selector Buttons */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg self-start sm:self-auto border border-slate-200">
+            {TIMELINE_OPTIONS.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setDateRange(t.id)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  dateRange === t.id
+                    ? 'bg-white text-indigo-700 shadow-sm font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden p-4 flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
-            <ArrowDownLeft className="w-6 h-6" />
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-4 flex items-center gap-4">
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Total Transactions</span>
+              <span className="text-2xl font-bold text-slate-900">{summary.total_transactions}</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Activity records &bull; {TIMELINE_LABELS[dateRange]}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-500 font-medium block">Stock Added</span>
-            <span className="text-xl font-bold text-emerald-600">+{summary.stock_in_qty}</span>
-            <span className="text-[11px] text-slate-400 block">Units added to inventory</span>
-          </div>
-        </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden p-4 flex items-center gap-4">
-          <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600">
-            <ArrowUpRight className="w-6 h-6" />
+          <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-4 flex items-center gap-4">
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
+              <ArrowDownLeft className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Stock Added</span>
+              <span className="text-2xl font-bold text-emerald-600">+{summary.stock_in_qty}</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Units added &bull; {TIMELINE_LABELS[dateRange]}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-500 font-medium block">Items Dispatched</span>
-            <span className="text-xl font-bold text-rose-600">-{summary.stock_out_qty}</span>
-            <span className="text-[11px] text-slate-400 block">Units sent out / sold</span>
-          </div>
-        </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden p-4 flex items-center gap-4">
-          <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-amber-600">
-            <AlertTriangle className="w-6 h-6" />
+          <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-4 flex items-center gap-4">
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600">
+              <ArrowUpRight className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Items Stocked Out</span>
+              <span className="text-2xl font-bold text-rose-600">-{summary.stock_out_qty}</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">Units stocked out &bull; {TIMELINE_LABELS[dateRange]}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-500 font-medium block">Damaged Goods</span>
-            <span className="text-xl font-bold text-amber-600">{summary.damaged_qty} units</span>
-            <span className="text-[11px] text-slate-400 block">{summary.damaged_count} damage records</span>
+
+          <div className="bg-slate-50/60 border border-slate-200/80 rounded-xl p-4 flex items-center gap-4">
+            <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-amber-600">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 font-medium block">Damaged Goods</span>
+              <span className="text-2xl font-bold text-amber-600">{summary.damaged_qty} units</span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">{summary.damaged_count} damage records &bull; {TIMELINE_LABELS[dateRange]}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -308,7 +402,7 @@ export default function ReportsAnalytics() {
             >
               <option value="all">All Movements</option>
               <option value="in">Stock Additions (In)</option>
-              <option value="out">Dispatches (Out)</option>
+              <option value="out">Stock Out</option>
               <option value="adjust">Adjustments</option>
               <option value="damage">Damage Write-offs</option>
             </select>
@@ -324,8 +418,9 @@ export default function ReportsAnalytics() {
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
-              <option value="7days">Last 7 Days</option>
-              <option value="30days">Last 30 Days</option>
+              <option value="7days">1 Week (Last 7 Days)</option>
+              <option value="30days">30 Days (Last Month)</option>
+              <option value="90days">90 Days (Last Quarter)</option>
             </select>
           </div>
         </div>
@@ -384,7 +479,7 @@ export default function ReportsAnalytics() {
                       {m.movement_type === 'in' ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 w-fit"><ArrowDownLeft className="w-3 h-3" /> STOCK IN</span>
                       ) : m.movement_type === 'out' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700 w-fit"><ArrowUpRight className="w-3 h-3" /> DISPATCH</span>
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700 w-fit"><ArrowUpRight className="w-3 h-3" /> STOCK OUT</span>
                       ) : m.movement_type === 'damage' ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 w-fit">DAMAGE</span>
                       ) : (
