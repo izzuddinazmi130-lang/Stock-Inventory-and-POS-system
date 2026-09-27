@@ -3,7 +3,6 @@ import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
-import { useHardwareScanner } from '../../hooks/useHardwareScanner';
 import {
   Camera, QrCode, UploadCloud, CheckCircle, AlertCircle,
   ShoppingCart, Plus, Minus, Trash2, RefreshCw, X, Tag,
@@ -110,8 +109,7 @@ export default function QrScanner({ embedded = false }) {
   const [successReceipt, setSuccessReceipt] = useState(null);
 
   const html5QrCodeRef = useRef(null);
-  const cameraScanCooldownRef = useRef(false);
-  const manualInputRef = useRef(null);
+  const scanCooldownRef = useRef(false);
 
   // Automatic branch resolution: Branch Admins seamlessly inherit their account branch
   const effectiveBranchId = useMemo(() => {
@@ -219,9 +217,6 @@ export default function QrScanner({ embedded = false }) {
         camConfig,
         { fps: 15, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-          if (cameraScanCooldownRef.current) return;
-          cameraScanCooldownRef.current = true;
-          setTimeout(() => { cameraScanCooldownRef.current = false; }, 1200);
           handleScannedCode(decodedText);
         },
         () => {}
@@ -279,6 +274,10 @@ export default function QrScanner({ embedded = false }) {
 
   // Handle scanned code (from Camera or Upload)
   const handleScannedCode = async (rawCode) => {
+    if (scanCooldownRef.current) return;
+    scanCooldownRef.current = true;
+    setTimeout(() => { scanCooldownRef.current = false; }, 1200);
+
     playBeep(880, 0.15);
     setErrorMessage(null);
 
@@ -300,14 +299,6 @@ export default function QrScanner({ embedded = false }) {
       setErrorMessage(err.response?.data?.message || `Failed to lookup scanned code: '${rawCode}'`);
     }
   };
-
-  useHardwareScanner(handleScannedCode, {
-    enabled: !isSuperAdmin,
-    maxKeystrokeDelay: 50,
-    minLength: 3,
-    prefix: null,
-    scanInputRef: manualInputRef
-  });
 
   // Manual SKU Search Submit
   const handleManualSearch = async (e) => {
@@ -1112,7 +1103,6 @@ export default function QrScanner({ embedded = false }) {
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Product SKU or Barcode Code</label>
                       <div className="relative">
                         <input
-                          ref={manualInputRef}
                           type="text"
                           placeholder="e.g. KA-KA001 or type code..."
                           value={manualInput}
@@ -1387,7 +1377,7 @@ export default function QrScanner({ embedded = false }) {
 
       {/* Success Receipt Modal */}
       {successReceipt && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-150">
             <div className="text-center mb-4">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
