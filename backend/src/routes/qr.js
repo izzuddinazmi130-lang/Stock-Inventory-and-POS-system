@@ -77,7 +77,7 @@ router.get('/generate/:id', authenticateToken, async (req, res) => {
     }
 
     const branchCode = item.branch_code || `BR${item.branch_id}`;
-    const qrCodeString = `HQ-ITEM-${branchCode}-${item.item_code}`;
+    const qrCodeString = `HQ-${branchCode.toUpperCase()}-${item.item_code}-${item.id}`;
 
     // Generate SVG
     const svgContent = await QRCode.toString(qrCodeString, { type: 'svg', margin: 1, width: 260 });

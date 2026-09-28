@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const QRCode = require('qrcode');
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
 
@@ -34,9 +35,8 @@ async function generateSku(branchCode, categoryPrefix, connection) {
 }
 
 // Generate unique QR token
-function generateQrToken(branchCode, sku) {
-  const ts = Date.now().toString(36).toUpperCase();
-  return `HQ-${branchCode.toUpperCase()}-${sku}-${ts}`;
+function generateQrToken(branchCode, sku, productId = '') {
+  return `HQ-${branchCode.toUpperCase()}-${sku}${productId ? `-${productId}` : ''}`;
 }
 
 // ─── GET /api/products/form-config ──────────────────────────────────────────
@@ -417,7 +417,7 @@ router.post('/', authenticateToken, async (req, res) => {
       quantity, minimum_quantity, min_quantity,
       unit_price, selling_price, price_dealer, price_staff, cost_price,
       variants, mark_as_new, new_duration_days,
-      branch_id, branch_ids
+      branch_id, branch_ids, size_variants
     } = req.body;
 
     if (!item_name || !category) {
@@ -435,6 +435,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
     await connection.beginTransaction();
     const createdItems = [];
+    const createdProducts = [];
+    const createdProductIds = [];
+    const sizeRows = Array.isArray(size_variants) && size_variants.length > 0
+      ? size_variants.filter(row => row && String(row.size || '').trim())
+      : [null];
 
     // All branches must belong to the same business for a single product, get business_id from first branch
     const [firstBranch] = await connection.query('SELECT business_id, branch_code FROM branches WHERE id = ?', [targetBranchIds[0]]);
@@ -446,23 +451,6 @@ router.post('/', authenticateToken, async (req, res) => {
     const branchCode = firstBranch[0].branch_code || `BR${targetBranchIds[0]}`;
     const catPrefix = category.trim().replace(/[^a-zA-Z0-9]/g, '').substring(0, 2);
 
-    const sku = await generateSku(branchCode, catPrefix, connection);
-    
-    // Check SKU uniqueness
-    const [dup] = await connection.query('SELECT id FROM products WHERE sku = ?', [sku]);
-    if (dup.length > 0) {
-      await connection.rollback(); connection.release();
-      return res.status(400).json({ success: false, message: `SKU ${sku} already exists.` });
-    }
-
-    const minQty = parseInt(minimum_quantity || min_quantity) || 5;
-    const initialQty = parseInt(quantity) || 0;
-    const sPrice = parseFloat(selling_price) || 0.00;
-    const dPrice = parseFloat(price_dealer) || 0.00;
-    const stPrice = parseFloat(price_staff) || 0.00;
-    const cPrice = parseFloat(cost_price || unit_price) || 0.00;
-    const status = initialQty > 0 ? 'available' : 'out_of_stock';
-    
     let newUntil = null;
     if (mark_as_new && new_duration_days) {
         const days = parseInt(new_duration_days);
@@ -472,43 +460,56 @@ router.post('/', authenticateToken, async (req, res) => {
         }
     }
 
-    // Insert Product
-    const [productResult] = await connection.query(
-        `INSERT INTO products (business_id, sku, name, category, description, price_customer, price_dealer, price_staff, cost_price, min_quantity, status, new_until, created_by, created_at, updated_at) 
+    for (const sizeRow of sizeRows) {
+      const sku = await generateSku(branchCode, catPrefix, connection);
+      const rowValue = (value, fallback) => value === undefined || value === '' ? fallback : value;
+      const minQty = parseInt(rowValue(sizeRow?.minimum_quantity, minimum_quantity ?? min_quantity ?? 5), 10) || 0;
+      const initialQty = parseInt(rowValue(sizeRow?.quantity, quantity), 10) || 0;
+      const sPrice = parseFloat(rowValue(sizeRow?.selling_price, selling_price)) || 0.00;
+      const dPrice = parseFloat(rowValue(sizeRow?.price_dealer, price_dealer)) || 0.00;
+      const stPrice = parseFloat(rowValue(sizeRow?.price_staff, price_staff)) || 0.00;
+      const cPrice = parseFloat(rowValue(sizeRow?.unit_price, cost_price || unit_price)) || 0.00;
+      const status = initialQty > 0 ? 'available' : 'out_of_stock';
+      const productVariants = { ...(variants && typeof variants === 'object' ? variants : {}) };
+      if (sizeRow?.size) productVariants.size = String(sizeRow.size).trim();
+
+      const [productResult] = await connection.query(
+        `INSERT INTO products (business_id, sku, name, category, description, price_customer, price_dealer, price_staff, cost_price, min_quantity, status, new_until, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [businessId, sku, item_name.trim(), category.trim(), description || null, sPrice, dPrice, stPrice, cPrice, minQty, status, newUntil, req.user.id]
-    );
-    const productId = productResult.insertId;
+      );
+      const productId = productResult.insertId;
+      createdProductIds.push(productId);
 
-    // Insert Variants
-    if (variants && typeof variants === 'object') {
-        for (const [key, value] of Object.entries(variants)) {
-            if (value) {
-                await connection.query(
-                    'INSERT INTO product_variant_values (product_id, attribute_key, value) VALUES (?, ?, ?)',
-                    [productId, key, value]
-                );
-            }
+      for (const [key, value] of Object.entries(productVariants)) {
+        if (value) {
+          await connection.query(
+            'INSERT INTO product_variant_values (product_id, attribute_key, value) VALUES (?, ?, ?)',
+            [productId, key, value]
+          );
         }
-    }
+      }
 
-    // Insert Stock per Branch
-    for (const targetBranch of targetBranchIds) {
+      let qrToken = '';
+      for (const targetBranch of targetBranchIds) {
         await connection.query(
-            'INSERT INTO product_branch_stock (product_id, branch_id, quantity) VALUES (?, ?, ?)',
-            [productId, targetBranch, initialQty]
+          'INSERT INTO product_branch_stock (product_id, branch_id, quantity) VALUES (?, ?, ?)',
+          [productId, targetBranch, initialQty]
         );
 
         if (initialQty > 0) {
-            await connection.query(
-                `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at) 
-                 VALUES (?, ?, 'in', ?, 0, ?, ?, ?, 'Initial Inventory Addition', ?, NOW())`,
-                [targetBranch, productId, initialQty, initialQty, cPrice, sPrice, req.user.id]
-            );
+          await connection.query(
+            `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at)
+             VALUES (?, ?, 'in', ?, 0, ?, ?, ?, 'Initial Inventory Addition', ?, NOW())`,
+            [targetBranch, productId, initialQty, initialQty, cPrice, sPrice, req.user.id]
+          );
         }
-        
-        const qrToken = generateQrToken(branchCode, sku);
+
+          qrToken = generateQrToken(branchCode, sku, productId);
         createdItems.push({ id: productId, sku, qr_code: qrToken, branch_id: targetBranch, branchCode });
+      }
+      const qrSvg = await QRCode.toString(qrToken, { type: 'svg', margin: 1, width: 180 });
+      createdProducts.push({ id: productId, sku, item_code: sku, item_name: item_name.trim(), qr_code: qrToken, qr_svg: qrSvg, size: productVariants.size || null, variants: productVariants, quantity: initialQty, minimum_quantity: minQty, selling_price: sPrice, price_dealer: dPrice, price_staff: stPrice, unit_price: cPrice });
     }
 
     await connection.commit();
@@ -519,11 +520,11 @@ router.post('/', authenticateToken, async (req, res) => {
          FROM products p 
          JOIN product_branch_stock pbs ON pbs.product_id = p.id 
          JOIN branches br ON br.id = pbs.branch_id 
-         WHERE p.id = ?`,
-        [productId]
+       WHERE p.id IN (?)`,
+      [createdProductIds]
     );
 
-    await recordAuditLog(req.user.id, req.user.role, 'CREATE_ITEM', 'products', productId, null, { item_name, category, branches: targetBranchIds }, req);
+    await recordAuditLog(req.user.id, req.user.role, 'CREATE_ITEM', 'products', createdProductIds[0], null, { item_name, category, sizes: sizeRows.map(row => row?.size).filter(Boolean), branches: targetBranchIds }, req);
 
     const io = req.app.get('io');
     if (io) {
@@ -532,9 +533,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Product '${item_name}' created in ${targetBranchIds.length} branch(es) successfully!`,
+      message: `${createdProductIds.length} product size(s) created in ${targetBranchIds.length} branch(es) successfully!`,
       item: createdRows[0] || null,
+      products: createdProducts,
       created_items: createdItems,
+      total_products: createdProductIds.length,
       total_branches: targetBranchIds.length
     });
   } catch (err) {

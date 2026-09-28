@@ -1,0 +1,105 @@
+[
+  {
+    "product_id": 7,
+    "name": "Kaftan Safira Dark Blue",
+    "variant": {
+      "colour": "Dark Blue",
+      "size": "M",
+      "model": "Safira Collection"
+    },
+    "old_sku": "KA-B01",
+    "new_sku": "A4266465"
+  },
+  {
+    "product_id": 8,
+    "name": "Kaftan Safira Black",
+    "variant": {
+      "colour": "Black",
+      "model": "Safira Collection",
+      "size": "L"
+    },
+    "old_sku": "KA-KA001",
+    "new_sku": "00369A36"
+  },
+  {
+    "product_id": 9,
+    "name": "Headphone Sony",
+    "variant": {
+      "model": "Sony MXC1290"
+    },
+    "old_sku": "AS-HE001",
+    "new_sku": "92242713"
+  },
+  {
+    "product_id": 10,
+    "name": "Kaftan Safira Red",
+    "variant": {
+      "colour": "Red",
+      "size": "L",
+      "model": "Safira Collection"
+    },
+    "old_sku": "KA-KA002",
+    "new_sku": "198C70C0"
+  },
+  {
+    "product_id": 12,
+    "name": "Kaftan Delima Maroon",
+    "variant": {
+      "colour": "Maroon",
+      "size": "S",
+      "model": "Delima"
+    },
+    "old_sku": "KA-KA003",
+    "new_sku": "5421084D"
+  },
+  {
+    "product_id": 13,
+    "name": "Kaftan Safira Sage Green",
+    "variant": {
+      "colour": "Sage Green M",
+      "model": "Safira"
+    },
+    "old_sku": "KA-KAFTAN-SAFIRA-SAGE-GREEN-SAGE-GREEN-M-SAFIRA",
+    "new_sku": "4467D961"
+  },
+  {
+    "product_id": 14,
+    "name": "Kaftan Safira Sage Green",
+    "variant": {
+      "colour": "Sage Green L",
+      "model": "Safira"
+    },
+    "old_sku": "KA-KAFTAN-SAFIRA-SAGE-GREEN-SAGE-GREEN-L-SAFIRA",
+    "new_sku": "3AF31C1C"
+  },
+  {
+    "product_id": 15,
+    "name": "Kaftan Safira Sage Green",
+    "variant": {
+      "colour": "Sage Green S",
+      "model": "Safira"
+    },
+    "old_sku": "KA-KAFTAN-SAFIRA-SAGE-GREEN-SAGE-GREEN-S-SAFIRA",
+    "new_sku": "58C3CE46"
+  },
+  {
+    "product_id": 16,
+    "name": "Kaftan Safira Sage Green",
+    "variant": {
+      "colour": "Sage Green XL",
+      "model": "Safira"
+    },
+    "old_sku": "KA-KAFTAN-SAFIRA-SAGE-GREEN-SAGE-GREEN-XL-SAFIRA",
+    "new_sku": "FE5E2C31"
+  },
+  {
+    "product_id": 17,
+    "name": "Kaftan Safira Sage Green",
+    "variant": {
+      "colour": "Sage Green XXL",
+      "model": "Safira"
+    },
+    "old_sku": "KA-KAFTAN-SAFIRA-SAGE-GREEN-SAGE-GREEN-XXL-SAFIRA",
+    "new_sku": "60EFE883"
+  }
+]

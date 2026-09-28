@@ -9,6 +9,18 @@ import {
   AlertTriangle, RefreshCw, Plus, Minus, ArrowLeft, Layers
 } from 'lucide-react';
 
+function getAttributeOptions(options) {
+  if (Array.isArray(options)) return options;
+  if (typeof options !== 'string') return [];
+
+  try {
+    const parsed = JSON.parse(options);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return options.split(',').map(option => option.trim()).filter(Boolean);
+  }
+}
+
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 function StepBar({ step }) {
   const steps = ['Select Branches', 'Product Details', 'Review & Create'];
@@ -66,6 +78,7 @@ export default function AddProductPage() {
     item_name:       '',
     category:        '',
     variants:        {},
+    size_variants:   [],
     mark_as_new:     false,
     new_duration_days: 14,
     quantity:        0,
@@ -130,7 +143,7 @@ export default function AddProductPage() {
         if (r.data.success) {
           setCategories(r.data.categories || []);
           setVariantAttributes(r.data.attributes || []);
-          setForm(prev => ({ ...prev, category: '', variants: {} }));
+          setForm(prev => ({ ...prev, category: '', variants: {}, size_variants: [] }));
         }
       })
       .catch(() => {});
@@ -163,6 +176,35 @@ export default function AddProductPage() {
     setForm(f => ({ ...f, [name]: value }));
   };
 
+  const toggleSize = (size) => {
+    setForm(prev => {
+      const exists = prev.size_variants.some(row => row.size === size);
+      return {
+        ...prev,
+        size_variants: exists
+          ? prev.size_variants.filter(row => row.size !== size)
+          : [...prev.size_variants, {
+              size,
+              quantity: 0,
+              minimum_quantity: prev.minimum_quantity,
+              unit_price: prev.unit_price,
+              selling_price: prev.selling_price,
+              price_dealer: prev.price_dealer,
+              price_staff: prev.price_staff,
+            }]
+      };
+    });
+  };
+
+  const updateSizeVariant = (size, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      size_variants: prev.size_variants.map(row => (
+        row.size === size ? { ...row, [field]: value } : row
+      ))
+    }));
+  };
+
   const toggleBranch = (brId) => {
     setSelectedBranches(prev =>
       prev.includes(brId) ? prev.filter(id => id !== brId) : [...prev, brId]
@@ -179,6 +221,10 @@ export default function AddProductPage() {
   const goStep3 = () => {
     if (!form.item_name.trim())    { setError('Product name is required.'); return; }
     if (!form.category.trim()) { setError('Category is required.'); return; }
+    if (sizeAttribute && form.size_variants.length === 0) { setError('Please select at least one size.'); return; }
+    if (form.size_variants.length > 0 && form.size_variants.some(row => !row.size)) {
+      setError('Each size must have a value.'); return;
+    }
     setError('');
     setStep(3);
   };
@@ -197,6 +243,7 @@ export default function AddProductPage() {
         selling_price:    parseFloat(form.selling_price) || 0,
         price_dealer:     parseFloat(form.price_dealer) || 0,
         price_staff:      parseFloat(form.price_staff) || 0,
+        size_variants:     form.size_variants,
         branch_ids:       selectedBranches,
         branch_id:        selectedBranches[0],
         variants:         form.variants,
@@ -219,6 +266,7 @@ export default function AddProductPage() {
   };
 
   const selectedBranchObjs = branches.filter(b => selectedBranches.includes(b.id));
+  const sizeAttribute = variantAttributes.find(attr => attr.attribute_key === 'size' && attr.input_type === 'select');
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -422,25 +470,68 @@ export default function AddProductPage() {
                     <Layers className="w-4 h-4 text-indigo-600" />
                     <label className="block text-sm font-medium text-slate-700 mb-1">Additional Custom Attributes</label>
                   </div>
-                  {variantAttributes.map(attr => (
+                  {variantAttributes.filter(attr => attr.attribute_key !== 'size').map(attr => (
                     <div key={attr.attribute_key} className="mb-3">
                       <label className="block text-sm font-medium text-slate-700 mb-1">{attr.label}</label>
                       {attr.input_type === 'select' ? (
                         <select value={form.variants?.[attr.attribute_key] || ''} onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                           <option value="">Select {attr.label}</option>
-                          {(Array.isArray(attr.options) ? attr.options : []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          {getAttributeOptions(attr.options).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                       ) : (
                         <input type="text" value={form.variants?.[attr.attribute_key] || ''} onChange={e => setForm(prev => ({ ...prev, variants: { ...prev.variants, [attr.attribute_key]: e.target.value } }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder={attr.label} />
                       )}
                     </div>
                   ))}
+                  {sizeAttribute && (
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">{sizeAttribute.label}s</label>
+                      <div className="flex flex-wrap gap-2">
+                        {getAttributeOptions(sizeAttribute.options).map(size => {
+                          const selected = form.size_variants.some(row => row.size === size);
+                          return (
+                            <button key={size} type="button" onClick={() => toggleSize(size)} className={`min-w-12 h-9 px-3 rounded-lg border text-sm font-semibold transition-colors ${selected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300'}`}>
+                              {size}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {form.size_variants.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          {form.size_variants.map(row => (
+                            <div key={row.size} className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                              <div className="mb-3 flex items-center justify-between">
+                                <span className="text-sm font-bold text-indigo-900">Size {row.size}</span>
+                                <button type="button" onClick={() => toggleSize(row.size)} className="text-xs font-medium text-rose-600 hover:text-rose-700">Remove</button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                {[
+                                  ['quantity', 'Initial Stock'],
+                                  ['minimum_quantity', 'Low Stock'],
+                                  ['unit_price', 'Cost Price'],
+                                  ['selling_price', 'Customer Price'],
+                                  ['price_dealer', 'Dealer Price'],
+                                  ['price_staff', 'Staff Price'],
+                                ].map(([field, label]) => (
+                                  <label key={field} className="text-xs font-medium text-slate-600">
+                                    {label}
+                                    <input type="number" min="0" step={field.includes('price') || field === 'unit_price' ? '0.01' : '1'} value={row[field]} onChange={e => updateSizeVariant(row.size, field, e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">No extra product fields are configured for this business.</div>
               )}
-              {/* Stock */}
-              <div className="grid grid-cols-2 gap-3">
+              {!sizeAttribute && <>
+                {/* Stock */}
+                <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Initial Stock *</label>
                   <div className="flex items-center gap-2">
@@ -468,6 +559,7 @@ export default function AddProductPage() {
                     value={form.minimum_quantity} onChange={handleFormChange} />
                 </div>
               </div>
+              </>}
 
               {/* Mark as New toggle */}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -503,8 +595,9 @@ export default function AddProductPage() {
                 </div>
               )}
 
-              {/* 3-Tier Pricing */}
-              <div>
+              {!sizeAttribute && <>
+                {/* 3-Tier Pricing */}
+                <div>
                 <div className="flex items-center gap-1 mb-2">
                   <DollarSign className="w-4 h-4 text-indigo-600" />
                   <label className="block text-sm font-medium text-slate-700">3-Tier Pricing</label>
@@ -533,10 +626,10 @@ export default function AddProductPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+                </div>
 
-              {/* Cost Price (optional) */}
-              <div>
+                {/* Cost Price (optional) */}
+                <div>
                 <label className="block text-sm font-medium text-slate-500 mb-1">
                   Cost / Purchase Price (internal use, optional)
                 </label>
@@ -546,7 +639,8 @@ export default function AddProductPage() {
                     className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 font-mono"
                     placeholder="0.00" value={form.unit_price} onChange={handleFormChange} />
                 </div>
-              </div>
+                </div>
+              </>}
             </div>
 
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
@@ -585,19 +679,19 @@ export default function AddProductPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-                <div className="space-y-1">
+                {form.size_variants.length === 0 && <div className="space-y-1">
                   <div className="text-[11px] font-semibold tracking-wide uppercase text-slate-400">Stock</div>
                   <div className="text-slate-900 font-mono font-bold">{form.quantity} units initial</div>
                   <div className="text-amber-600">Min threshold: {form.minimum_quantity}</div>
-                </div>
+                </div>}
                 <div className="space-y-1">
                   <div className="text-[11px] font-semibold tracking-wide uppercase text-slate-400">SKU (auto-generated)</div>
-                  <div className="font-mono text-indigo-600 font-bold">{previewSku || 'Generating...'}</div>
+                  <div className="font-mono text-indigo-600 font-bold">{form.size_variants.length > 0 ? `${form.size_variants.length} unique SKUs` : (previewSku || 'Generating...')}</div>
                 </div>
               </div>
 
               {/* Pricing */}
-              <div className="space-y-2 pt-3 border-t border-slate-200">
+              {form.size_variants.length === 0 && <div className="space-y-2 pt-3 border-t border-slate-200">
                 {[
                   { label: 'Customer Price', key: 'selling_price', icon: ShoppingBag, color: 'text-emerald-600' },
                   { label: 'Dealer Price',   key: 'price_dealer',  icon: Briefcase,   color: 'text-indigo-600'  },
@@ -609,7 +703,22 @@ export default function AddProductPage() {
                     <div className="font-mono font-bold text-sm text-slate-900">RM {parseFloat(form[p.key] || 0).toFixed(2)}</div>
                   </div>
                 ))}
-              </div>
+              </div>}
+              {form.size_variants.length > 0 && (
+                <div className="space-y-2 border-t border-slate-200 pt-3">
+                  {form.size_variants.map(row => (
+                    <div key={row.size} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <div className="mb-2 text-sm font-bold text-slate-900">Size {row.size}</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <span>Stock: <strong>{row.quantity}</strong></span>
+                        <span>Customer: <strong>RM {parseFloat(row.selling_price || 0).toFixed(2)}</strong></span>
+                        <span>Dealer: <strong>RM {parseFloat(row.price_dealer || 0).toFixed(2)}</strong></span>
+                        <span>Staff: <strong>RM {parseFloat(row.price_staff || 0).toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Target Branches */}
@@ -656,7 +765,29 @@ export default function AddProductPage() {
             </div>
 
             {/* Product detail card */}
-            {createdProduct.item && (
+            {createdProduct.products?.length > 0 && (
+              <div className="space-y-3">
+                {createdProduct.products.map(product => (
+                  <div key={product.id} className="bg-white border border-emerald-200 rounded-2xl p-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-extrabold text-slate-900">{form.item_name} {product.size && `- Size ${product.size}`}</h3>
+                        <div className="mt-1 text-xs text-slate-500">SKU <span className="font-mono font-bold text-indigo-600">{product.sku}</span></div>
+                      </div>
+                      <QrCode className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                      <div className="rounded-lg bg-slate-50 p-2">QR token<div className="mt-1 break-all font-mono text-[10px] text-slate-600">{product.qr_code}</div>{product.qr_svg && <div className="mt-2 h-20 w-20 bg-white" dangerouslySetInnerHTML={{ __html: product.qr_svg }} />}</div>
+                      <div className="rounded-lg bg-slate-50 p-2">Stock<div className="mt-1 font-mono font-bold">{product.quantity}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-2">Customer<div className="mt-1 font-mono font-bold">RM {parseFloat(product.selling_price || 0).toFixed(2)}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-2">Dealer / Staff<div className="mt-1 font-mono font-bold">RM {parseFloat(product.price_dealer || 0).toFixed(2)} / {parseFloat(product.price_staff || 0).toFixed(2)}</div></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(!createdProduct.products || createdProduct.products.length === 0) && createdProduct.item && (
               <div className="bg-white border border-emerald-200 rounded-2xl p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -668,7 +799,7 @@ export default function AddProductPage() {
                       ))}
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700">
                     <Sparkles className="w-3 h-3" /> New
                   </span>
                 </div>
@@ -726,12 +857,12 @@ export default function AddProductPage() {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => { setStep(isSuperAdmin ? 1 : 2); setForm({ item_name:'', category:'', variants:{}, mark_as_new:false, new_duration_days:14, quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); setError(''); }}
-                className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                onClick={() => { setStep(isSuperAdmin ? 1 : 2); setForm({ item_name:'', category:'', variants:{}, size_variants:[], mark_as_new:false, new_duration_days:14, quantity:0, minimum_quantity:5, unit_price:0, selling_price:0, price_dealer:0, price_staff:0 }); setCreatedProduct(null); setPreviewSku(''); setPreviewQr(''); setError(''); }}
+                className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors justify-center"
               >
                 <Plus className="w-4 h-4" /> Add Another Product
               </button>
-              <button onClick={() => navigate('/products')} className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center">
+              <button onClick={() => navigate('/products')} className="flex-1 inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                 <Package className="w-4 h-4" /> View All Products
               </button>
             </div>
