@@ -300,6 +300,44 @@ export default function QrScanner({ embedded = false }) {
     }
   };
 
+  // Hardware QR scanners usually act like keyboards and finish with Enter or Tab.
+  // Capture scans even when the manual input is not focused, without interfering
+  // with normal typing in form controls.
+  useEffect(() => {
+    let scanBuffer = '';
+    let lastKeyAt = 0;
+
+    const handleHardwareKey = event => {
+      const target = event.target;
+      const isFormControl = target instanceof HTMLElement && (
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+        target.isContentEditable
+      );
+      if (isFormControl) return;
+
+      const now = Date.now();
+      if (now - lastKeyAt > 100) scanBuffer = '';
+      lastKeyAt = now;
+
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        if (scanBuffer.length >= 3) {
+          event.preventDefault();
+          const code = scanBuffer;
+          scanBuffer = '';
+          handleScannedCode(code);
+        }
+        return;
+      }
+
+      if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+        scanBuffer += event.key;
+      }
+    };
+
+    document.addEventListener('keydown', handleHardwareKey, true);
+    return () => document.removeEventListener('keydown', handleHardwareKey, true);
+  }, [handleScannedCode]);
+
   // Manual SKU Search Submit
   const handleManualSearch = async (e) => {
     if (e) e.preventDefault();
@@ -1225,6 +1263,13 @@ export default function QrScanner({ embedded = false }) {
                               )}
                             </div>
                             <h4 className="text-sm font-bold text-slate-900 mt-0.5">{item.name}</h4>
+                            {(item.colour || item.size || item.model) && (
+                              <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
+                                {item.colour && <span className="rounded-full bg-pink-50 px-2 py-0.5 text-pink-700">Colour: {item.colour}</span>}
+                                {item.size && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">Size: {item.size}</span>}
+                                {item.model && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-teal-700">Model: {item.model}</span>}
+                              </div>
+                            )}
                           </div>
 
                           <button

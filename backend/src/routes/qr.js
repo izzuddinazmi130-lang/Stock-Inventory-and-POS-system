@@ -15,9 +15,13 @@ function parseQrCode(rawCode) {
     code = code.substring(8).trim();
   }
 
-  // Format 2: HQ-{branchCode}-{sku}-{timestamp}
-  const match2 = code.match(/^HQ-[^-]+-(.+)-[A-Z0-9]+$/);
-  if (match2) return match2[1].trim();
+  // Format 2: HQ-{branchCode}-{sku}-{productId}; SKU may contain hyphens.
+  const productToken = code.match(/^HQ-[^-]+-(.+)-(\d+)$/);
+  if (productToken) return productToken[1].trim();
+
+  // Format 3: legacy HQ-{branchCode}-{sku}-{timestamp} token.
+  const legacyToken = code.match(/^HQ-[^-]+-(.+)-[A-Z0-9]+$/);
+  if (legacyToken) return legacyToken[1].trim();
 
   return code;
 }
@@ -210,6 +214,14 @@ router.get('/lookup', authenticateToken, async (req, res) => {
     }
 
     const product = rows[0];
+    const [variantRows] = await pool.query(
+      'SELECT attribute_key, value FROM product_variant_values WHERE product_id = ? ORDER BY id',
+      [product.id]
+    );
+    const variants = {};
+    variantRows.forEach(row => {
+      if (row.value) variants[row.attribute_key] = row.value;
+    });
 
     return res.json({
       success: true,
@@ -232,7 +244,11 @@ router.get('/lookup', authenticateToken, async (req, res) => {
         branch_id: targetBranch,
         branch_name: product.branch_name,
         in_stock: parseInt(product.in_stock || 0),
-        quantity: parseInt(product.in_stock || 0)
+        quantity: parseInt(product.in_stock || 0),
+        variants,
+        colour: variants.colour || variants.color || null,
+        size: variants.size || null,
+        model: variants.model || null
       }
     });
 

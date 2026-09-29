@@ -16,22 +16,29 @@ const getEffectiveBranchId = (user, queryBranchId) => {
   return null;
 };
 
-// Generate a unique SKU for a branch + category combo
+// Canonical SKU format used by existing products and POS: BRANCH-CATEGORY###.
 async function generateSku(branchCode, categoryPrefix, connection) {
   const db = connection || pool;
   const prefix = `${branchCode.toUpperCase()}-${categoryPrefix.toUpperCase().substring(0, 2)}`;
-  // Find highest existing sequence for this prefix
   const [rows] = await db.query(
-    `SELECT sku FROM products WHERE sku LIKE ? ORDER BY sku DESC LIMIT 1`,
+    `SELECT sku FROM products WHERE sku LIKE ?`,
     [`${prefix}%`]
   );
-  let seq = 1;
-  if (rows.length > 0) {
-    const lastCode = rows[0].sku;
-    const lastNum = parseInt(lastCode.replace(prefix, ''), 10);
-    if (!isNaN(lastNum)) seq = lastNum + 1;
+  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sequencePattern = new RegExp(`^${escapedPrefix}(\\d+)$`, 'i');
+  const usedSequences = rows
+    .map(row => String(row.sku || '').match(sequencePattern))
+    .filter(Boolean)
+    .map(match => Number(match[1]));
+  let seq = usedSequences.length > 0 ? Math.max(...usedSequences) + 1 : 1;
+  let candidate = `${prefix}${String(seq).padStart(3, '0')}`;
+
+  while (true) {
+    const [existing] = await db.query('SELECT id FROM products WHERE sku = ? LIMIT 1', [candidate]);
+    if (existing.length === 0) return candidate;
+    seq += 1;
+    candidate = `${prefix}${String(seq).padStart(3, '0')}`;
   }
-  return `${prefix}${String(seq).padStart(3, '0')}`;
 }
 
 // Generate unique QR token
