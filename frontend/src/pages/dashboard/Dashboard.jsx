@@ -3,17 +3,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useBusiness } from '../../context/BusinessContext';
 import Layout from '../../components/Layout';
-import KpiCard from '../../components/KpiCard';
 import api from '../../services/api';
-import { Package, Boxes, AlertTriangle, UserCheck, ArrowUpRight, ArrowDownLeft, RefreshCw, Plus, Building2, Sparkles, Camera } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-const BIZ_PALETTE = ['#B4502E', '#2563EB', '#059669', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#4F46E5'];
-const getBusinessColor = (biz, idx) => {
-  if (biz.industry === 'fashion' || (biz.name || '').toLowerCase().includes('kaftan')) return '#B4502E';
-  if (biz.industry === 'technology' || (biz.name || '').toLowerCase().includes('tech')) return '#2563EB';
-  return BIZ_PALETTE[idx % BIZ_PALETTE.length];
-};
+import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store, Sparkles, ScanLine, ArrowRight, PackageCheck, X } from 'lucide-react';
+import {
+  Button, Card, CardHeader, KpiCard, PageHeader, StatusPill, Badge, BusinessDot, EmptyState, ErrorState,
+  Table, THead, TBody, TH, TR, TD, TableState, Skeleton, cn, focusRing,
+} from '../../components/ui';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -22,6 +17,9 @@ export default function Dashboard() {
   const { selectedBusiness, setSelectedBusiness } = useBusiness();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [freshIds, setFreshIds] = useState(() => new Set());
+  const seenIds = React.useRef(null);
   const [stats, setStats] = useState({
     totalItems: 0,
     totalStock: 0,
@@ -41,6 +39,7 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
 
       if (isSuperAdmin) {
         const scopedParams = {};
@@ -109,6 +108,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error('Dashboard load error:', err);
+      setLoadError(err.response?.data?.message || 'The dashboard could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -140,264 +140,216 @@ export default function Dashboard() {
     };
   }, [socket, selectedBusiness]);
 
-  // Derived metrics
-  const lowStockProducts = products.filter(p => parseInt(p.quantity) <= parseInt(p.minimum_quantity || p.min_quantity || 5)).slice(0, 5);
+  // Rows that arrived since the last load (live updates) get a brief highlight
+  useEffect(() => {
+    const ids = recentMovements.map(m => m.id);
+    if (seenIds.current) setFreshIds(new Set(ids.filter(id => !seenIds.current.has(id))));
+    seenIds.current = new Set(ids);
+  }, [recentMovements]);
+
+  // Derived metrics (stock level per branch row comes from the server's stock_status)
+  const lowStockProducts = products
+    .filter(p => (p.stock_status ? p.stock_status !== 'ok' : parseInt(p.quantity) <= parseInt(p.minimum_quantity ?? p.min_quantity ?? 0)))
+    .slice(0, 5);
+  const firstLoad = loading && recentMovements.length === 0 && products.length === 0;
+
+  const scopeName = isSuperAdmin ? (selectedBusiness?.name || 'all businesses') : (user?.branch_name || 'this branch');
 
   return (
     <Layout>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          {isSuperAdmin ? (
-            <>
-              <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted mb-1">
-                Business / {selectedBusiness?.name || 'All Businesses'} / Overview
-              </p>
-              <h1 className="text-2xl font-bold text-ink">
-                {selectedBusiness?.name || 'HQ'} — Inventory Overview
-              </h1>
-            </>
-          ) : (
-            <>
-              <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted mb-1">
-                My Branch / Overview
-              </p>
-              <h1 className="text-2xl font-bold text-ink">
-                {user?.branch_name || 'My Branch'} — Inventory Overview
-              </h1>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchData} className="inline-flex items-center gap-2 h-9 px-3 text-ink-muted text-sm font-medium rounded-lg hover:bg-sunken hover:text-ink transition-colors">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
-          <Link to="/qr/scan" className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors shadow-sm">
-            <Camera className="w-4 h-4 text-accent" /> POS Scanner
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={isSuperAdmin ? (selectedBusiness ? `${selectedBusiness.name} overview` : 'Overview') : `${user?.branch_name || 'My branch'} overview`}
+        description={isSuperAdmin ? 'Stock, alerts and activity across every business and branch.' : 'Stock, alerts and recent activity in your branch.'}
+        meta={isSuperAdmin && selectedBusiness ? (
+          <Badge tone="accent" dot>
+            Filtered: {selectedBusiness.name}
+            <button type="button" onClick={() => setSelectedBusiness(null)} className={cn('-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-accent-muted', focusRing)} aria-label="Clear business filter">
+              <X className="w-3 h-3" aria-hidden="true" />
+            </button>
+          </Badge>
+        ) : null}
+        actions={<>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+          <Button variant="secondary" icon={ScanLine} to="/qr/scan">{isSuperAdmin ? 'POS overview' : 'Open point of sale'}</Button>
+        </>}
+      />
 
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSuperAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-4 mb-6`}>
+      {loadError && recentMovements.length === 0 && products.length === 0 ? (
+        <Card><ErrorState description={loadError} onRetry={fetchData} /></Card>
+      ) : (
+      <>
+      <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6', isSuperAdmin ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-3')}>
         {isSuperAdmin ? (
           <>
-            <KpiCard title="Total Businesses" value={businessCount} meta="Registered businesses" metaColor="gray" icon={Building2} />
-            <KpiCard title="Total Branches" value={branchCount} meta="Active branches" metaColor="blue" icon={Building2} />
-            <KpiCard title="Total Products" value={stats.totalItems} meta="Active SKUs" metaColor="gray" icon={Package} />
-            <KpiCard title="Low Stock Alerts" value={stats.lowStockCount} meta="SKUs below threshold" metaColor={stats.lowStockCount > 0 ? 'rose' : 'amber'} icon={AlertTriangle} />
-            <KpiCard title="New Arrivals" value={stats.newArrivals || 0} meta="Products marked as new" metaColor="indigo" icon={Sparkles} />
+            <KpiCard loading={firstLoad} label="Businesses" value={businessCount} meta="Registered" icon={Building2} tone="neutral" to="/businesses" />
+            <KpiCard loading={firstLoad} label="Branches" value={branchCount} meta="Across all businesses" icon={Store} tone="info" />
+            <KpiCard loading={firstLoad} label="Products" value={stats.totalItems} meta={`In ${scopeName}`} icon={Package} tone="accent" to="/products" />
+            <KpiCard loading={firstLoad} label="Low stock" value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
+            <KpiCard loading={firstLoad} label="New arrivals" value={stats.newArrivals || 0} meta="Marked as new" icon={Sparkles} tone="violet" />
           </>
         ) : (
           <>
-            <KpiCard title="Total Products" value={stats.totalItems} meta="Active SKUs in this branch" metaColor="gray" icon={Package} />
-            <KpiCard title="Low Stock Alerts" value={stats.lowStockCount} meta="SKUs below threshold" metaColor={stats.lowStockCount > 0 ? 'rose' : 'amber'} icon={AlertTriangle} />
-            <KpiCard title="New Arrivals" value={stats.newArrivals || 0} meta="Products marked as new" metaColor="indigo" icon={Sparkles} />
+            <KpiCard loading={firstLoad} label="Products" value={stats.totalItems} meta="Stocked in this branch" icon={Package} tone="accent" to="/products" />
+            <KpiCard loading={firstLoad} label="Low stock" value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
+            <KpiCard loading={firstLoad} label="New arrivals" value={stats.newArrivals || 0} meta="Marked as new" icon={Sparkles} tone="violet" />
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-        <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-            <div className="flex items-center gap-2">
-              <Boxes className="w-4 h-4 text-accent" />
-              <h6 className="font-semibold text-ink">Recent Inventory Movements</h6>
-            </div>
-            <Link to="/reports/movement" className="text-xs text-accent hover:text-accent-fg font-semibold">
-              View All &rarr;
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-subtle">
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">Item Code & Name</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">Type</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">Quantity</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">Timestamp</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentMovements.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-8 text-ink-muted text-xs">
-                      No recent inventory movements recorded.
-                    </td>
-                  </tr>
-                ) : (
-                  recentMovements.map((mov) => (
-                    <tr key={mov.id} className="hover:bg-subtle">
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
-                        <span className="font-semibold block">{mov.item_name}</span>
-                        <span className="font-mono text-[11px] text-ink-muted block">{mov.item_code}</span>
-                      </td>
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
-                        {mov.movement_type === 'in' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg">
-                             STOCK IN
-                          </span>
-                        ) : mov.movement_type === 'out' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-danger-soft text-danger-fg">
-                             STOCK OUT
-                          </span>
-                        ) : mov.movement_type === 'damage' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg">
-                             DAMAGE
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-violet-soft text-violet-fg">ADJUST</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface font-mono font-bold">
-                        {mov.movement_type === 'in' ? `+${mov.quantity}` : `-${mov.quantity}`}
-                      </td>
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-ink-muted bg-surface">
-                        {new Date(mov.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6">
+        <Card className="overflow-hidden">
+          <CardHeader
+            icon={History}
+            title="Recent stock movements"
+            description="Latest sales, restocks, adjustments and damage."
+            actions={<Button variant="ghost" size="sm" iconRight={ArrowRight} to="/reports/movement">View all</Button>}
+          />
+          <Table minWidth="36rem">
+            <THead>
+              <TR>
+                <TH>Product</TH>
+                <TH>Type</TH>
+                <TH numeric>Qty</TH>
+                <TH className="text-right">When</TH>
+              </TR>
+            </THead>
+            <TBody>
+              <TableState
+                colSpan={4}
+                loading={firstLoad}
+                empty={!loading && recentMovements.length === 0}
+                emptyIcon={History}
+                emptyTitle="No stock movements yet"
+                emptyDescription="Sales, restocks and adjustments will appear here."
+              />
+              {recentMovements.map((mov, i) => (
+                <TR key={mov.id} index={i} highlight={freshIds.has(mov.id)}>
+                  <TD>
+                    <span className="font-medium text-ink block">{mov.item_name}</span>
+                    <span className="font-mono text-caption text-ink-muted block">{mov.item_code}</span>
+                  </TD>
+                  <TD><StatusPill kind="movement" value={mov.movement_type} size="sm" /></TD>
+                  <TD numeric className={cn('font-semibold', mov.movement_type === 'in' ? 'text-success-fg' : 'text-ink')}>
+                    {mov.movement_type === 'in' ? `+${mov.quantity}` : `-${mov.quantity}`}
+                  </TD>
+                  <TD className="text-right text-caption text-ink-muted whitespace-nowrap">
+                    {new Date(mov.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </Card>
 
         <div className="flex flex-col gap-6">
-          <div className="bg-surface border border-line rounded-xl">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-danger-fg" />
-                <h6 className="font-semibold text-ink">Low Stock Alerts</h6>
-              </div>
-              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-danger-soft text-danger-fg">{lowStockProducts.length} items</span>
-            </div>
-            <div className="p-4 space-y-3">
-              {lowStockProducts.length === 0 ? (
-                <p className="text-sm text-ink-muted text-center py-4">All stock levels healthy.</p>
+          <Card>
+            <CardHeader
+              icon={PackageMinus}
+              title="Low stock"
+              actions={lowStockProducts.length > 0 && <Badge tone="warning" size="sm">{lowStockProducts.length} {lowStockProducts.length === 1 ? 'item' : 'items'}</Badge>}
+            />
+            <div className="p-2">
+              {firstLoad ? (
+                <div className="space-y-3 p-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
+              ) : lowStockProducts.length === 0 ? (
+                <EmptyState compact icon={PackageCheck} title="All stock levels healthy" />
               ) : (
-                lowStockProducts.map(p => (
-                  <div key={p.id} className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-ink truncate">{p.item_name}</p>
-                      <p className="text-[11px] text-ink-muted font-mono truncate">{p.item_code}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-danger-fg">{p.quantity}</p>
-                      <p className="text-[10px] text-ink-muted">Min: {p.minimum_quantity}</p>
-                    </div>
-                  </div>
-                ))
+                <ul>
+                  {lowStockProducts.map(p => {
+                    const out = p.stock_status ? p.stock_status === 'out' : parseInt(p.quantity) <= 0;
+                    return (
+                      <li key={`${p.id}-${p.branch_id}`} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-subtle transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ink truncate">{p.item_name}</p>
+                          <p className="text-caption text-ink-muted font-mono truncate">{p.item_code}{isSuperAdmin && p.branch_name ? ` · ${p.branch_name}` : ''}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={cn('text-sm font-semibold tabular-nums', out ? 'text-danger-fg' : 'text-warning-fg')}>{out ? 'Out' : `${p.quantity} left`}</p>
+                          <p className="text-[11px] text-ink-muted tabular-nums">Alert at {p.minimum_quantity}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {lowStockProducts.length > 0 && (
+                <div className="px-3 pt-1 pb-2"><Button variant="link" size="sm" iconRight={ArrowRight} to="/low-stock">Open low stock list</Button></div>
               )}
             </div>
-          </div>
-          
+          </Card>
+
           {isSuperAdmin && pendingCount > 0 && (
-            <div className="bg-surface border border-line rounded-xl">
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-warning-fg" />
-                  <h6 className="font-semibold text-ink">Pending Approvals</h6>
-                </div>
+            <Card className="animate-fade-in">
+              <CardHeader icon={UserCheck} title="Pending approvals" />
+              <div className="p-5">
+                <p className="text-sm text-ink-secondary mb-4">
+                  <span className="font-semibold text-ink tabular-nums">{pendingCount}</span> {pendingCount === 1 ? 'person is' : 'people are'} waiting for account approval.
+                </p>
+                <Button variant="accent-soft" fullWidth to="/users/pending">Review requests</Button>
               </div>
-              <div className="p-4">
-                <p className="text-sm text-ink-secondary mb-3">There are <strong className="text-ink">{pendingCount}</strong> user registrations waiting for approval.</p>
-                <Link to="/users/pending" className="inline-flex items-center justify-center w-full gap-2 h-9 px-3 bg-warning-soft text-warning-fg text-sm font-medium rounded-lg hover:bg-warning-muted transition-colors">
-                  Review Approvals
-                </Link>
-              </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
 
-      {/* Dynamic Multi-Business Overview / Breakdown — Super Admin only */}
+      {/* Per-business breakdown: super admin only */}
       {isSuperAdmin && (
-        <div className="mt-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <section className="mt-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-4">
             <div>
-              <h6 className="font-bold text-ink text-sm tracking-tight">Business Operations Breakdown</h6>
-              <p className="text-xs text-ink-muted">Live inventory totals and branch counts for all registered corporate entities</p>
+              <h2 className="text-base font-semibold text-ink">Businesses</h2>
+              <p className="text-sm text-ink-muted">Select a business to filter this overview.</p>
             </div>
-            <Link to="/businesses" className="text-xs font-semibold text-accent hover:text-accent-fg transition-colors">
-              Manage Businesses &rarr;
-            </Link>
+            <Button variant="ghost" size="sm" iconRight={ArrowRight} to="/businesses">Manage businesses</Button>
           </div>
 
-          {allBusinesses.length === 0 ? (
-            <div className="bg-surface border border-line rounded-xl p-8 text-center text-ink-muted text-xs">
-              No registered businesses found in the system.
+          {firstLoad ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[0, 1, 2].map(i => <Skeleton key={i} className="h-36 rounded-xl" />)}
             </div>
+          ) : allBusinesses.length === 0 ? (
+            <Card><EmptyState icon={Building2} title="No businesses yet" description="Create a business to start adding branches and products." action={<Button to="/businesses" size="sm">Go to businesses</Button>} /></Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {allBusinesses.map((biz, idx) => {
-                const bizColor = getBusinessColor(biz, idx);
+              {allBusinesses.map(biz => {
                 const bizItems = allProducts.filter(p => Number(p.business_id) === Number(biz.id));
-                const bizItemCount = bizItems.length;
                 const bizTotalStock = bizItems.reduce((acc, p) => acc + Number(p.quantity || 0), 0);
                 const bizBranches = allBranches.filter(br => Number(br.business_id) === Number(biz.id));
                 const isSelected = selectedBusiness?.id === biz.id;
-
                 return (
-                  <div
+                  <Card
                     key={biz.id}
+                    as="button"
+                    type="button"
+                    interactive
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedBusiness(isSelected ? null : biz)}
-                    className={`bg-surface border rounded-xl p-5 transition-all cursor-pointer hover:shadow-md ${
-                      isSelected 
-                        ? 'ring-2 ring-accent border-accent shadow-sm bg-accent-soft/10' 
-                        : 'border-line hover:border-line-strong'
-                    }`}
-                    style={{ borderBottom: `3px solid ${bizColor}` }}
-                    title={`Click to ${isSelected ? 'clear filter' : 'filter dashboard by ' + biz.name}`}
+                    className={cn('text-left p-5 w-full', isSelected && 'border-accent ring-1 ring-accent bg-accent-soft/40')}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: bizColor }} />
-                        <span className="font-bold text-sm text-ink truncate">{biz.name}</span>
-                      </div>
-                      {biz.industry && (
-                        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-sunken text-ink-secondary flex-shrink-0">
-                          {biz.industry}
-                        </span>
-                      )}
+                    <div className="flex items-start justify-between gap-2 mb-4">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <BusinessDot business={biz} />
+                        <span className="font-semibold text-sm text-ink truncate">{biz.name}</span>
+                      </span>
+                      {biz.industry && <Badge size="sm" className="capitalize">{biz.industry}</Badge>}
                     </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-2xl font-black text-ink tracking-tight">{bizItemCount}</span>
-                        <span className="text-xs font-semibold text-ink-muted">items</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-ink-muted pt-2 border-t border-line-soft">
-                        <span>Stock on hand:</span>
-                        <strong className="text-ink font-semibold">{bizTotalStock} units</strong>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-ink-muted">
-                        <span>Branches:</span>
-                        <span className="text-ink-secondary font-medium">
-                          {bizBranches.length} {bizBranches.length === 1 ? 'branch' : 'branches'}
-                        </span>
-                      </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-display text-2xl font-semibold text-ink tabular-nums">{bizItems.length}</span>
+                      <span className="text-caption text-ink-muted">products</span>
                     </div>
-                  </div>
+                    <dl className="mt-3 pt-3 border-t border-line-soft grid grid-cols-2 gap-2 text-caption">
+                      <div><dt className="text-ink-muted">Stock on hand</dt><dd className="font-medium text-ink tabular-nums">{bizTotalStock} units</dd></div>
+                      <div><dt className="text-ink-muted">Branches</dt><dd className="font-medium text-ink tabular-nums">{bizBranches.length}</dd></div>
+                    </dl>
+                  </Card>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
       )}
-
-      <div className="border-t border-line mt-8 pt-4 flex items-center justify-between text-[11px] font-semibold tracking-wide uppercase text-ink-muted">
-        <div>
-          {isSuperAdmin
-            ? 'HQ INVENTORY · LIVE OPERATIONS'
-            : `${user?.branch_name || 'BRANCH'} · LIVE OPERATIONS`}
-        </div>
-        {isSuperAdmin && (
-          <div className="flex items-center gap-1">
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Admin</span>
-          </div>
-        )}
-      </div>
+      </>
+      )}
     </Layout>
   );
 }

@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Field, Input, Select, MoneyInput, FormAlert } from '../../components/ui/Form';
 import {
-  Package, ChevronRight, ChevronLeft, Building, Store, Hash, CheckCircle, QrCode,
-  Sparkles, AlertTriangle, RefreshCw, Plus, Minus, ArrowLeft, Briefcase, Pencil, Info
+  Field, Input, Select, MoneyInput, Alert, Button, ButtonBase, IconButton, Switch, PageHeader, Card as UiCard, Badge,
+  BusinessDot, Table, THead, TBody, TH, TR, TD, cn,
+} from '../../components/ui';
+import {
+  Package, ChevronRight, ChevronLeft, Building2, Store, Hash, Check, CheckCircle2, QrCode, Printer,
+  Sparkles, Plus, Minus, Pencil, Info, AlertTriangle,
 } from 'lucide-react';
 
 function getAttributeOptions(options) {
@@ -53,21 +56,26 @@ const EMPTY_FORM = {
 function StepBar({ steps, current }) {
   const currentIdx = steps.findIndex(s => s.key === current);
   return (
-    <ol className="flex items-center mb-6">
+    <ol className="flex items-center mb-6" aria-label="Progress">
       {steps.map((s, i) => {
         const done = i < currentIdx;
         const active = i === currentIdx;
         return (
           <React.Fragment key={s.key}>
-            <li className="flex items-center gap-2 min-w-0">
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                done ? 'bg-success-muted text-success-fg' : active ? 'bg-accent text-white' : 'bg-sunken text-ink-muted'
-              }`}>
-                {done ? <CheckCircle className="w-4 h-4" /> : i + 1}
+            <li className="flex items-center gap-2 min-w-0" aria-current={active ? 'step' : undefined}>
+              <span className={cn(
+                'w-7 h-7 rounded-full flex items-center justify-center text-caption font-semibold flex-shrink-0 transition-colors duration-base',
+                done ? 'bg-accent-soft text-accent' : active ? 'bg-accent text-white shadow-xs' : 'bg-sunken text-ink-muted'
+              )}>
+                {done ? <Check className="w-4 h-4" aria-hidden="true" /> : i + 1}
               </span>
-              <span className={`text-xs font-semibold truncate hidden sm:block ${active ? 'text-ink' : done ? 'text-success-fg' : 'text-ink-muted'}`}>{s.label}</span>
+              <span className={cn('text-caption font-medium truncate hidden sm:block', active ? 'text-ink' : 'text-ink-muted')}>{s.label}</span>
             </li>
-            {i < steps.length - 1 && <li className={`h-px flex-1 mx-3 min-w-4 ${done ? 'bg-success-line' : 'bg-line'}`} aria-hidden="true" />}
+            {i < steps.length - 1 && (
+              <li className="relative h-px flex-1 mx-3 min-w-4 bg-line overflow-hidden" aria-hidden="true">
+                <span className={cn('absolute inset-y-0 left-0 bg-accent transition-[width] duration-slow ease-out', done ? 'w-full' : 'w-0')} />
+              </li>
+            )}
           </React.Fragment>
         );
       })}
@@ -75,24 +83,22 @@ function StepBar({ steps, current }) {
   );
 }
 
+/** One wizard step: header, body, footer with Back / Next. */
 function Card({ title, description, icon: Icon, children, footer }) {
   return (
-    <div className="bg-surface border border-line rounded-xl">
-      <div className="px-6 pt-5 pb-4 border-b border-line-soft flex items-start gap-3">
-        {Icon && <div className="p-2 rounded-lg bg-accent-soft text-accent"><Icon className="w-5 h-5" /></div>}
+    <UiCard className="animate-slide-up">
+      <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-line-soft flex items-start gap-3">
+        {Icon && <div className="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0"><Icon className="w-[18px] h-[18px]" aria-hidden="true" /></div>}
         <div>
-          <h2 className="font-bold text-ink">{title}</h2>
-          {description && <p className="text-xs text-ink-muted mt-0.5">{description}</p>}
+          <h2 className="text-base font-semibold text-ink">{title}</h2>
+          {description && <p className="text-sm text-ink-muted mt-0.5">{description}</p>}
         </div>
       </div>
-      <div className="p-6 space-y-6">{children}</div>
-      {footer && <div className="px-6 py-4 border-t border-line-soft bg-subtle/60 rounded-b-xl flex items-center justify-between gap-3">{footer}</div>}
-    </div>
+      <div className="p-5 sm:p-6 space-y-6">{children}</div>
+      {footer && <div className="px-5 sm:px-6 py-4 border-t border-line-soft bg-subtle/60 rounded-b-xl flex flex-wrap items-center justify-between gap-3">{footer}</div>}
+    </UiCard>
   );
 }
-
-const btnPrimary = 'inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-const btnSecondary = 'inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors';
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function AddProductPage() {
@@ -335,47 +341,40 @@ export default function AddProductPage() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <Layout>
-      <div className="flex items-center gap-3 mb-6">
-        <Link to="/products" className="p-2 rounded-lg text-ink-muted hover:bg-sunken hover:text-ink" title="Back to products">
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink tracking-tight">Add New Product</h1>
-          <p className="text-xs text-ink-muted mt-0.5">
-            {step === 'done' ? 'Print the QR labels and stick them on the stock.' : 'Create a product in the catalog and give it starting stock.'}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        back={{ to: '/products', label: 'Back to products' }}
+        breadcrumbs={[{ label: 'Products', to: '/products' }, { label: 'Add product' }]}
+        title="Add product"
+        description={step === 'done' ? 'Print the QR labels and stick them on the stock.' : 'Create a product in the catalog and give it starting stock.'}
+      />
 
       <div className="max-w-3xl mx-auto">
         {step !== 'done' && <StepBar steps={steps} current={step} />}
 
         {/* Where the product is going (steps after "Where") */}
         {step !== 'where' && step !== 'done' && (
-          <div className="mb-4 px-4 py-2.5 bg-surface border border-line rounded-xl flex items-center justify-between gap-3 text-sm text-ink-secondary">
+          <div className="mb-4 px-4 py-2.5 bg-surface border border-line rounded-xl shadow-card flex items-center justify-between gap-3 text-sm text-ink-secondary">
             <span className="flex items-center gap-2 min-w-0">
-              <Store className="w-4 h-4 text-warning-fg flex-shrink-0" />
+              {selectedBizObj ? <BusinessDot business={selectedBizObj} /> : <Store className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" />}
               <span className="truncate">Adding to {whereLabel}</span>
             </span>
             {isSuperAdmin && (
-              <button type="button" onClick={() => go('where')} className="text-xs font-semibold text-accent hover:text-accent-fg flex-shrink-0">Change</button>
+              <Button variant="link" size="sm" onClick={() => go('where')}>Change</Button>
             )}
           </div>
         )}
 
-        {error && <div className="mb-4"><FormAlert onClose={() => setError('')}>{error}</FormAlert></div>}
+        {error && <Alert tone="danger" className="mb-4" onClose={() => setError('')}>{error}</Alert>}
 
         {/* ── STEP: Where ─────────────────────────────────────────────── */}
         {step === 'where' && (
           <Card
-            icon={Building}
+            icon={Building2}
             title="Where is this product sold?"
             description="Choose the business, then every branch that will stock it. Each branch gets its own stock count."
             footer={<>
-              <Link to="/products" className={btnSecondary}>Cancel</Link>
-              <button type="button" onClick={() => next('where', 'details')} className={btnPrimary}>
-                Next: Product details <ChevronRight className="w-4 h-4" />
-              </button>
+              <Button variant="secondary" to="/products">Cancel</Button>
+              <Button iconRight={ChevronRight} onClick={() => next('where', 'details')}>Next: Product details</Button>
             </>}
           >
             <Field label="Business" required error={errors.business}>
@@ -383,17 +382,17 @@ export default function AddProductPage() {
                 {businesses.map(biz => {
                   const active = String(selectedBiz) === String(biz.id);
                   return (
-                    <button
+                    <ButtonBase
                       key={biz.id}
-                      type="button"
+                      aria-pressed={active}
                       onClick={() => { if (!active) { setSelectedBiz(String(biz.id)); setSelectedBranches([]); } setErrors(e => ({ ...e, business: undefined })); }}
-                      className={`p-3 rounded-lg border text-left transition-colors ${active ? 'border-accent bg-accent-soft ring-1 ring-accent' : 'border-line bg-surface hover:border-line-strong'}`}
+                      className={cn('p-3 rounded-lg border text-left', active ? 'border-accent bg-accent-soft ring-1 ring-accent' : 'border-line bg-surface hover:border-line-strong hover:bg-subtle')}
                     >
-                      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                        <Briefcase className={`w-4 h-4 ${active ? 'text-accent' : 'text-ink-muted'}`} /> {biz.name}
-                      </div>
-                      <div className="text-[11px] text-ink-muted capitalize mt-0.5">{biz.industry || 'General'}</div>
-                    </button>
+                      <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                        <BusinessDot business={biz} /> {biz.name}
+                      </span>
+                      <span className="block text-caption text-ink-muted capitalize mt-0.5">{biz.industry || 'General'}</span>
+                    </ButtonBase>
                   );
                 })}
               </div>
@@ -406,38 +405,39 @@ export default function AddProductPage() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-ink-muted">{selectedBranches.length} of {branches.length} selected</span>
-                      <button
-                        type="button"
+                      <span className="text-caption text-ink-muted tabular-nums">{selectedBranches.length} of {branches.length} selected</span>
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => { setSelectedBranches(selectedBranches.length === branches.length ? [] : branches.map(b => b.id)); setErrors(e => ({ ...e, branches: undefined })); }}
-                        className="text-xs font-semibold text-accent hover:text-accent-fg"
                       >
                         {selectedBranches.length === branches.length ? 'Clear all' : 'Select all'}
-                      </button>
+                      </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {branches.map(br => {
                         const checked = selectedBranches.includes(br.id);
                         return (
-                          <button
+                          <ButtonBase
                             key={br.id}
-                            type="button"
+                            role="checkbox"
+                            aria-checked={checked}
                             onClick={() => {
                               setSelectedBranches(prev => (checked ? prev.filter(id => id !== br.id) : [...prev, br.id]));
                               setErrors(e => ({ ...e, branches: undefined }));
                             }}
-                            className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${checked ? 'border-success bg-success-soft' : 'border-line bg-surface hover:border-line-strong'}`}
+                            className={cn('flex items-center gap-3 p-3 rounded-lg border text-left', checked ? 'border-accent bg-accent-soft ring-1 ring-accent' : 'border-line bg-surface hover:border-line-strong hover:bg-subtle')}
                           >
-                            <span className={`w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-success border-success' : 'border-line-strong bg-surface'}`}>
-                              {checked && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                            <span className={cn('w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border transition-colors', checked ? 'bg-accent border-accent' : 'border-line-strong bg-surface')}>
+                              {checked && <Check className="w-3.5 h-3.5 text-white" aria-hidden="true" />}
                             </span>
                             <span className="min-w-0">
                               <span className="block text-sm font-semibold text-ink truncate">{br.name}</span>
-                              <span className="block text-[11px] text-ink-muted font-mono">
+                              <span className="block text-caption text-ink-muted font-mono">
                                 {br.branch_code || `BR${br.id}`}{Number(br.is_active) === 0 && <span className="ml-1 font-sans text-warning-fg">· inactive</span>}
                               </span>
                             </span>
-                          </button>
+                          </ButtonBase>
                         );
                       })}
                     </div>
@@ -456,11 +456,9 @@ export default function AddProductPage() {
             description="What the product is. Stock and prices come next."
             footer={<>
               {isSuperAdmin
-                ? <button type="button" onClick={() => go('where')} className={btnSecondary}><ChevronLeft className="w-4 h-4" /> Back</button>
-                : <Link to="/products" className={btnSecondary}>Cancel</Link>}
-              <button type="button" onClick={() => next('details', 'pricing')} className={btnPrimary}>
-                Next: Stock &amp; prices <ChevronRight className="w-4 h-4" />
-              </button>
+                ? <Button variant="secondary" icon={ChevronLeft} onClick={() => go('where')}>Back</Button>
+                : <Button variant="secondary" to="/products">Cancel</Button>}
+              <Button iconRight={ChevronRight} onClick={() => next('details', 'pricing')}>Next: Stock &amp; prices</Button>
             </>}
           >
             <Field label="Product name" required error={errors.item_name}>
@@ -476,12 +474,12 @@ export default function AddProductPage() {
 
             <Field label="Category" required error={errors.category}>
               {configLoaded && categories.length === 0 ? (
-                <div className="p-3 bg-warning-soft border border-warning-line rounded-lg text-sm text-warning-fg">
+                <Alert tone="warning">
                   This business has no categories yet.{' '}
                   {isSuperAdmin
                     ? <Link to={`/businesses/${selectedBiz}/forms`} className="font-semibold underline">Set them up in Product Form Setup</Link>
                     : 'Ask HQ to add categories for your business.'}
-                </div>
+                </Alert>
               ) : (
                 <Select value={form.category} onChange={e => setField('category', e.target.value)} error={errors.category}>
                   <option value="">Choose a category…</option>
@@ -522,37 +520,27 @@ export default function AddProductPage() {
                   {getAttributeOptions(sizeAttribute.options).map(size => {
                     const selected = form.size_variants.some(row => row.size === size);
                     return (
-                      <button
+                      <ButtonBase
                         key={size}
-                        type="button"
                         onClick={() => toggleSize(size)}
                         aria-pressed={selected}
-                        className={`min-w-12 h-9 px-3 rounded-lg border text-sm font-semibold transition-colors ${selected ? 'border-accent bg-accent text-white' : 'border-line bg-surface text-ink-secondary hover:border-accent-line'}`}
+                        className={cn('min-w-12 h-10 px-3 rounded-lg border text-sm font-semibold active:scale-[0.97]', selected ? 'border-accent bg-accent text-white shadow-xs' : 'border-line bg-surface text-ink-secondary hover:border-accent-line hover:text-ink')}
                       >
                         {size}
-                      </button>
+                      </ButtonBase>
                     );
                   })}
                 </div>
               </Field>
             )}
 
-            <div className="p-3 bg-subtle rounded-lg border border-line space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-ink">Mark as new arrival</div>
-                  <div className="text-xs text-ink-muted">Shows a “NEW” badge on the product for a while.</div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.mark_as_new}
-                  onClick={() => setField('mark_as_new', !form.mark_as_new)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${form.mark_as_new ? 'bg-accent' : 'bg-line-strong'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${form.mark_as_new ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
+            <div className="p-4 bg-subtle rounded-lg border border-line-soft space-y-3">
+              <Switch
+                checked={form.mark_as_new}
+                onChange={v => setField('mark_as_new', v)}
+                label="Mark as new arrival"
+                description="Shows a “NEW” badge on the product for a while."
+              />
               {form.mark_as_new && (
                 <Field label="Show the badge for">
                   <Select value={form.new_duration_days || 14} onChange={e => setField('new_duration_days', parseInt(e.target.value, 10))} className="sm:max-w-[12rem]">
@@ -576,22 +564,20 @@ export default function AddProductPage() {
               ? `The starting stock is added in each of the ${selectedBranches.length} selected branches.`
               : 'How many you have now, and what to charge.'}
             footer={<>
-              <button type="button" onClick={() => go('details')} className={btnSecondary}><ChevronLeft className="w-4 h-4" /> Back</button>
-              <button type="button" onClick={() => next('pricing', 'review')} className={btnPrimary}>
-                Next: Review <ChevronRight className="w-4 h-4" />
-              </button>
+              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('details')}>Back</Button>
+              <Button iconRight={ChevronRight} onClick={() => next('pricing', 'review')}>Next: Review</Button>
             </>}
           >
             {!hasSizes ? (
               <>
                 <section>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-3">Stock</h3>
+                  <h3 className="text-sm font-semibold text-ink mb-3">Stock</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Field label="Starting stock" hint="Units on hand right now. 0 is fine." error={errors.quantity}>
                       <div className="flex items-center gap-2">
-                        <button type="button" aria-label="Decrease" onClick={() => setField('quantity', Math.max(0, toInt(form.quantity) - 1))} className="h-10 w-10 flex items-center justify-center rounded-lg border border-line text-ink-muted hover:bg-subtle flex-shrink-0"><Minus className="w-4 h-4" /></button>
-                        <Input type="number" min="0" step="1" placeholder="0" value={form.quantity} onChange={e => setField('quantity', e.target.value)} className="text-center font-mono font-semibold" error={errors.quantity} />
-                        <button type="button" aria-label="Increase" onClick={() => setField('quantity', toInt(form.quantity) + 1)} className="h-10 w-10 flex items-center justify-center rounded-lg border border-line text-ink-muted hover:bg-subtle flex-shrink-0"><Plus className="w-4 h-4" /></button>
+                        <IconButton icon={Minus} label="One less" variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', Math.max(0, toInt(form.quantity) - 1))} />
+                        <Input type="number" min="0" step="1" inputMode="numeric" placeholder="0" value={form.quantity} onChange={e => setField('quantity', e.target.value)} className="text-center font-mono font-semibold" error={errors.quantity} />
+                        <IconButton icon={Plus} label="One more" variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', toInt(form.quantity) + 1)} />
                       </div>
                     </Field>
                     <Field label="Low-stock alert at" hint="Flag the product when stock drops to this number." error={errors.minimum_quantity}>
@@ -600,8 +586,8 @@ export default function AddProductPage() {
                   </div>
                 </section>
                 <section>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Prices</h3>
-                  <p className="text-xs text-ink-muted mb-3">The POS charges one of the first three, depending on who is buying.</p>
+                  <h3 className="text-sm font-semibold text-ink">Prices</h3>
+                  <p className="text-caption text-ink-muted mt-0.5 mb-3">The POS charges one of the first three, depending on who is buying.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {PRICE_FIELDS.map(p => (
                       <Field key={p.key} label={p.label} hint={p.hint} error={errors[p.key]}>
@@ -615,8 +601,8 @@ export default function AddProductPage() {
               <>
                 <section className="p-4 bg-accent-soft/60 border border-accent-muted rounded-xl">
                   <div className="flex items-start gap-2 mb-3">
-                    <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-accent-fg">
+                    <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-caption text-accent-fg">
                       <strong>Same for every size?</strong> Fill these in and press <em>Apply to all sizes</em>. Then change any size in the table below.
                     </p>
                   </div>
@@ -626,13 +612,13 @@ export default function AddProductPage() {
                     errors={{}}
                   />
                   <div className="flex justify-end mt-3">
-                    <button type="button" onClick={applyDefaultsToAllSizes} className="inline-flex items-center gap-1.5 h-9 px-3 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent-hover">
+                    <Button size="sm" onClick={applyDefaultsToAllSizes}>
                       Apply to all {form.size_variants.length} sizes
-                    </button>
+                    </Button>
                   </div>
                 </section>
                 <section>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-3">Each size</h3>
+                  <h3 className="text-sm font-semibold text-ink mb-3">Each size</h3>
                   <SizeGrid
                     rows={form.size_variants.map(row => ({ key: row.size, label: `Size ${row.size}`, values: row }))}
                     onChange={(size, key, value) => updateSizeRow(size, key, value)}
@@ -651,28 +637,23 @@ export default function AddProductPage() {
             title="Review and create"
             description="Check everything below. Use Edit to go back and change a section."
             footer={<>
-              <button type="button" onClick={() => go('pricing')} className={btnSecondary}><ChevronLeft className="w-4 h-4" /> Back</button>
-              <button type="button" onClick={handleSubmit} disabled={loading} className={btnPrimary}>
-                {loading
-                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Creating…</>
-                  : <><CheckCircle className="w-4 h-4" /> Create {hasSizes ? `${form.size_variants.length} products` : 'product'}</>}
-              </button>
+              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('pricing')}>Back</Button>
+              <Button icon={CheckCircle2} loading={loading} onClick={handleSubmit}>
+                {loading ? 'Creating…' : `Create ${hasSizes ? `${form.size_variants.length} products` : 'product'}`}
+              </Button>
             </>}
           >
             {warnings.length > 0 && (
-              <FormAlert type="warning">
-                <div className="font-semibold mb-0.5">Please double-check:</div>
+              <Alert tone="warning" title="Please double-check">
                 <ul className="list-disc pl-4 space-y-0.5">{warnings.map(w => <li key={w}>{w}</li>)}</ul>
-              </FormAlert>
+              </Alert>
             )}
 
             <ReviewSection title="Where" onEdit={isSuperAdmin ? () => go('where') : null}>
               <div className="text-sm text-ink-secondary">{selectedBizObj?.name}</div>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {selectedBranchObjs.map(br => (
-                  <span key={br.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-sunken rounded-lg text-xs text-ink-secondary">
-                    <Store className="w-3 h-3 text-warning-fg" /> {br.name}
-                  </span>
+                  <Badge key={br.id} icon={Store}>{br.name}</Badge>
                 ))}
               </div>
             </ReviewSection>
@@ -680,15 +661,13 @@ export default function AddProductPage() {
             <ReviewSection title="Product" onEdit={() => go('details')}>
               <div className="font-semibold text-ink">{form.item_name}</div>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold bg-violet-soft text-violet-fg">{form.category}</span>
+                <Badge tone="accent">{form.category}</Badge>
                 {otherAttributes.map(attr => form.variants?.[attr.attribute_key] && (
-                  <span key={attr.attribute_key} className="rounded-full px-2 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg">
-                    {attr.label}: {form.variants[attr.attribute_key]}
-                  </span>
+                  <Badge key={attr.attribute_key}>{attr.label}: {form.variants[attr.attribute_key]}</Badge>
                 ))}
-                {form.mark_as_new && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg">NEW for {form.new_duration_days} days</span>}
+                {form.mark_as_new && <Badge tone="violet" icon={Sparkles}>New for {form.new_duration_days} days</Badge>}
               </div>
-              <div className="text-xs text-ink-muted mt-2">
+              <div className="text-caption text-ink-muted mt-2">
                 SKU: {hasSizes
                   ? `one per size, generated automatically (${form.size_variants.length} total)`
                   : <span className="font-mono text-accent">{previewSku || 'generated automatically'}</span>}
@@ -696,36 +675,36 @@ export default function AddProductPage() {
             </ReviewSection>
 
             <ReviewSection title="Stock & prices" onEdit={() => go('pricing')}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-ink-muted text-left">
-                      {hasSizes && <th className="py-1 pr-3 font-semibold">Size</th>}
-                      <th className="py-1 pr-3 font-semibold">Stock</th>
-                      <th className="py-1 pr-3 font-semibold">Alert at</th>
-                      <th className="py-1 pr-3 font-semibold">Customer</th>
-                      <th className="py-1 pr-3 font-semibold">Dealer</th>
-                      <th className="py-1 pr-3 font-semibold">Staff</th>
-                      <th className="py-1 font-semibold">Cost</th>
-                    </tr>
-                  </thead>
-                  <tbody className="font-mono text-ink">
+              <div className="border border-line rounded-lg overflow-hidden">
+                <Table dense minWidth="32rem">
+                  <THead>
+                    <TR>
+                      {hasSizes && <TH>Size</TH>}
+                      <TH numeric>Stock</TH>
+                      <TH numeric>Alert at</TH>
+                      <TH numeric>Customer</TH>
+                      <TH numeric>Dealer</TH>
+                      <TH numeric>Staff</TH>
+                      <TH numeric>Cost</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
                     {(hasSizes ? form.size_variants : [form]).map((row, i) => (
-                      <tr key={row.size || i} className="border-t border-line-soft">
-                        {hasSizes && <td className="py-1.5 pr-3 font-sans font-semibold">{row.size}</td>}
-                        <td className="py-1.5 pr-3">{toInt(row.quantity)}</td>
-                        <td className="py-1.5 pr-3">{row.minimum_quantity === '' ? 5 : toInt(row.minimum_quantity)}</td>
-                        <td className="py-1.5 pr-3">{money(row.selling_price)}</td>
-                        <td className="py-1.5 pr-3">{money(row.price_dealer)}</td>
-                        <td className="py-1.5 pr-3">{money(row.price_staff)}</td>
-                        <td className="py-1.5">{money(row.unit_price)}</td>
-                      </tr>
+                      <TR key={row.size || i}>
+                        {hasSizes && <TD className="font-semibold">{row.size}</TD>}
+                        <TD numeric>{toInt(row.quantity)}</TD>
+                        <TD numeric>{row.minimum_quantity === '' ? 5 : toInt(row.minimum_quantity)}</TD>
+                        <TD numeric>{money(row.selling_price)}</TD>
+                        <TD numeric>{money(row.price_dealer)}</TD>
+                        <TD numeric>{money(row.price_staff)}</TD>
+                        <TD numeric>{money(row.unit_price)}</TD>
+                      </TR>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               </div>
               {selectedBranches.length > 1 && (
-                <p className="text-xs text-ink-muted mt-2">Stock shown is per branch ({selectedBranches.length} branches).</p>
+                <p className="text-caption text-ink-muted mt-2">Stock shown is per branch ({selectedBranches.length} branches).</p>
               )}
             </ReviewSection>
           </Card>
@@ -738,15 +717,15 @@ export default function AddProductPage() {
           const hasSizes = created.some(p => p.size);
           const noPrice = created.some(p => !(parseFloat(p.selling_price) > 0));
           return (
-            <div className="space-y-5">
+            <div className="space-y-5 animate-slide-up">
               {/* Success summary */}
-              <div className="bg-surface border border-line rounded-xl overflow-hidden">
+              <UiCard className="overflow-hidden">
                 <div className="px-6 py-6 flex flex-col sm:flex-row sm:items-center gap-4 border-b border-line-soft">
-                  <div className="w-12 h-12 rounded-full bg-success-soft border border-success-line flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-6 h-6 text-success-fg" />
+                  <div className="w-12 h-12 rounded-full bg-success-soft ring-8 ring-success-soft/50 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6 text-success-fg" aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-extrabold text-ink truncate">{first.item_name || 'Product'} is ready</h2>
+                    <h2 className="font-display text-lg font-semibold text-ink truncate">{first.item_name || 'Product'} is ready</h2>
                     <p className="text-sm text-ink-muted mt-0.5">
                       {created.length} {hasSizes ? (created.length === 1 ? 'size' : 'sizes') : (created.length === 1 ? 'item' : 'items')} added to {whereLabel}.
                     </p>
@@ -760,64 +739,54 @@ export default function AddProductPage() {
                     ['Total stock', created.reduce((s, p) => s + (parseInt(p.quantity, 10) || 0), 0)],
                   ].map(([label, value]) => (
                     <div key={label} className="px-3 py-3">
-                      <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
-                      <dd className="mt-0.5 text-sm font-bold text-ink truncate">{value}</dd>
+                      <dt className="text-caption text-ink-muted">{label}</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-ink truncate tabular-nums">{value}</dd>
                     </div>
                   ))}
                 </dl>
-              </div>
+              </UiCard>
 
               {noPrice && (
-                <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-warning-line bg-warning-soft text-sm text-warning-fg">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-warning-fg" />
-                  <span>Some items have no customer price (RM 0.00). They will ring up free at the POS until you set a price in <Link to="/products" className="font-semibold underline">Products</Link>.</span>
-                </div>
+                <Alert tone="warning">
+                  Some items have no customer price (RM 0.00). They will ring up free at the POS until you set a price in <Link to="/products" className="font-semibold underline">Products</Link>.
+                </Alert>
               )}
 
               {/* One label card per created SKU */}
               <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2">QR labels</h3>
+                <h3 className="text-sm font-semibold text-ink mb-2">QR labels</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {created.map(product => (
-                    <div key={product.id} className="bg-surface border border-line rounded-xl p-4 flex gap-4">
+                    <UiCard key={product.id} className="p-4 flex gap-4">
                       <div className="w-24 h-24 flex-shrink-0 rounded-lg border border-line bg-surface p-1.5 flex items-center justify-center overflow-hidden">
                         {product.qr_svg
                           ? <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: product.qr_svg }} />
-                          : <QrCode className="w-10 h-10 text-ink-subtle" />}
+                          : <QrCode className="w-10 h-10 text-ink-subtle" aria-hidden="true" />}
                       </div>
                       <div className="min-w-0 flex-1 flex flex-col">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-bold text-ink text-sm leading-snug line-clamp-2">{product.item_name}</p>
-                          {product.size && (
-                            <span className="flex-shrink-0 rounded-lg bg-accent-soft border border-accent-muted px-2 py-0.5 text-xs font-bold text-accent-fg">{product.size}</span>
-                          )}
+                          <p className="font-semibold text-ink text-sm leading-snug line-clamp-2">{product.item_name}</p>
+                          {product.size && <Badge tone="accent" className="flex-shrink-0 font-semibold">{product.size}</Badge>}
                         </div>
-                        <p className="font-mono text-xs text-ink-muted mt-0.5">{product.sku}</p>
-                        <div className="mt-2 flex items-baseline gap-3 text-xs">
-                          <span className={`font-mono font-bold text-sm ${parseFloat(product.selling_price) > 0 ? 'text-ink' : 'text-warning-fg'}`}>{money(product.selling_price)}</span>
+                        <p className="font-mono text-caption text-ink-muted mt-0.5">{product.sku}</p>
+                        <div className="mt-2 flex items-baseline gap-3 text-caption">
+                          <span className={cn('font-semibold text-sm tabular-nums', parseFloat(product.selling_price) > 0 ? 'text-ink' : 'text-warning-fg')}>{money(product.selling_price)}</span>
                           <span className={parseInt(product.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg'}>
                             {parseInt(product.quantity, 10) || 0} in stock
                           </span>
                         </div>
-                        <Link
-                          to={`/qr/generate?product_id=${product.id}`}
-                          className="mt-auto pt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg self-start"
-                        >
-                          <QrCode className="w-3.5 h-3.5" /> Print label
-                        </Link>
+                        <Button variant="link" size="sm" icon={Printer} to={`/qr/generate?product_id=${product.id}`} className="mt-auto pt-2 self-start">
+                          Print label
+                        </Button>
                       </div>
-                    </div>
+                    </UiCard>
                   ))}
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <button onClick={startAnother} className={`${btnSecondary} flex-1 justify-center`}>
-                  <Plus className="w-4 h-4" /> Add another product here
-                </button>
-                <button onClick={() => navigate('/products')} className={`${btnPrimary} flex-1 justify-center`}>
-                  <Package className="w-4 h-4" /> Go to products
-                </button>
+                <Button variant="secondary" icon={Plus} onClick={startAnother} className="flex-1">Add another product here</Button>
+                <Button icon={Package} onClick={() => navigate('/products')} className="flex-1">Go to products</Button>
               </div>
             </div>
           );
@@ -831,12 +800,8 @@ function ReviewSection({ title, onEdit, children }) {
   return (
     <section className="pb-5 border-b border-line-soft last:border-0 last:pb-0">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">{title}</h3>
-        {onEdit && (
-          <button type="button" onClick={onEdit} className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg">
-            <Pencil className="w-3 h-3" /> Edit
-          </button>
-        )}
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        {onEdit && <Button variant="link" size="sm" icon={Pencil} onClick={onEdit}>Edit</Button>}
       </div>
       {children}
     </section>
@@ -857,9 +822,9 @@ function SizeGrid({ rows, onChange, errors }) {
     <div className="overflow-x-auto -mx-1 px-1">
       <table className="w-full min-w-[40rem]">
         <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-ink-muted text-left">
-            <th className="pb-1.5 pr-2 font-semibold w-24" />
-            {cols.map(c => <th key={c.key} className="pb-1.5 px-1 font-semibold">{c.label}</th>)}
+          <tr className="text-table-head uppercase text-ink-muted text-left">
+            <th className="pb-1.5 pr-2 w-24"><span className="sr-only">Row</span></th>
+            {cols.map(c => <th key={c.key} scope="col" className="pb-1.5 px-1 font-semibold">{c.label}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -870,16 +835,20 @@ function SizeGrid({ rows, onChange, errors }) {
                 const err = errors[`${row.key}.${c.key}`];
                 return (
                   <td key={c.key} className="py-1 px-1">
-                    <input
+                    <Input
                       type="number"
+                      size="sm"
                       min="0"
                       step={c.int ? '1' : '0.01'}
+                      inputMode={c.int ? 'numeric' : 'decimal'}
                       placeholder={c.int ? '0' : '0.00'}
                       value={row.values[c.key]}
                       onChange={e => onChange(row.key, c.key, e.target.value)}
                       title={err || undefined}
                       aria-label={`${row.label} ${c.label}`}
-                      className={`h-9 w-full rounded-lg border bg-surface px-2 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-accent ${err ? 'border-danger' : 'border-line'}`}
+                      aria-invalid={err ? true : undefined}
+                      error={Boolean(err)}
+                      className="h-9 px-2 font-mono tabular-nums"
                     />
                   </td>
                 );
@@ -889,7 +858,7 @@ function SizeGrid({ rows, onChange, errors }) {
         </tbody>
       </table>
       {rows.some(r => cols.some(c => errors[`${r.key}.${c.key}`])) && (
-        <p className="mt-1 text-xs text-danger-fg flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Fix the highlighted boxes: stock must be a whole number, and nothing can be negative.</p>
+        <p className="mt-1 text-caption text-danger-fg flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Fix the highlighted boxes: stock must be a whole number, and nothing can be negative.</p>
       )}
     </div>
   );

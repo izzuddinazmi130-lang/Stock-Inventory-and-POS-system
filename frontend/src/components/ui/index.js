@@ -2,7 +2,7 @@
 export { cn, focusRing, prefersReducedMotion } from './cn';
 export { default as Button, IconButton, ButtonBase, Spinner } from './Button';
 export {
-  Field, Input, Select, Textarea, MoneyInput, SearchInput, Checkbox, FormSection, ChoiceCards,
+  Field, Input, Select, Textarea, MoneyInput, SearchInput, Checkbox, Switch, FormSection, ChoiceCards,
   Alert, FormAlert, inputClass, toDateInput,
 } from './controls';
 export { Modal, Drawer } from './Modal';

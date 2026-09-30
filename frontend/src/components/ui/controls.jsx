@@ -71,9 +71,24 @@ export function Field({ label, required, optional, hint, error, children, classN
   );
 }
 
+/** Text input. `icon` adds a leading icon; `suffix` shows text/node at the end (e.g. "units"). */
 export const Input = forwardRef(function Input(rawProps, ref) {
-  const { error, size = 'md', className, ...props } = useFieldProps(rawProps);
-  return <input ref={ref} className={cn(inputClass, CONTROL_SIZES[size], error && errorClass, className)} {...props} />;
+  const { error, size = 'md', className, icon: Icon, suffix, wrapperClassName, ...props } = useFieldProps(rawProps);
+  const input = (
+    <input
+      ref={ref}
+      className={cn(inputClass, CONTROL_SIZES[size], Icon && 'pl-9', suffix && 'pr-14', error && errorClass, className)}
+      {...props}
+    />
+  );
+  if (!Icon && !suffix) return input;
+  return (
+    <div className={cn('relative', wrapperClassName)}>
+      {Icon && <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" aria-hidden="true" />}
+      {input}
+      {suffix && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-caption text-ink-muted">{suffix}</span>}
+    </div>
+  );
 });
 
 /** Native <select> (keeps mobile pickers and keyboard behaviour) with the app's styling. */
@@ -179,6 +194,44 @@ export const Checkbox = forwardRef(function Checkbox({ label, description, class
     </label>
   );
 });
+
+/**
+ * On/off switch.
+ *   <Switch checked={on} onChange={setOn} label="Mark as new arrival" description="Shows a NEW badge." />
+ */
+export function Switch({ checked, onChange, label, description, disabled, className }) {
+  const id = useId();
+  const toggle = (
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-base ease-out disabled:opacity-50',
+        focusRing,
+        checked ? 'bg-accent' : 'bg-line-strong'
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-base ease-out', checked ? 'translate-x-[22px]' : 'translate-x-0.5')}
+      />
+    </button>
+  );
+  if (!label) return toggle;
+  return (
+    <div className={cn('flex items-center justify-between gap-4', className)}>
+      <label htmlFor={id} className="cursor-pointer select-none">
+        <span className="block text-sm font-medium text-ink">{label}</span>
+        {description && <span className="block text-caption text-ink-muted mt-0.5">{description}</span>}
+      </label>
+      {toggle}
+    </div>
+  );
+}
 
 /** A titled group of fields inside a form. */
 export function FormSection({ title, description, children, className, actions }) {

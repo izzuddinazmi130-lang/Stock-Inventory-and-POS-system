@@ -11,10 +11,10 @@ import Button from './Button';
  */
 export default function FilterBar({ children, actions, className, onReset, resetVisible = true }) {
   return (
-    <div className={cn('bg-surface border border-line rounded-xl shadow-card p-3 mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center', className)}>
+    <div className={cn('bg-surface border border-line rounded-xl shadow-card p-3 mb-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center [&>*:first-child]:col-span-2', className)}>
       {children}
       {(actions || (onReset && resetVisible)) && (
-        <div className="flex items-center gap-2 md:ml-auto">
+        <div className="col-span-2 flex items-center justify-end gap-2 md:ml-auto">
           {onReset && resetVisible && (
             <Button variant="ghost" size="sm" icon={SlidersHorizontal} onClick={onReset}>Reset filters</Button>
           )}

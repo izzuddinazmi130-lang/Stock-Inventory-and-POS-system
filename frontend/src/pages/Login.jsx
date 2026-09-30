@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Boxes, Lock, Mail, User, ShieldAlert, CheckCircle, Building2 } from 'lucide-react';
+import { Lock, Mail, User, Building2, ScanLine, PackageMinus, ArrowRight } from 'lucide-react';
+import BrandMark from '../components/BrandMark';
+import { Alert, BusinessDot, Button, Field, Input, Select } from '../components/ui';
 
 export default function Login() {
   const { login } = useAuth();
@@ -99,110 +101,120 @@ export default function Login() {
     }
   };
 
-  const inputClass = "bg-surface border border-line rounded-lg px-3 h-10 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-full pl-10";
-  const selectClass = "bg-surface border border-line rounded-lg px-3 h-10 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-full";
-  const labelClass = "block text-sm font-medium text-ink-secondary mb-1";
-
-  const getBusinessColor = (name) => {
-    if (name.toLowerCase().includes('kaftan')) return 'bg-[#B4502E]';
-    if (name.toLowerCase().includes('astech')) return 'bg-[#2563EB]';
-    return 'bg-ink-subtle';
-  };
+  const selectedBusiness = businesses.find(b => String(b.id) === String(formData.business_id));
+  const switchMode = () => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccess(''); };
 
   return (
-    <div className="min-h-screen bg-[#F1F3F9] flex items-center justify-center p-4">
-      <div className="bg-surface border border-line rounded-xl shadow-sm p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-xl bg-ink flex items-center justify-center text-white mx-auto mb-4">
-            <Boxes className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">HQ Inventory</h1>
-          <p className="text-xs text-ink-muted mt-1">Multi-Role Warehouse & Inventory Portal</p>
+    <div className="min-h-screen bg-page lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      {/* Brand panel (large screens) */}
+      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-ink text-white p-12">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-[0.07]"
+          style={{ backgroundImage: 'linear-gradient(rgb(255 255 255) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255) 1px, transparent 1px)', backgroundSize: '32px 32px' }}
+        />
+        <div aria-hidden="true" className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-accent/30 blur-3xl" />
+        <div className="relative flex items-center gap-2.5">
+          <BrandMark />
+          <span className="font-display text-lg font-semibold tracking-tight">HQ Inventory</span>
         </div>
-
-        {error && (
-          <div className="mb-6 p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegisterMode && (
-            <div>
-              <label className={labelClass}>Full Name *</label>
-              <div className="relative">
-                <input type="text" name="full_name" required placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} className={inputClass} />
-                <User className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className={labelClass}>{isRegisterMode ? 'Email Address *' : 'Email or Username *'}</label>
-            <div className="relative">
-              <input type={isRegisterMode ? 'email' : 'text'} name="email" required placeholder={isRegisterMode ? 'user@domain.com' : 'superadmin@hq.com'} value={formData.email} onChange={handleChange} className={inputClass} />
-              <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
-            </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Password *</label>
-            <div className="relative">
-              <input type="password" name="password" required minLength={6} placeholder="••••••••" value={formData.password} onChange={handleChange} className={inputClass} />
-              <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
-            </div>
-          </div>
-
-          {isRegisterMode && (
-            <>
-              <div>
-                <label className={labelClass}>Business *</label>
-                <div className="relative">
-                  {formData.business_id && (
-                    <span className={"absolute left-3 top-3.5 inline-block w-2 h-2 rounded-full " + getBusinessColor(businesses.find(b => b.id.toString() === formData.business_id)?.name || '')}></span>
-                  )}
-                  <select name="business_id" value={formData.business_id} onChange={handleChange} className={selectClass + (formData.business_id ? " pl-7" : "")}>
-                    <option value="">— Select a business —</option>
-                    {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Branch *</label>
-                <select name="branch_id" value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0} className={selectClass + " disabled:opacity-50 disabled:cursor-not-allowed"}>
-                  <option value="">{formData.business_id ? '— Select a branch —' : '— Select a business first —'}</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Confirm Password *</label>
-                <div className="relative">
-                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter your password" className={inputClass} />
-                  <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
-                </div>
-              </div>
-            </>
-          )}
-
-          <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors mt-2">
-            {submitting ? 'Processing...' : isRegisterMode ? 'Submit Registration Request' : 'Sign In to Portal'}
-          </button>
-        </form>
-
-        <div className="mt-6 pt-5 border-t border-line-soft text-center">
-          <button type="button" onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccess(''); }} className="text-xs text-accent hover:text-accent-fg font-semibold">
-            {isRegisterMode ? 'Already have an account? Sign In' : 'Need an account? Submit Registration Request'}
-          </button>
+        <div className="relative max-w-md">
+          <h2 className="font-display text-3xl font-semibold tracking-tight leading-tight">Stock, sales and every branch in one calm place.</h2>
+          <ul className="mt-8 space-y-4 text-sm text-white/80">
+            {[
+              [ScanLine, 'Scan and sell at the counter, with receipts'],
+              [PackageMinus, 'Low-stock alerts before shelves run empty'],
+              [Building2, 'Each branch sees only its own data'],
+            ].map(([Icon, text]) => (
+              <li key={text} className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4" aria-hidden="true" /></span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+        <p className="relative text-caption text-white/50">Multi-business inventory &amp; point of sale</p>
+      </aside>
+
+      {/* Form */}
+      <main className="flex min-h-screen items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-sm animate-slide-up">
+          <div className="lg:hidden flex justify-center mb-8"><BrandMark withName /></div>
+
+          <div className="mb-6">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+              {isRegisterMode ? 'Request an account' : 'Welcome back'}
+            </h1>
+            <p className="text-sm text-ink-muted mt-1">
+              {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to manage stock and sales.'}
+            </p>
+          </div>
+
+          {error && <Alert tone="danger" className="mb-5" onClose={() => setError('')}>{error}</Alert>}
+          {success && <Alert tone="success" className="mb-5" onClose={() => setSuccess('')}>{success}</Alert>}
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+            {isRegisterMode && (
+              <Field label="Full name" required>
+                <Input icon={User} type="text" name="full_name" required autoComplete="name" placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} />
+              </Field>
+            )}
+
+            <Field label={isRegisterMode ? 'Email address' : 'Email or username'} required>
+              <Input
+                icon={Mail}
+                type={isRegisterMode ? 'email' : 'text'}
+                name="email"
+                required
+                autoComplete={isRegisterMode ? 'email' : 'username'}
+                placeholder={isRegisterMode ? 'you@company.com' : 'you@company.com'}
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </Field>
+
+            <Field label="Password" required>
+              <Input icon={Lock} type="password" name="password" required minLength={6} autoComplete={isRegisterMode ? 'new-password' : 'current-password'} placeholder="••••••••" value={formData.password} onChange={handleChange} />
+            </Field>
+
+            {isRegisterMode && (
+              <>
+                <Field label="Confirm password" required>
+                  <Input icon={Lock} type="password" name="confirmPassword" autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter your password" />
+                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Business" required>
+                    <div className="relative">
+                      {selectedBusiness && <BusinessDot business={selectedBusiness} className="absolute left-3 top-1/2 -translate-y-1/2 z-[1] pointer-events-none" />}
+                      <Select name="business_id" value={formData.business_id} onChange={handleChange} className={selectedBusiness ? 'pl-7' : ''}>
+                        <option value="">Select…</option>
+                        {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </Select>
+                    </div>
+                  </Field>
+                  <Field label="Branch" required>
+                    <Select name="branch_id" value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0}>
+                      <option value="">{formData.business_id ? 'Select…' : 'Business first'}</option>
+                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </Select>
+                  </Field>
+                </div>
+              </>
+            )}
+
+            <Button type="submit" loading={submitting} fullWidth size="lg" iconRight={submitting ? undefined : ArrowRight} className="mt-2">
+              {submitting ? 'Please wait…' : isRegisterMode ? 'Send request' : 'Sign in'}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-ink-muted">
+            {isRegisterMode ? 'Already have an account?' : 'New to the team?'}{' '}
+            <Button variant="link" onClick={switchMode} className="text-sm font-semibold">
+              {isRegisterMode ? 'Sign in' : 'Request an account'}
+            </Button>
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
