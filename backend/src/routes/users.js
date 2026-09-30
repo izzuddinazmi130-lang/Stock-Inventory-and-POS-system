@@ -133,6 +133,21 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     }
 
+    // Admin accounts must be fully assigned
+    if (role === 'admin') {
+      if (!business_id || !branch_id) {
+        return res.status(400).json({ success: false, message: 'Admin accounts must be assigned to both a business and a branch.' });
+      }
+      // Validate branch belongs to business
+      const [branchCheck] = await pool.query(
+        'SELECT id FROM branches WHERE id = ? AND business_id = ?',
+        [branch_id, business_id]
+      );
+      if (branchCheck.length === 0) {
+        return res.status(400).json({ success: false, message: 'The selected branch does not belong to the selected business.' });
+      }
+    }
+
     const [dup] = await pool.query('SELECT id FROM users WHERE email = ?', [emailClean]);
     if (dup.length > 0) {
       return res.status(400).json({ success: false, message: 'An account with this email address already exists.' });
@@ -234,9 +249,29 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
+    const targetRole = role || users[0].role;
+    let effectiveBusiness = business_id || null;
+    let effectiveBranch   = branch_id   || null;
+
+    // Admin accounts must be fully assigned (fields omitted from the request keep their current value)
+    if (targetRole === 'admin') {
+      if (business_id === undefined) effectiveBusiness = users[0].business_id;
+      if (branch_id === undefined) effectiveBranch = users[0].branch_id;
+      if (!effectiveBusiness || !effectiveBranch) {
+        return res.status(400).json({ success: false, message: 'Admin accounts must be assigned to both a business and a branch.' });
+      }
+      const [branchCheck] = await pool.query(
+        'SELECT id FROM branches WHERE id = ? AND business_id = ?',
+        [effectiveBranch, effectiveBusiness]
+      );
+      if (branchCheck.length === 0) {
+        return res.status(400).json({ success: false, message: 'The selected branch does not belong to the selected business.' });
+      }
+    }
+
     await pool.query(
       'UPDATE users SET business_id = ?, branch_id = ?, role = ?, updated_at = NOW() WHERE id = ?',
-      [business_id || null, branch_id || null, role || users[0].role, userId]
+      [effectiveBusiness, effectiveBranch, targetRole, userId]
     );
 
     await recordAuditLog(req.user.id, req.user.role, 'UPDATE_USER', 'users', userId, users[0], { business_id, branch_id, role }, req);

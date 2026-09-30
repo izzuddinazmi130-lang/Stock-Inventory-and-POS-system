@@ -18,7 +18,7 @@ export default function QrHub() {
           className={`flex items-center gap-1.5 px-4 h-9 rounded-md text-sm font-semibold transition-all ${tab === 'scan' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
         >
           <Camera className="w-4 h-4 text-indigo-600" />
-          <span>POS &amp; Scanner</span>
+          <span>Point of Sale</span>
         </button>
         <button
           type="button"
@@ -26,7 +26,7 @@ export default function QrHub() {
           className={`flex items-center gap-1.5 px-4 h-9 rounded-md text-sm font-semibold transition-all ${tab === 'generate' ? 'bg-white text-slate-900 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
         >
           <QrCode className="w-4 h-4 text-indigo-600" />
-          <span>Label Generator</span>
+          <span>Print QR labels</span>
         </button>
       </div>
       {tab === 'scan' ? <QrScanner embedded /> : <QrGenerator embedded />}

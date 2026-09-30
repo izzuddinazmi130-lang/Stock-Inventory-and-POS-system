@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, ArrowRight, Edit3, Trash2, X, CheckCircle, AlertCircle, Phone, Mail, FileText, SlidersHorizontal } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { Modal, FormSection, Field, Input, Select, Textarea, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
 
 export default function BusinessList() {
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -42,6 +44,7 @@ export default function BusinessList() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const res = await api.post('/businesses', addForm);
       if (res.data.success) {
@@ -57,11 +60,14 @@ export default function BusinessList() {
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to create business' });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const res = await api.put(`/businesses/${editForm.id}`, editForm);
       if (res.data.success) {
@@ -73,6 +79,8 @@ export default function BusinessList() {
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update business' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -114,6 +122,7 @@ export default function BusinessList() {
       address: b.address || '',
       notes: b.notes || b.description || ''
     });
+    setMessage(null);
     setShowEditModal(true);
   };
 
@@ -145,7 +154,7 @@ export default function BusinessList() {
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">View Business</h1>
           <p className="text-sm text-slate-500 mt-1">Corporate entity registry, business profiles, and operational branch hierarchy.</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4 sm:mt-0">
+        <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4 sm:mt-0">
           <Plus size={18} />
           Add Business
         </button>
@@ -158,7 +167,7 @@ export default function BusinessList() {
           <Building2 className="w-12 h-12 text-slate-300 mb-3" />
           <p className="text-slate-600 font-medium">No businesses yet</p>
           <p className="text-sm text-slate-500 mb-4">Add your first business entity to get started.</p>
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+          <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             <Plus size={16} /> Add Business
           </button>
         </div>
@@ -248,174 +257,95 @@ export default function BusinessList() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
-              <h3 className="text-lg font-bold text-slate-900">Add New Business Profile</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6">
-              <form onSubmit={handleAddSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Trading Name *</label>
-                    <input type="text" required placeholder="e.g. Kaftanasia"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Legal / Registered Name</label>
-                    <input type="text" placeholder="e.g. Kaftanasia Sdn. Bhd."
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.legal_name} onChange={(e) => setAddForm({ ...addForm, legal_name: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Business Registration No.</label>
-                    <input type="text" placeholder="e.g. 202601099882 (123456-X)"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.registration_number} onChange={(e) => setAddForm({ ...addForm, registration_number: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Industry / Category</label>
-                    <select
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.industry} onChange={(e) => setAddForm({ ...addForm, industry: e.target.value })}>
-                      <option value="">-- Select --</option>
-                      <option value="fashion">Fashion &amp; Apparel</option>
-                      <option value="technology">Technology &amp; Electronics</option>
-                      <option value="general">General / Other</option>
-                    </select>
-                    <p className="text-[11px] text-slate-400 mt-1">Determines the Add Product form shown to this business's branches.</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Person</label>
-                    <input type="text" placeholder="Primary contact name"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_person} onChange={(e) => setAddForm({ ...addForm, contact_person: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Email</label>
-                    <input type="email" placeholder="contact@business.com"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_email} onChange={(e) => setAddForm({ ...addForm, contact_email: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Phone</label>
-                    <input type="text" placeholder="+60 12-345 6789"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_phone} onChange={(e) => setAddForm({ ...addForm, contact_phone: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Head Office Address</label>
-                  <input type="text" placeholder="Street address, building, city, state"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={addForm.address} onChange={(e) => setAddForm({ ...addForm, address: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Corporate Notes / Summary</label>
-                  <textarea rows="2" placeholder="Internal notes or description..."
-                    className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={addForm.notes} onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}></textarea>
-                </div>
-                <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Business Profile</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <Modal
+          size="lg"
+          icon={Building2}
+          title="Add a new business"
+          description="Only the trading name is required. You can fill in the rest later."
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton disabled={saving}>{saving ? 'Saving…' : 'Create business'}</PrimaryButton>
+          </>}
+        >
+          <BusinessFields form={addForm} setForm={setAddForm} />
+        </Modal>
       )}
 
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
-              <h3 className="text-lg font-bold text-slate-900">Edit Business Details</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6">
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Trading Name *</label>
-                    <input type="text" required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Legal Name</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.legal_name} onChange={(e) => setEditForm({ ...editForm, legal_name: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Registration Number</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.registration_number} onChange={(e) => setEditForm({ ...editForm, registration_number: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Industry</label>
-                    <select
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}>
-                      <option value="">-- Select --</option>
-                      <option value="fashion">Fashion &amp; Apparel</option>
-                      <option value="technology">Technology &amp; Electronics</option>
-                      <option value="general">General / Other</option>
-                    </select>
-                    <p className="text-[11px] text-slate-400 mt-1">Determines the Add Product form shown to this business's branches.</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Person</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_person} onChange={(e) => setEditForm({ ...editForm, contact_person: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Email</label>
-                    <input type="email"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_email} onChange={(e) => setEditForm({ ...editForm, contact_email: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Phone</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_phone} onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Address</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Notes</label>
-                  <textarea rows="2"
-                    className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}></textarea>
-                </div>
-                <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
-                  <button type="button" onClick={() => setShowEditModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Changes</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <Modal
+          size="lg"
+          icon={Edit3}
+          title={`Edit ${editForm.name || 'business'}`}
+          description="Changes apply to this business and all of its branches."
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</PrimaryButton>
+          </>}
+        >
+          <BusinessFields form={editForm} setForm={setEditForm} />
+        </Modal>
       )}
     </Layout>
+  );
+}
+
+// Fields shared by the Add and Edit business forms
+function BusinessFields({ form, setForm }) {
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  return (
+    <>
+      <FormSection title="Business identity">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Trading name" required hint="The name staff and customers know.">
+            <Input required placeholder="e.g. Kaftanasia" value={form.name} onChange={set('name')} />
+          </Field>
+          <Field label="Registered company name" optional>
+            <Input placeholder="e.g. Kaftanasia Sdn. Bhd." value={form.legal_name} onChange={set('legal_name')} />
+          </Field>
+          <Field label="Registration number" optional>
+            <Input placeholder="e.g. 202601099882 (123456-X)" value={form.registration_number} onChange={set('registration_number')} />
+          </Field>
+          <Field label="Industry" optional hint="Used to group businesses. Product form fields are set under “Product form”.">
+            <Select value={form.industry} onChange={set('industry')}>
+              <option value="">Choose an industry…</option>
+              <option value="fashion">Fashion &amp; Apparel</option>
+              <option value="technology">Technology &amp; Electronics</option>
+              <option value="general">General / Other</option>
+            </Select>
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection title="Main contact" description="Who HQ should reach about this business.">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Field label="Contact person" optional>
+            <Input placeholder="Full name" value={form.contact_person} onChange={set('contact_person')} />
+          </Field>
+          <Field label="Email" optional>
+            <Input type="email" placeholder="contact@business.com" value={form.contact_email} onChange={set('contact_email')} />
+          </Field>
+          <Field label="Phone" optional>
+            <Input type="tel" placeholder="+60 12-345 6789" value={form.contact_phone} onChange={set('contact_phone')} />
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection title="Other details">
+        <Field label="Head office address" optional>
+          <Input placeholder="Street, building, city, state" value={form.address} onChange={set('address')} />
+        </Field>
+        <Field label="Internal notes" optional hint="Only visible to HQ.">
+          <Textarea rows={2} placeholder="Anything worth remembering about this business…" value={form.notes} onChange={set('notes')} />
+        </Field>
+      </FormSection>
+    </>
   );
 }

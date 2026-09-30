@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import KpiCard from '../../components/KpiCard';
+import { Modal, FormSection, Field, Input, Select, ChoiceCards, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
 import { 
   Users, Plus, ShieldCheck, UserX, Trash2, CheckCircle, 
   AlertCircle, X, Clock, Edit3, UserCheck, Check, Search, Filter, Building2, Store,
@@ -144,6 +145,7 @@ export default function UserManagement() {
       business_id: filterBusiness || '',
       branch_id: filterBranch || ''
     });
+    setMessage(null);
     setShowAddModal(true);
   };
 
@@ -269,10 +271,13 @@ export default function UserManagement() {
   const openEditModal = (u) => {
     setEditForm({
       id: u.id,
+      full_name: u.full_name || '',
+      email: u.email || '',
       role: u.role,
       business_id: u.business_id || '',
       branch_id: u.branch_id || ''
     });
+    setMessage(null);
     setShowEditModal(true);
   };
 
@@ -618,108 +623,53 @@ export default function UserManagement() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Provision New User Account</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        <Modal
+          icon={Users}
+          title="Add a user"
+          description="The account can sign in straight away with the password you set."
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Create user</PrimaryButton>
+          </>}
+        >
+          <FormSection title="Account">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Full name" required>
+                <Input required placeholder="e.g. Sarah Jenkins" value={addForm.full_name} onChange={e => setAddForm({ ...addForm, full_name: e.target.value })} />
+              </Field>
+              <Field label="Email" required hint="Used to sign in.">
+                <Input type="email" required placeholder="name@company.com" value={addForm.email} onChange={e => setAddForm({ ...addForm, email: e.target.value })} />
+              </Field>
             </div>
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-                  <input type="text" required placeholder="e.g. Sarah Jenkins" value={addForm.full_name} onChange={e => setAddForm({...addForm, full_name: e.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address *</label>
-                  <input type="email" required placeholder="user@domain.com" value={addForm.email} onChange={e => setAddForm({...addForm, email: e.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
-                <input type="password" required minLength={6} placeholder="Minimum 6 characters" value={addForm.password} onChange={e => setAddForm({...addForm, password: e.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">System Role *</label>
-                <select value={addForm.role} onChange={e => setAddForm({...addForm, role: e.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <option value="super_admin">Super Admin</option>
-                  <option value="admin">Branch Admin</option>
-                </select>
-              </div>
-
-              {addForm.role === 'admin' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Business *</label>
-                    <select required value={addForm.business_id} onChange={e => setAddForm({...addForm, business_id: e.target.value, branch_id: ''})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                      <option value="">— Select a business —</option>
-                      {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Branch *</label>
-                    <select required value={addForm.branch_id} onChange={e => setAddForm({...addForm, branch_id: e.target.value})} disabled={!addForm.business_id || branches.length === 0} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 text-slate-900">
-                      <option value="">{addForm.business_id ? '— Select a branch —' : '— Select a business first —'}</option>
-                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowAddModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Create User</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <Field label="Password" required hint="At least 6 characters. Share it with the user privately.">
+              <Input type="password" required minLength={6} autoComplete="new-password" value={addForm.password} onChange={e => setAddForm({ ...addForm, password: e.target.value })} />
+            </Field>
+          </FormSection>
+          <UserAccessFields form={addForm} setForm={setAddForm} businesses={businesses} branches={branches} />
+        </Modal>
       )}
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Edit User Assignment</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">System Role *</label>
-                <select value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <option value="super_admin">Super Admin</option>
-                  <option value="admin">Branch Admin</option>
-                </select>
-              </div>
-
-              {editForm.role === 'admin' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Business *</label>
-                    <select required value={editForm.business_id} onChange={e => setEditForm({...editForm, business_id: e.target.value, branch_id: ''})} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                      <option value="">— Select a business —</option>
-                      {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Branch *</label>
-                    <select required value={editForm.branch_id} onChange={e => setEditForm({...editForm, branch_id: e.target.value})} disabled={!editForm.business_id || editBranches.length === 0} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50">
-                      <option value="">{editForm.business_id ? '— Select a branch —' : '— Select a business first —'}</option>
-                      {editBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowEditModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          icon={Edit3}
+          title="Change user access"
+          description={editForm.full_name ? `${editForm.full_name}${editForm.email ? ` · ${editForm.email}` : ''}` : undefined}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Save changes</PrimaryButton>
+          </>}
+        >
+          <UserAccessFields form={editForm} setForm={setEditForm} businesses={businesses} branches={editBranches} />
+        </Modal>
       )}
 
       {/* ── Inspect User Branch Access Modal ── */}
@@ -892,3 +842,34 @@ export default function UserManagement() {
   );
 }
 
+// Role + business/branch assignment, shared by the Add and Edit user forms
+function UserAccessFields({ form, setForm, businesses, branches }) {
+  return (
+    <FormSection title="Access" description="Decide what this person can see and do.">
+      <ChoiceCards
+        value={form.role}
+        onChange={role => setForm({ ...form, role })}
+        options={[
+          { value: 'admin', icon: Store, label: 'Branch Admin', description: 'Runs one branch: products, POS, stores, damage and reports for that branch.' },
+          { value: 'super_admin', icon: ShieldCheck, label: 'Super Admin', description: 'HQ access to every business, branch, user and setting.' }
+        ]}
+      />
+      {form.role === 'admin' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Business" required>
+            <Select required value={form.business_id} onChange={e => setForm({ ...form, business_id: e.target.value, branch_id: '' })}>
+              <option value="">Choose a business…</option>
+              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Branch" required hint={form.business_id && branches.length === 0 ? 'This business has no branches yet.' : undefined}>
+            <Select required value={form.branch_id} onChange={e => setForm({ ...form, branch_id: e.target.value })} disabled={!form.business_id || branches.length === 0}>
+              <option value="">{form.business_id ? 'Choose a branch…' : 'Choose a business first'}</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </Field>
+        </div>
+      )}
+    </FormSection>
+  );
+}

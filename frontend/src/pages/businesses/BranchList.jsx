@@ -3,6 +3,16 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Building, Plus, Store, Edit3, Trash2, X, CheckCircle, AlertCircle, FileBarChart, ExternalLink, Search, CheckSquare, Square, Layers, RefreshCw } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { Modal, FormSection, PrimaryButton, SecondaryButton, toDateInput } from '../../components/ui/Form';
+import BranchFields from '../../components/forms/BranchFields';
+import CatalogPicker from '../../components/forms/CatalogPicker';
+
+// Collect the distinct skip reasons returned by /products/add-to-branch across several requests
+const collectSkipReasons = (settled) => [...new Set(settled.flatMap(r =>
+  r.status === 'fulfilled'
+    ? (r.value.data.results || []).filter(x => x.action === 'skipped').map(x => x.reason)
+    : [r.reason?.response?.data?.message || 'request failed']
+))].join('; ');
 
 export default function BranchList() {
   const { id } = useParams();
@@ -52,6 +62,7 @@ export default function BranchList() {
   }, [id]);
 
   const openAddModal = async () => {
+    setMessage(null);
     setStockSelections({});
     setCatalogSearch('');
     setShowAddModal(true);
@@ -105,7 +116,7 @@ export default function BranchList() {
           const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.data.success).length;
           const failed = results.length - succeeded;
           stockMsg = failed > 0
-            ? ` ${succeeded} existing product(s) stocked, ${failed} failed to add.`
+            ? ` ${succeeded} existing product(s) stocked, ${failed} failed to add (${collectSkipReasons(results)}).`
             : ` ${succeeded} existing product(s) stocked into this branch.`;
         }
 
@@ -126,10 +137,6 @@ export default function BranchList() {
       setCreatingBranch(false);
     }
   };
-
-  const filteredCatalogProducts = catalogProducts.filter(p =>
-    !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase())
-  );
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -163,7 +170,7 @@ export default function BranchList() {
   };
 
   const openEditModal = (b) => {
-    const formatDate = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+    setMessage(null);
     setEditForm({
       id: b.id,
       name: b.name || '',
@@ -176,7 +183,7 @@ export default function BranchList() {
       contact_phone: b.contact_phone || '',
       contact_email: b.contact_email || '',
       operating_hours: b.operating_hours || '',
-      opening_date: formatDate(b.opening_date),
+      opening_date: toDateInput(b.opening_date),
       is_active: b.is_active !== undefined ? b.is_active : 1
     });
     setShowEditModal(true);
@@ -322,253 +329,57 @@ export default function BranchList() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 px-6 pt-6">
-              <h3 className="text-lg font-bold text-slate-900">Add New Branch Location</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="px-6 pb-6">
-              <form onSubmit={handleAddSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Branch Name *</label>
-                    <input type="text" required placeholder="e.g. Bangi Central Branch"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Branch Code</label>
-                    <input type="text" placeholder="e.g. AST-KT or KAF-BG"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.branch_code} onChange={(e) => setAddForm({ ...addForm, branch_code: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Street Address</label>
-                  <input type="text" placeholder="Lot number, building, street address"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={addForm.address} onChange={(e) => setAddForm({ ...addForm, address: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">City</label>
-                    <input type="text" placeholder="Bandar Baru Bangi"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.city} onChange={(e) => setAddForm({ ...addForm, city: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">State</label>
-                    <input type="text" placeholder="Selangor"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.state} onChange={(e) => setAddForm({ ...addForm, state: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Postcode</label>
-                    <input type="text" placeholder="43650"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.postcode} onChange={(e) => setAddForm({ ...addForm, postcode: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Branch Manager / Contact</label>
-                    <input type="text" placeholder="Manager name"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_person} onChange={(e) => setAddForm({ ...addForm, contact_person: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Contact Phone</label>
-                    <input type="text" placeholder="+60 3-8920 1122"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_phone} onChange={(e) => setAddForm({ ...addForm, contact_phone: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Contact Email</label>
-                    <input type="email" placeholder="branch@domain.com"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.contact_email} onChange={(e) => setAddForm({ ...addForm, contact_email: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Operating Hours</label>
-                    <input type="text" placeholder="e.g. Mon-Sun 10:00 AM - 10:00 PM"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.operating_hours} onChange={(e) => setAddForm({ ...addForm, operating_hours: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Opening Date</label>
-                    <input type="date"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={addForm.opening_date} onChange={(e) => setAddForm({ ...addForm, opening_date: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between mt-4 mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Stock Existing Products (optional)</label>
-                    <span className="text-xs text-slate-400">{Object.keys(stockSelections).length} selected</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mb-2">Map products already used elsewhere in {business ? business.name : 'this business'} into this new branch as soon as it's created.</p>
-
-                  <div className="relative mb-2">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder="Search catalog by SKU or product name..."
-                      value={catalogSearch}
-                      onChange={e => setCatalogSearch(e.target.value)}
-                      className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  {catalogLoading ? (
-                    <div className="py-6 text-center text-xs text-slate-400 font-mono">Loading product catalog...</div>
-                  ) : filteredCatalogProducts.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-400 italic">No products found in this business catalog yet.</div>
-                  ) : (
-                    <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
-                      {filteredCatalogProducts.map(p => {
-                        const isChecked = p.id in stockSelections;
-                        return (
-                          <div key={p.id} className={`p-2.5 flex items-center justify-between gap-3 transition-colors text-xs ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
-                            <div
-                              onClick={() => toggleProductSelection(p.id)}
-                              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
-                            >
-                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                              <div className="truncate">
-                                <span className="font-semibold text-slate-900">{p.name}</span>
-                                <span className="font-mono text-[11px] text-indigo-600 ml-2 font-bold">{p.sku}</span>
-                              </div>
-                            </div>
-                            {isChecked && (
-                              <input
-                                type="number"
-                                min="0"
-                                value={stockSelections[p.id]}
-                                onChange={e => updateProductQuantity(p.id, e.target.value)}
-                                onClick={e => e.stopPropagation()}
-                                placeholder="Qty"
-                                className="h-8 w-20 flex-shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" disabled={creatingBranch} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                    {creatingBranch ? (<><RefreshCw size={14} className="animate-spin" /> Saving...</>) : 'Save Branch'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <Modal
+          size="lg"
+          icon={Building}
+          title={`Add a branch to ${business?.name || 'this business'}`}
+          description="Only the branch name is required."
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton disabled={creatingBranch}>
+              {creatingBranch ? <><RefreshCw size={14} className="animate-spin" /> Saving…</> : 'Create branch'}
+            </PrimaryButton>
+          </>}
+        >
+          <BranchFields form={addForm} setForm={setAddForm} />
+          <FormSection
+            title="Starting products (optional)"
+            description={`Tick products from ${business ? business.name : 'this business'}'s catalog to stock them in the new branch straight away.`}
+          >
+            <CatalogPicker
+              products={catalogProducts}
+              loading={catalogLoading}
+              search={catalogSearch}
+              onSearch={setCatalogSearch}
+              selections={stockSelections}
+              onToggle={toggleProductSelection}
+              onQuantity={updateProductQuantity}
+              emptyText="This business has no products yet."
+            />
+          </FormSection>
+        </Modal>
       )}
 
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 px-6 pt-6">
-              <h3 className="text-lg font-bold text-slate-900">Edit Branch Details</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="px-6 pb-6">
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Branch Name *</label>
-                    <input type="text" required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Branch Code</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.branch_code} onChange={(e) => setEditForm({ ...editForm, branch_code: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Address</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">City</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">State</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.state} onChange={(e) => setEditForm({ ...editForm, state: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Postcode</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.postcode} onChange={(e) => setEditForm({ ...editForm, postcode: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Contact Person</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_person} onChange={(e) => setEditForm({ ...editForm, contact_person: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Contact Phone</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_phone} onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Contact Email</label>
-                    <input type="email"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.contact_email} onChange={(e) => setEditForm({ ...editForm, contact_email: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Operating Hours</label>
-                    <input type="text"
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={editForm.operating_hours} onChange={(e) => setEditForm({ ...editForm, operating_hours: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-slate-700">Status</label>
-                    <select
-                      value={editForm.is_active}
-                      onChange={(e) => setEditForm({ ...editForm, is_active: parseInt(e.target.value) })}
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value={1}>ACTIVE</option>
-                      <option value={0}>INACTIVE</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-                  <button type="button" onClick={() => setShowEditModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Changes</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <Modal
+          size="lg"
+          icon={Edit3}
+          title={`Edit ${editForm.name || 'branch'}`}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Save changes</PrimaryButton>
+          </>}
+        >
+          <BranchFields form={editForm} setForm={setEditForm} showStatus />
+        </Modal>
       )}
     </Layout>
   );

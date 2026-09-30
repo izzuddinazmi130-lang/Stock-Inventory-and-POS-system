@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 function formatDateTime(val) {
   if (!val) return '—';
@@ -111,6 +112,8 @@ function getTimingStatusText(store, phase) {
 
 export default function StoreReport() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [store, setStore] = useState(null);
   const [movements, setMovements] = useState([]);
   const [summary, setSummary] = useState({ total_cash: 0, total_online: 0, total_sales: 0, total_items_sold: 0 });
@@ -188,10 +191,10 @@ export default function StoreReport() {
           </p>
           <div className="flex justify-center gap-3">
             <Link
-              to="/businesses"
+              to={isSuperAdmin ? '/businesses' : `/branches/${user?.branch_id}/stores`}
               className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
             >
-              <ArrowLeft size={16} /> Businesses
+              <ArrowLeft size={16} /> {isSuperAdmin ? 'Businesses' : 'My Stores'}
             </Link>
             <button
               onClick={fetchReport}
@@ -209,9 +212,15 @@ export default function StoreReport() {
     <Layout>
       {/* Breadcrumb Navigation */}
       <nav className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
-        <Link to="/businesses" className="hover:text-slate-900 transition-colors">Businesses</Link>
-        <span>/</span>
-        <Link to={`/businesses/${store.business_id || 1}/branches`} className="hover:text-slate-900 transition-colors">{store.business_name || 'Business'}</Link>
+        {isSuperAdmin ? (
+          <>
+            <Link to="/businesses" className="hover:text-slate-900 transition-colors">Businesses</Link>
+            <span>/</span>
+            <Link to={`/businesses/${store.business_id}/branches`} className="hover:text-slate-900 transition-colors">{store.business_name || 'Business'}</Link>
+          </>
+        ) : (
+          <span>{store.business_name || 'Business'}</span>
+        )}
         <span>/</span>
         <Link to={`/branches/${store.branch_id}`} className="hover:text-slate-900 transition-colors">{store.branch_name || 'Branch'}</Link>
         <span>/</span>
@@ -360,11 +369,11 @@ export default function StoreReport() {
 
           <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
             <span className="block text-[11px] font-semibold uppercase text-slate-400">Person In Charge</span>
-            <span className="block text-sm font-bold text-slate-900 mt-1 flex items-center gap-1">
+            <span className="flex text-sm font-bold text-slate-900 mt-1 items-center gap-1">
               <User size={13} className="text-slate-400" /> {store.person_in_charge || 'HQ Staff'}
             </span>
             {store.contact_phone ? (
-              <span className="block text-xs font-mono text-slate-500 mt-0.5 flex items-center gap-1">
+              <span className="flex text-xs font-mono text-slate-500 mt-0.5 items-center gap-1">
                 <Phone size={11} className="text-slate-400" /> {store.contact_phone}
               </span>
             ) : (

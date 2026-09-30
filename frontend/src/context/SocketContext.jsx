@@ -22,11 +22,10 @@ export const SocketProvider = ({ children }) => {
       withCredentials: true
     });
 
+    // The server authenticates the socket with the auth cookie and joins it to the
+    // rooms for this user's business/branch (or the super admin room) itself.
     newSocket.on('connect', () => {
       console.log('⚡ Socket.io connected:', newSocket.id);
-      if (user.assigned_warehouse_id) {
-        newSocket.emit('join_warehouse', user.assigned_warehouse_id);
-      }
     });
 
     setSocket(newSocket);

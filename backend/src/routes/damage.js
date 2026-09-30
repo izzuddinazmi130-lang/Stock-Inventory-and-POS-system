@@ -5,6 +5,8 @@ const fs = require('fs');
 const multer = require('multer');
 const pool = require('../config/db');
 const { authenticateToken, recordAuditLog } = require('../middleware/auth');
+const { resolveScope, handleScopeError } = require('../middleware/scope');
+const { emitToBusiness } = require('../utils/realtime');
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, '../../uploads/damage-reports');
@@ -41,20 +43,13 @@ const upload = multer({
   fileFilter
 });
 
-// Helper for effective branch scoping
-function getEffectiveBranchId(user, requestedBranchId) {
-  if (user.role === 'admin') return user.branch_id;
-  if (requestedBranchId && requestedBranchId !== 'all' && requestedBranchId !== '') {
-    return parseInt(requestedBranchId, 10);
-  }
-  return null;
-}
 
 // --- GET /api/damage-reports --------------------------------------------------
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const branchId = getEffectiveBranchId(req.user, req.query.branch_id);
-    const businessId = req.query.business_id ? parseInt(req.query.business_id, 10) : null;
+    // Admin: always their own business, all branches by default, optionally one sibling branch.
+    // Super admin: any business / branch / all. Stats below are computed from the same scoped rows.
+    const { businessId, branchId } = await resolveScope(req, { level: 'business' });
     const startDate = req.query.start_date || null;
     const endDate = req.query.end_date || null;
     const search = req.query.search ? `%${req.query.search.trim()}%` : null;
@@ -129,6 +124,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     return res.json({ success: true, reports, stats });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     console.error('Fetch damage reports error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch damage reports: ' + err.message });
   }
@@ -157,6 +153,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const report = reports[0];
+    // Branch admin: may read any report within their own business, never another business's
+    if (req.user.role !== 'super_admin' && (!req.user.business_id || report.business_id !== parseInt(req.user.business_id, 10))) {
+      return res.status(404).json({ success: false, message: 'Damage report not found.' });
+    }
+
     const [photos] = await pool.query(
       'SELECT id, photo_path, uploaded_at FROM damage_report_photos WHERE damage_report_id = ?',
       [report.id]
@@ -190,13 +191,14 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
       });
     }
 
-    const targetBranch = getEffectiveBranchId(req.user, branch_id);
+    // Write actions stay branch-restricted: an admin may only report damage for their own branch
+    const targetBranch = parseInt(branch_id, 10);
     if (!targetBranch) {
       connection.release();
       return res.status(400).json({ success: false, message: 'Valid branch selection is required.' });
     }
 
-    if (req.user.role === 'admin' && parseInt(targetBranch, 10) !== req.user.branch_id) {
+    if (req.user.role !== 'super_admin' && (!req.user.branch_id || targetBranch !== parseInt(req.user.branch_id, 10))) {
       connection.release();
       return res.status(403).json({ success: false, message: 'Unauthorized branch for damage reporting.' });
     }
@@ -227,6 +229,11 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
       return res.status(404).json({ success: false, message: 'Branch not found.' });
     }
     const businessId = branches[0].business_id;
+    if (product.business_id !== businessId) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({ success: false, message: 'This product does not belong to the business of this branch.' });
+    }
 
     // Check branch stock
     const [stocks] = await connection.query(
@@ -282,11 +289,6 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
       [newQty, product_id, targetBranch]
     );
 
-    // Auto-update product status if stock is exhausted
-    if (newQty === 0 && product.status !== 'discontinued') {
-      await connection.query('UPDATE products SET status = ? WHERE id = ?', ['out_of_stock', product_id]);
-    }
-
     // 4. Log in stock_movements linked to damage_reports
     await connection.query(
       `INSERT INTO stock_movements
@@ -321,11 +323,8 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
     );
 
     // Emit live socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('inventory_updated', { branch_id: targetBranch, item_id: product_id, new_qty: newQty });
-      io.emit('damage_reported', { report_id: reportId, branch_id: targetBranch, product_id });
-    }
+    emitToBusiness(req, businessId, 'inventory_updated', { branch_id: targetBranch, item_id: product_id, new_qty: newQty });
+    emitToBusiness(req, businessId, 'damage_reported', { report_id: reportId, branch_id: targetBranch, product_id });
 
     return res.json({
       success: true,
@@ -362,7 +361,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const report = reports[0];
 
     // Branch-scoped admins may only delete records from their own branch
-    if (req.user.role === 'admin' && report.branch_id !== req.user.branch_id) {
+    if (req.user.role !== 'super_admin' && (!req.user.branch_id || report.branch_id !== parseInt(req.user.branch_id, 10))) {
       connection.release();
       return res.status(403).json({ success: false, message: 'Unauthorized to delete a damage report from another branch.' });
     }
@@ -390,14 +389,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         'UPDATE product_branch_stock SET quantity = ? WHERE product_id = ? AND branch_id = ?',
         [newQty, report.product_id, report.branch_id]
       );
-
-      // If stock was auto-marked out_of_stock because of this damage, bring it back
-      if (curQty === 0 && newQty > 0) {
-        await connection.query(
-          "UPDATE products SET status = 'active' WHERE id = ? AND status = 'out_of_stock'",
-          [report.product_id]
-        );
-      }
     }
 
     // Remove the damage stock movement created for this damage report so reports & analytics stay consistent
@@ -440,11 +431,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       req
     );
 
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('inventory_updated', { branch_id: report.branch_id, item_id: report.product_id, new_qty: newQty });
-      io.emit('damage_deleted', { report_id: reportId, branch_id: report.branch_id, product_id: report.product_id });
-    }
+    emitToBusiness(req, report.business_id, 'inventory_updated', { branch_id: report.branch_id, item_id: report.product_id, new_qty: newQty });
+    emitToBusiness(req, report.business_id, 'damage_deleted', { report_id: reportId, branch_id: report.branch_id, product_id: report.product_id });
 
     return res.json({
       success: true,

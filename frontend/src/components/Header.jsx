@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBusiness } from '../context/BusinessContext';
 import { Search, LogOut } from 'lucide-react';
 import api from '../services/api';
+import LowStockBell from './LowStockBell';
 
 const BIZ_COLORS = { 1: '#B4502E', 2: '#2563EB' };
 
@@ -120,6 +121,8 @@ export default function Header() {
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
           {roleLabel}
         </div>
+
+        <LowStockBell />
 
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-sm flex items-center justify-center flex-shrink-0">

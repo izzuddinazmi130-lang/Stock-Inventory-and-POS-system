@@ -3,6 +3,11 @@ const router = express.Router();
 const QRCode = require('qrcode');
 const pool = require('../config/db');
 const { authenticateToken, recordAuditLog } = require('../middleware/auth');
+const { emitToBusiness } = require('../utils/realtime');
+const { toSen, fromSen, nextReceiptNo, variantTextFor, loadSale } = require('../utils/sales');
+
+const PRICE_TIERS = ['customer', 'dealer', 'staff'];
+const PAYMENT_METHODS = ['cash', 'qr', 'online_banking'];
 
 // Helper to extract clean SKU from scanned QR string
 function parseQrCode(rawCode) {
@@ -31,10 +36,17 @@ router.get('/generate/:id', authenticateToken, async (req, res) => {
   try {
     const productId = parseInt(req.params.id, 10);
 
-    // Determine which branch to show stock for
-    const branchId = req.user.role !== 'super_admin' && req.user.branch_id
-      ? parseInt(req.user.branch_id)
-      : null;
+    // Determine which branch to show stock for (branch admin: always their own; never unrestricted)
+    let branchId = null;
+    if (req.user.role !== 'super_admin') {
+      branchId = req.user.branch_id ? parseInt(req.user.branch_id, 10) : null;
+      if (!branchId) {
+        return res.status(403).json({ success: false, message: 'Access denied: Branch Admin must have an assigned branch.' });
+      }
+    } else if (req.query.branch_id) {
+      // Super admin may pick which branch's label to print (the QR string includes the branch code)
+      branchId = parseInt(req.query.branch_id, 10) || null;
+    }
 
     let query = `
       SELECT
@@ -277,8 +289,18 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       payment_method = 'cash', // 'cash', 'qr', 'online_banking'
       store_id = null,
       note = '',
+      cash_received = null,
       items = []
     } = req.body;
+
+    if (mode !== 'stock_out' && mode !== 'stock_in') {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'Invalid mode.' });
+    }
+    if (mode === 'stock_out' && (!PRICE_TIERS.includes(price_tier) || !PAYMENT_METHODS.includes(payment_method))) {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'Invalid price list or payment method.' });
+    }
 
     // Resolve target branch from authenticated branch admin
     const targetBranch = req.user.branch_id ? parseInt(req.user.branch_id, 10) : null;
@@ -305,10 +327,23 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No items provided for POS transaction.' });
     }
 
+    // A store event must belong to the operator's own branch
+    if (store_id) {
+      const [storeRows] = await connection.query('SELECT id FROM stores WHERE id = ? AND branch_id = ?', [store_id, targetBranch]);
+      if (storeRows.length === 0) {
+        connection.release();
+        return res.status(403).json({ success: false, message: 'That store does not belong to your branch.' });
+      }
+    }
+
+    // Lock stock rows in a fixed order (by product id) so two tills selling the same products can't deadlock
+    cartItems = [...cartItems].sort((a, b) => (parseInt(a.product_id, 10) || 0) - (parseInt(b.product_id, 10) || 0));
+
     await connection.beginTransaction();
 
     const processedItems = [];
-    let grandTotal = 0;
+    const saleLines = [];
+    let grandTotalSen = 0;
     let totalQuantity = 0;
 
     for (const item of cartItems) {
@@ -368,7 +403,7 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
 
       // Select price based on price tier
       let unitSellingPrice = parseFloat(product.price_customer || 0);
-      const tier = item.price_tier || price_tier;
+      const tier = price_tier;
       if (tier === 'dealer') {
         unitSellingPrice = parseFloat(product.price_dealer || product.price_customer || 0);
       } else if (tier === 'staff') {
@@ -397,14 +432,6 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
           );
         }
 
-        // Update product status if zero
-        if (newQty === 0) {
-          await connection.query(
-            "UPDATE products SET status = 'out_of_stock' WHERE id = ? AND status != 'discontinued'",
-            [product.id]
-          );
-        }
-
         const tierLabel = tier.toUpperCase();
         const saleRef = note ? note.trim() : 'POS Counter Sale';
         const movementNote = `[POS Sale - ${tierLabel}] ${saleRef}`;
@@ -429,9 +456,22 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
           ]
         );
 
-        const lineTotal = unitSellingPrice * qty;
-        grandTotal += lineTotal;
+        const lineTotalSen = toSen(unitSellingPrice) * qty;
+        const lineTotal = fromSen(lineTotalSen);
+        grandTotalSen += lineTotalSen;
         totalQuantity += qty;
+
+        saleLines.push({
+          product_id: product.id,
+          movement_id: movResult.insertId,
+          sku: product.sku,
+          name: product.name,
+          variant_text: await variantTextFor(connection, product.id),
+          quantity: qty,
+          unit_price: unitSellingPrice,
+          line_total: lineTotal,
+          cost_price: costPrice
+        });
 
         processedItems.push({
           movement_id: movResult.insertId,
@@ -460,14 +500,6 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
           await connection.query(
             'INSERT INTO product_branch_stock (product_id, branch_id, quantity, created_at) VALUES (?, ?, ?, NOW())',
             [product.id, targetBranch, newQty]
-          );
-        }
-
-        // Restore status if was out of stock
-        if (curQty === 0 && newQty > 0) {
-          await connection.query(
-            "UPDATE products SET status = 'available' WHERE id = ? AND status = 'out_of_stock'",
-            [product.id]
           );
         }
 
@@ -511,8 +543,48 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       }
     }
 
+    // A sale gets a receipt number and a sales-history record (restocks don't)
+    const grandTotal = fromSen(grandTotalSen);
+    let saleId = null;
+    if (mode === 'stock_out') {
+      let cashReceived = null;
+      let changeDue = null;
+      if (payment_method === 'cash' && cash_received !== null && cash_received !== '' && cash_received !== undefined) {
+        const cashSen = toSen(cash_received);
+        if (cashSen < grandTotalSen) {
+          throw new Error(`Cash received (RM ${fromSen(cashSen).toFixed(2)}) is less than the total (RM ${grandTotal.toFixed(2)}).`);
+        }
+        cashReceived = fromSen(cashSen);
+        changeDue = fromSen(cashSen - grandTotalSen);
+      }
+
+      const [[branchRow]] = await connection.query('SELECT business_id, branch_code FROM branches WHERE id = ?', [targetBranch]);
+      const receiptNo = await nextReceiptNo(connection, targetBranch, branchRow.branch_code);
+      const [saleResult] = await connection.query(
+        `INSERT INTO sales
+           (receipt_no, business_id, branch_id, store_id, price_tier, payment_method, total_amount,
+            cash_received, change_due, item_count, total_quantity, note, cashier_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          receiptNo, branchRow.business_id, targetBranch, store_id ? parseInt(store_id, 10) : null,
+          price_tier, payment_method, grandTotal, cashReceived, changeDue,
+          saleLines.length, totalQuantity, note ? String(note).trim().slice(0, 255) : null, req.user.id
+        ]
+      );
+      saleId = saleResult.insertId;
+
+      await connection.query(
+        `INSERT INTO sale_items (sale_id, product_id, movement_id, sku, name, variant_text, quantity, unit_price, line_total, cost_price)
+         VALUES ?`,
+        [saleLines.map(l => [saleId, l.product_id, l.movement_id, l.sku, l.name, l.variant_text, l.quantity, l.unit_price, l.line_total, l.cost_price])]
+      );
+      await connection.query('UPDATE stock_movements SET sale_id = ? WHERE id IN (?)', [saleId, saleLines.map(l => l.movement_id)]);
+    }
+
     await connection.commit();
     connection.release();
+
+    const sale = saleId ? await loadSale(pool, saleId) : null;
 
     // Audit Log
     const auditAction = mode === 'stock_out' ? 'POS_SALE_TRANSACTION' : 'POS_STOCK_IN_TRANSACTION';
@@ -523,33 +595,30 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       'stock_movements',
       processedItems[0]?.movement_id || 0,
       { branch_id: targetBranch, mode, items_count: processedItems.length, total_quantity: totalQuantity },
-      { grand_total: grandTotal, price_tier, payment_method },
+      { grand_total: grandTotal, price_tier, payment_method, receipt_no: sale?.receipt_no || null },
       req
     );
 
-    // Broadcast real-time Socket.io update so Super Admin and other screens sync live
-    const io = req.app.get('io');
-    if (io) {
-      for (const item of processedItems) {
-        io.emit('inventory_updated', {
-          branch_id: targetBranch,
-          item_id: item.product_id,
-          new_qty: item.new_stock,
-          action: mode === 'stock_out' ? 'pos_sale' : 'pos_restock'
-        });
-      }
-      io.emit('stock_movement', {
+    // Broadcast real-time Socket.io update to this business and super admins
+    for (const item of processedItems) {
+      emitToBusiness(req, req.user.business_id, 'inventory_updated', {
         branch_id: targetBranch,
-        action: mode,
-        total_items: processedItems.length,
-        timestamp: new Date().toISOString()
+        item_id: item.product_id,
+        new_qty: item.new_stock,
+        action: mode === 'stock_out' ? 'pos_sale' : 'pos_restock'
       });
     }
+    emitToBusiness(req, req.user.business_id, 'stock_movement', {
+      branch_id: targetBranch,
+      action: mode,
+      total_items: processedItems.length,
+      timestamp: new Date().toISOString()
+    });
 
     return res.json({
       success: true,
       message: mode === 'stock_out'
-        ? `Sale completed! ${totalQuantity} unit(s) stocked out. Total: RM ${grandTotal.toFixed(2)}.`
+        ? `Sale ${sale?.receipt_no || ''} completed. Total: RM ${grandTotal.toFixed(2)}.`
         : `Stock received! ${totalQuantity} unit(s) added to branch inventory.`,
       mode,
       branch_id: targetBranch,
@@ -559,6 +628,7 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       total_quantity: totalQuantity,
       grand_total: grandTotal,
       items: processedItems,
+      sale,
       timestamp: new Date().toISOString()
     });
 
@@ -646,10 +716,6 @@ router.post('/scan-deduct', authenticateToken, async (req, res) => {
         [newQty, item.id, targetBranch]
       );
 
-      if (newQty === 0) {
-        await connection.query("UPDATE products SET status = 'out_of_stock' WHERE id = ?", [item.id]);
-      }
-
       await connection.query(
         `INSERT INTO stock_movements
            (branch_id, item_id, movement_type, quantity, qty_before, qty_after, note, performed_by, created_at)
@@ -660,10 +726,7 @@ router.post('/scan-deduct', authenticateToken, async (req, res) => {
       await connection.commit();
       connection.release();
 
-      const io = req.app.get('io');
-      if (io) {
-        io.emit('inventory_updated', { branch_id: targetBranch, item_id: item.id, new_qty: newQty });
-      }
+      emitToBusiness(req, req.user.business_id, 'inventory_updated', { branch_id: targetBranch, item_id: item.id, new_qty: newQty });
 
       return res.json({
         success: true,

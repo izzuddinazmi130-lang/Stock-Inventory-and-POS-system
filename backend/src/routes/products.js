@@ -5,16 +5,15 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
+const { resolveScope, handleScopeError } = require('../middleware/scope');
+const { emitToBusiness } = require('../utils/realtime');
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const getEffectiveBranchId = (user, queryBranchId) => {
-  if (user.role !== 'super_admin') {
-    return user.branch_id || (queryBranchId ? parseInt(queryBranchId) : null);
-  }
-  if (queryBranchId) return parseInt(queryBranchId);
-  return null;
-};
+// A branch admin may only act on products of their own business.
+function assertProductInUserBusiness(user, product) {
+  return user.role === 'super_admin' || parseInt(product.business_id, 10) === parseInt(user.business_id, 10);
+}
 
 // Canonical SKU format used by existing products and POS: BRANCH-CATEGORY###.
 async function generateSku(branchCode, categoryPrefix, connection) {
@@ -66,8 +65,11 @@ router.get('/form-config', authenticateToken, async (req, res) => {
 // ─── GET /api/products/variant-attributes (legacy compatibility) ────────────
 router.get('/variant-attributes', authenticateToken, async (req, res) => {
   try {
-    const { business_id } = req.query;
-    const [rows] = await pool.query('SELECT * FROM business_form_fields WHERE business_id = ? ORDER BY sort_order, label', [business_id || req.user.business_id]);
+    const businessId = req.user.role === 'super_admin'
+      ? (req.query.business_id || req.user.business_id)
+      : req.user.business_id;
+    if (!businessId) return res.status(400).json({ success: false, message: 'business_id is required' });
+    const [rows] = await pool.query('SELECT * FROM business_form_fields WHERE business_id = ? ORDER BY sort_order, label', [businessId]);
     res.json({ success: true, attributes: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -77,7 +79,7 @@ router.get('/variant-attributes', authenticateToken, async (req, res) => {
 // ─── GET /api/products ───────────────────────────────────────────────────────
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const branchId = getEffectiveBranchId(req.user, req.query.branch_id);
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
     const search = req.query.search ? `%${req.query.search.trim()}%` : null;
     const status = req.query.status ? req.query.status.trim() : null;
 
@@ -101,9 +103,9 @@ router.get('/', authenticateToken, async (req, res) => {
     `;
     const params = [];
 
-    if (req.query.business_id) {
+    if (businessId) {
         query += ' AND p.business_id = ?';
-        params.push(req.query.business_id);
+        params.push(businessId);
     }
     if (branchId) { 
         query += ' AND pbs.branch_id = ?'; 
@@ -123,7 +125,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
     if (req.query.stock_status && req.query.stock_status !== 'all') {
         if (req.query.stock_status === 'out_of_stock') {
-            query += ' AND (pbs.quantity = 0 OR p.status = "out_of_stock")';
+            query += ' AND pbs.quantity <= 0';
         } else if (req.query.stock_status === 'low_stock') {
             query += ' AND pbs.quantity > 0 AND pbs.quantity <= p.min_quantity';
         } else if (req.query.stock_status === 'in_stock') {
@@ -169,17 +171,21 @@ router.get('/', authenticateToken, async (req, res) => {
       r.variant_color = r.colour;
       r.size = r.variants.size || null;
       r.model = r.variants.model || null;
+      // Stock level for THIS branch row, derived from quantity (never from products.status)
+      const qty = parseInt(r.quantity || 0, 10);
+      r.stock_status = qty <= 0 ? 'out' : qty <= parseInt(r.minimum_quantity || 0, 10) ? 'low' : 'ok';
     });
 
     const stats = {
       totalItems: rows.length,
       totalStock: rows.reduce((s, r) => s + parseInt(r.quantity || 0), 0),
-      lowStockCount: rows.filter(r => parseInt(r.quantity || 0) <= parseInt(r.minimum_quantity || 5)).length,
+      lowStockCount: rows.filter(r => r.stock_status !== 'ok').length,
       newArrivals: rows.filter(r => r.new_until && new Date(r.new_until) > new Date()).length
     };
 
     return res.json({ success: true, items: rows, stats });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     console.error('Fetch products error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch inventory items: ' + err.message });
   }
@@ -188,14 +194,16 @@ router.get('/', authenticateToken, async (req, res) => {
 // ─── GET /api/products/categories ───────────────────────────────────────────
 router.get('/categories', authenticateToken, async (req, res) => {
   try {
-    const branchId = getEffectiveBranchId(req.user, req.query.branch_id);
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
     let query = 'SELECT DISTINCT p.category FROM products p JOIN product_branch_stock pbs ON pbs.product_id = p.id WHERE p.category IS NOT NULL AND p.category != ""';
     const params = [];
+    if (businessId) { query += ' AND p.business_id = ?'; params.push(businessId); }
     if (branchId) { query += ' AND pbs.branch_id = ?'; params.push(branchId); }
     query += ' ORDER BY p.category ASC';
     const [rows] = await pool.query(query, params);
     return res.json({ success: true, categories: rows.map(r => r.category) });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -206,6 +214,9 @@ router.get('/preview-sku', authenticateToken, async (req, res) => {
     const { branch_id, category } = req.query;
     if (!branch_id || !category) {
       return res.status(400).json({ success: false, message: 'branch_id and category are required.' });
+    }
+    if (req.user.role !== 'super_admin' && parseInt(branch_id, 10) !== parseInt(req.user.branch_id, 10)) {
+      return res.status(403).json({ success: false, message: 'Access denied: not your branch.' });
     }
     const [branches] = await pool.query('SELECT branch_code FROM branches WHERE id = ?', [branch_id]);
     if (branches.length === 0) return res.status(404).json({ success: false, message: 'Branch not found.' });
@@ -221,59 +232,116 @@ router.get('/preview-sku', authenticateToken, async (req, res) => {
 });
 
 // ─── GET /api/products/catalog ──────────────────────────────────────────────
-// Returns all unique products across business catalog (used for Add Existing to Branch)
-// For branch admins, excludes products already in their branch
+// Business catalog used by "Add to branch / Restock". Products already in the target branch are
+// NOT hidden: each row carries in_branch / branch_qty for that branch so the UI can offer a restock.
+// Target branch: admin → their own branch; super_admin → optional ?branch_id.
+// total_stock (summed across all branches) is returned to super_admin only.
 router.get('/catalog', authenticateToken, async (req, res) => {
   try {
-    const { business_id } = req.query;
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
+    const isSuperAdmin = req.user.role === 'super_admin';
+
     let query = `
-      SELECT 
+      SELECT
         p.id, p.sku, p.name, p.category, p.status, p.business_id, b.name as business_name,
         p.price_customer, p.cost_price, p.min_quantity,
-        COUNT(pbs.branch_id) as branch_count,
-        COALESCE(SUM(pbs.quantity), 0) as total_stock
+        (tb.product_id IS NOT NULL) AS in_branch,
+        tb.quantity AS branch_qty
+        ${isSuperAdmin ? ', (SELECT COUNT(*) FROM product_branch_stock s WHERE s.product_id = p.id) AS branch_count' : ''}
+        ${isSuperAdmin ? ', (SELECT COALESCE(SUM(s.quantity), 0) FROM product_branch_stock s WHERE s.product_id = p.id) AS total_stock' : ''}
       FROM products p
       JOIN businesses b ON b.id = p.business_id
-      LEFT JOIN product_branch_stock pbs ON pbs.product_id = p.id
-      WHERE 1=1
+      LEFT JOIN product_branch_stock tb ON tb.product_id = p.id AND tb.branch_id = ?
+      WHERE p.status != 'discontinued'
     `;
-    const params = [];
-    if (business_id) {
+    const params = [branchId || 0];
+    if (businessId) {
       query += ' AND p.business_id = ?';
-      params.push(business_id);
+      params.push(businessId);
     }
-    if (req.user.role !== 'super_admin' && req.user.business_id) {
-      query += ' AND p.business_id = ?';
-      params.push(req.user.business_id);
-    }
-    query += ' GROUP BY p.id ORDER BY p.name ASC';
+    query += ' ORDER BY p.name ASC';
     const [rows] = await pool.query(query, params);
 
-    // For branch admins, filter out products that already exist in their branch
-    let filteredRows = rows;
-    if (req.user.role !== 'super_admin' && req.user.branch_id) {
-      const userBranchId = parseInt(req.user.branch_id, 10);
-      // Get product IDs that already exist in the user's branch
-      const [existingStock] = await pool.query(
-        'SELECT DISTINCT product_id FROM product_branch_stock WHERE branch_id = ?',
-        [userBranchId]
-      );
-      const existingProductIds = new Set(existingStock.map(row => row.product_id));
-      // Filter out products that are already in the user's branch
-      filteredRows = rows.filter(row => !existingProductIds.has(row.id));
+    rows.forEach(r => {
+      r.in_branch = Boolean(r.in_branch);
+      r.branch_qty = r.in_branch ? parseInt(r.branch_qty || 0, 10) : null;
+      if (isSuperAdmin) r.total_stock = Number(r.total_stock) || 0;
+    });
+
+    return res.json({ success: true, branch_id: branchId, products: rows });
+  } catch (err) {
+    if (handleScopeError(res, err)) return;
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/products/low-stock ────────────────────────────────────────────
+// Branch stock rows at or below the product's "alert at" level (quantity 0 = out of stock).
+// Branch admin: own branch. Super admin: optional ?business_id / ?branch_id.
+// ?limit=N returns only the N most urgent rows (counts always cover everything).
+router.get('/low-stock', authenticateToken, async (req, res) => {
+  try {
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
+    const limit = parseInt(req.query.limit, 10) || null;
+
+    let query = `
+      SELECT p.id, p.sku, p.name, p.category, p.min_quantity, p.price_customer,
+             p.business_id, b.name AS business_name,
+             pbs.branch_id, br.name AS branch_name, pbs.quantity
+      FROM product_branch_stock pbs
+      JOIN products p ON p.id = pbs.product_id
+      JOIN branches br ON br.id = pbs.branch_id
+      JOIN businesses b ON b.id = p.business_id
+      WHERE p.status != 'discontinued' AND pbs.quantity <= p.min_quantity
+    `;
+    const params = [];
+    if (businessId) { query += ' AND p.business_id = ?'; params.push(businessId); }
+    if (branchId) { query += ' AND pbs.branch_id = ?'; params.push(branchId); }
+    query += ' ORDER BY (pbs.quantity <= 0) DESC, (pbs.quantity - p.min_quantity) ASC, p.name ASC';
+    const [rows] = await pool.query(query, params);
+
+    const ids = [...new Set(rows.map(r => r.id))];
+    const variantMap = {};
+    if (ids.length > 0) {
+      const [variantRows] = await pool.query('SELECT product_id, attribute_key, value FROM product_variant_values WHERE product_id IN (?)', [ids]);
+      variantRows.forEach(v => { (variantMap[v.product_id] = variantMap[v.product_id] || {})[v.attribute_key] = v.value; });
     }
 
-    return res.json({ success: true, products: filteredRows });
+    const items = rows.map(r => {
+      const quantity = parseInt(r.quantity, 10) || 0;
+      const min = parseInt(r.min_quantity, 10) || 0;
+      return {
+        ...r,
+        quantity,
+        min_quantity: min,
+        variants: variantMap[r.id] || {},
+        size: variantMap[r.id]?.size || null,
+        stock_status: quantity <= 0 ? 'out' : 'low',
+        // Enough to get back to twice the alert level
+        suggested_restock: Math.max(1, min * 2 - quantity)
+      };
+    });
+
+    const counts = {
+      out: items.filter(i => i.stock_status === 'out').length,
+      low: items.filter(i => i.stock_status === 'low').length
+    };
+    counts.total = counts.out + counts.low;
+
+    return res.json({ success: true, counts, items: limit ? items.slice(0, limit) : items });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // ─── GET /api/products/:id ───────────────────────────────────────────────────
+// Returns the product row for the caller's branch (admin) or the requested/first branch (super_admin).
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const [items] = await pool.query(
-      `SELECT 
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
+
+    let query = `SELECT
         p.id, p.sku as item_code, p.name as item_name, p.category, p.description,
         p.price_customer as selling_price, p.price_dealer, p.price_staff, p.cost_price,
         p.min_quantity as minimum_quantity, p.status, p.new_until,
@@ -283,16 +351,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
       JOIN product_branch_stock pbs ON pbs.product_id = p.id
       JOIN branches br ON br.id = pbs.branch_id
       JOIN businesses b2 ON b2.id = p.business_id
-      WHERE p.id = ?`,
-      [req.params.id]
-    );
+      WHERE p.id = ?`;
+    const params = [req.params.id];
+    if (businessId) { query += ' AND p.business_id = ?'; params.push(businessId); }
+    if (branchId) { query += ' AND pbs.branch_id = ?'; params.push(branchId); }
+    query += ' ORDER BY pbs.branch_id LIMIT 1';
+
+    const [items] = await pool.query(query, params);
     if (items.length === 0) return res.status(404).json({ success: false, message: 'Product not found.' });
 
     const item = items[0];
-    const effectiveBranch = getEffectiveBranchId(req.user, null);
-    if (effectiveBranch && parseInt(item.branch_id) !== effectiveBranch) {
-      return res.status(403).json({ success: false, message: 'Access denied: item belongs to another branch.' });
-    }
 
     const [variantRows] = await pool.query(
       `SELECT attribute_key, value FROM product_variant_values WHERE product_id = ?`,
@@ -309,107 +377,153 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     return res.json({ success: true, item });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // ─── POST /api/products/add-to-branch ───────────────────────────────────────
-// Stocks existing products in selected branches
+// Upsert: adds existing catalog products to branches, or restocks them if already there.
+// Body: { product_ids[], branch_ids[], product_quantities: { [productId]: qty }, initial_quantity? }
+// qty must be an integer >= 1 to restock; 0 is allowed only to list a product in a branch without stock.
+// Returns results[] = { product_id, branch_id, action: 'created'|'restocked'|'skipped', reason?, qty_before, qty_after }.
 router.post('/add-to-branch', authenticateToken, async (req, res) => {
-  const connection = await pool.getConnection();
+  let connection;
   try {
-    const { product_ids, branch_ids, product_quantities, initial_quantity = 0 } = req.body;
+    const { product_ids, branch_ids, product_quantities, initial_quantity = 1 } = req.body;
 
-    const pIds = (Array.isArray(product_ids) ? product_ids : [req.body.product_id]).filter(Boolean).map(id => parseInt(id, 10));
-    let bIds = (Array.isArray(branch_ids) ? branch_ids : [req.body.branch_id]).filter(Boolean).map(id => parseInt(id, 10));
+    const pIds = [...new Set((Array.isArray(product_ids) ? product_ids : [req.body.product_id]).filter(Boolean).map(id => parseInt(id, 10)))];
+    let bIds = [...new Set((Array.isArray(branch_ids) ? branch_ids : [req.body.branch_id]).filter(Boolean).map(id => parseInt(id, 10)))];
 
-    // For branch admins, auto-select their branch if not provided
-    if (req.user.role !== 'super_admin' && req.user.branch_id && bIds.length === 0) {
-      bIds = [parseInt(req.user.branch_id, 10)];
+    if (req.user.role !== 'super_admin') {
+      // Branch admin: business and branch always come from the token
+      const { branchId } = await resolveScope(req, { level: 'branch' });
+      if (bIds.some(id => id !== branchId)) {
+        return res.status(403).json({ success: false, message: 'You can only add products to your assigned branch.' });
+      }
+      bIds = [branchId];
     }
 
-    if (pIds.length === 0 || bIds.length === 0) {
-      connection.release();
+    if (pIds.length === 0 || bIds.length === 0 || pIds.some(isNaN) || bIds.some(isNaN)) {
       return res.status(400).json({ success: false, message: 'Please select at least one product and one branch.' });
     }
 
-    // Permission check for non-super_admin
-    if (req.user.role !== 'super_admin' && req.user.branch_id) {
-      const hasOtherBranch = bIds.some(id => id !== parseInt(req.user.branch_id, 10));
-      if (hasOtherBranch) {
-        connection.release();
-        return res.status(403).json({ success: false, message: 'You can only add products to your assigned branch.' });
+    const [productRows] = await pool.query('SELECT id, name, sku, business_id, status, cost_price, price_customer FROM products WHERE id IN (?)', [pIds]);
+    const [branchRows] = await pool.query('SELECT id, name, business_id FROM branches WHERE id IN (?)', [bIds]);
+    const productMap = new Map(productRows.map(p => [p.id, p]));
+    const branchMap = new Map(branchRows.map(b => [b.id, b]));
+
+    if (req.user.role !== 'super_admin') {
+      const foreign = productRows.filter(p => !assertProductInUserBusiness(req.user, p));
+      if (foreign.length > 0) {
+        return res.status(403).json({ success: false, message: 'Access denied: one or more products belong to another business.' });
       }
     }
 
+    const rawQtyFor = (pId) => {
+      const perProduct = product_quantities && (product_quantities[pId] ?? product_quantities[String(pId)]);
+      return perProduct ?? initial_quantity;
+    };
+
+    const results = [];
+    const skip = (product_id, branch_id, reason, qty_before = null) =>
+      results.push({ product_id, branch_id, action: 'skipped', reason, qty_before, qty_after: qty_before });
+
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    let addedCount = 0;
-    const addedPairs = [];
-
     for (const pId of pIds) {
-      const [pRows] = await connection.query('SELECT * FROM products WHERE id = ?', [pId]);
-      if (pRows.length === 0) continue;
-      const product = pRows[0];
-      const qtyForProduct = Math.max(0, parseInt(
-        (product_quantities && (product_quantities[pId] ?? product_quantities[String(pId)])) ?? initial_quantity,
-        10
-      ) || 0);
+      const product = productMap.get(pId);
+      const rawQty = rawQtyFor(pId);
+      const qty = Number(rawQty);
+      const qtyValid = rawQty !== '' && rawQty !== null && Number.isInteger(qty) && qty >= 0;
 
       for (const bId of bIds) {
-        const [bRows] = await connection.query('SELECT * FROM branches WHERE id = ?', [bId]);
-        if (bRows.length === 0) continue;
-        const branch = bRows[0];
-
-        // Check if branch belongs to the product's business
-        if (branch.business_id !== product.business_id) {
-          continue;
-        }
+        const branch = branchMap.get(bId);
+        if (!product) { skip(pId, bId, 'product not found'); continue; }
+        if (product.status === 'discontinued') { skip(pId, bId, 'product is discontinued'); continue; }
+        if (!branch) { skip(pId, bId, 'branch not found'); continue; }
+        if (branch.business_id !== product.business_id) { skip(pId, bId, 'different business'); continue; }
+        if (!qtyValid) { skip(pId, bId, 'invalid quantity (must be a whole number, 0 or more)'); continue; }
 
         const [existing] = await connection.query(
-          'SELECT id FROM product_branch_stock WHERE product_id = ? AND branch_id = ?',
+          'SELECT id, quantity FROM product_branch_stock WHERE product_id = ? AND branch_id = ? FOR UPDATE',
           [pId, bId]
         );
 
         if (existing.length === 0) {
           await connection.query(
             'INSERT INTO product_branch_stock (product_id, branch_id, quantity, created_at) VALUES (?, ?, ?, NOW())',
-            [pId, bId, qtyForProduct]
+            [pId, bId, qty]
           );
-
-          if (qtyForProduct > 0) {
+          if (qty > 0) {
             await connection.query(
               `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at)
                VALUES (?, ?, 'in', ?, 0, ?, ?, ?, 'Stock Added to Branch', ?, NOW())`,
-              [bId, pId, qtyForProduct, qtyForProduct, product.cost_price, product.price_customer, req.user.id]
+              [bId, pId, qty, qty, product.cost_price, product.price_customer, req.user.id]
             );
           }
-
-          addedCount++;
-          addedPairs.push({ product_id: pId, branch_id: bId });
+          results.push({ product_id: pId, branch_id: bId, action: 'created', qty_before: 0, qty_after: qty });
+        } else {
+          const qtyBefore = parseInt(existing[0].quantity || 0, 10);
+          if (qty < 1) { skip(pId, bId, 'already in branch; restock quantity must be at least 1', qtyBefore); continue; }
+          const qtyAfter = qtyBefore + qty;
+          await connection.query('UPDATE product_branch_stock SET quantity = ? WHERE id = ?', [qtyAfter, existing[0].id]);
+          await connection.query(
+            `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at)
+             VALUES (?, ?, 'in', ?, ?, ?, ?, ?, 'Restock', ?, NOW())`,
+            [bId, pId, qty, qtyBefore, qtyAfter, product.cost_price, product.price_customer, req.user.id]
+          );
+          results.push({ product_id: pId, branch_id: bId, action: 'restocked', qty_before: qtyBefore, qty_after: qtyAfter });
         }
+
+        // Stock is back above zero → product is no longer out of stock
       }
     }
 
     await connection.commit();
     connection.release();
+    connection = null;
 
-    await recordAuditLog(req.user.id, req.user.role, 'ADD_PRODUCT_TO_BRANCH', 'product_branch_stock', null, null, { products: pIds, branches: bIds, addedCount }, req);
+    const created = results.filter(r => r.action === 'created');
+    const restocked = results.filter(r => r.action === 'restocked');
+    const skipped = results.filter(r => r.action === 'skipped');
 
-    const io = req.app.get('io');
-    if (io) {
-      bIds.forEach(bid => io.emit('inventory_updated', { branch_id: bid, action: 'add_to_branch' }));
+    // e.g. "2 added, 1 restocked, 1 skipped: different business"
+    const parts = [];
+    if (created.length) parts.push(`${created.length} added`);
+    if (restocked.length) parts.push(`${restocked.length} restocked`);
+    if (skipped.length) {
+      const reasons = [...new Set(skipped.map(r => r.reason))].join('; ');
+      parts.push(`${skipped.length} skipped: ${reasons}`);
     }
+    const message = parts.join(', ') || 'Nothing to do.';
+
+    await recordAuditLog(req.user.id, req.user.role, 'ADD_PRODUCT_TO_BRANCH', 'product_branch_stock', null, null, { products: pIds, branches: bIds, results }, req);
+
+    // Notify only the branches that actually changed
+    const changed = [...created, ...restocked];
+    const affectedBranchIds = [...new Set(changed.map(r => r.branch_id))];
+    affectedBranchIds.forEach(bid => {
+      emitToBusiness(req, branchMap.get(bid).business_id, 'inventory_updated', { branch_id: bid, action: 'add_to_branch' });
+    });
 
     return res.json({
-      success: true,
-      message: `Successfully allocated ${addedCount} product-to-branch inventory record(s).`,
-      added_count: addedCount
+      success: changed.length > 0,
+      partial: changed.length > 0 && skipped.length > 0,
+      message,
+      results,
+      added_count: created.length,
+      restocked_count: restocked.length,
+      skipped_count: skipped.length
     });
 
   } catch (err) {
-    await connection.rollback();
-    connection.release();
+    if (connection) {
+      await connection.rollback();
+      connection.release();
+    }
+    if (handleScopeError(res, err)) return;
     console.error('Add to branch error:', err);
     return res.status(500).json({ success: false, message: 'Failed to add product to branch: ' + err.message });
   }
@@ -433,11 +547,25 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     let targetBranchIds = [];
-    if (req.user.role === 'super_admin' && Array.isArray(branch_ids) && branch_ids.length > 0) {
-      targetBranchIds = branch_ids.map(id => parseInt(id));
-    } else {
-      const effectiveBranch = getEffectiveBranchId(req.user, branch_id) || 1;
-      targetBranchIds = [effectiveBranch];
+    if (req.user.role !== 'super_admin') {
+      // Branch admin: always their own branch
+      const { branchId } = await resolveScope(req, { level: 'branch' });
+      targetBranchIds = [branchId];
+    } else if (Array.isArray(branch_ids) && branch_ids.length > 0) {
+      targetBranchIds = [...new Set(branch_ids.map(id => parseInt(id, 10)))];
+    } else if (branch_id) {
+      targetBranchIds = [parseInt(branch_id, 10)];
+    }
+    if (targetBranchIds.length === 0 || targetBranchIds.some(isNaN)) {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'Please select at least one branch.' });
+    }
+
+    // A product belongs to exactly one business, so every target branch must share it
+    const [targetBranches] = await connection.query('SELECT DISTINCT business_id FROM branches WHERE id IN (?)', [targetBranchIds]);
+    if (targetBranches.length > 1) {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'All selected branches must belong to the same business.' });
     }
 
     await connection.beginTransaction();
@@ -476,7 +604,8 @@ router.post('/', authenticateToken, async (req, res) => {
       const dPrice = parseFloat(rowValue(sizeRow?.price_dealer, price_dealer)) || 0.00;
       const stPrice = parseFloat(rowValue(sizeRow?.price_staff, price_staff)) || 0.00;
       const cPrice = parseFloat(rowValue(sizeRow?.unit_price, cost_price || unit_price)) || 0.00;
-      const status = initialQty > 0 ? 'available' : 'out_of_stock';
+      // Stock level is per branch and derived from quantity; status only says whether the product is sold at all
+      const status = 'available';
       const productVariants = { ...(variants && typeof variants === 'object' ? variants : {}) };
       if (sizeRow?.size) productVariants.size = String(sizeRow.size).trim();
 
@@ -533,10 +662,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     await recordAuditLog(req.user.id, req.user.role, 'CREATE_ITEM', 'products', createdProductIds[0], null, { item_name, category, sizes: sizeRows.map(row => row?.size).filter(Boolean), branches: targetBranchIds }, req);
 
-    const io = req.app.get('io');
-    if (io) {
-      targetBranchIds.forEach(bid => io.emit('inventory_updated', { branch_id: bid, action: 'create' }));
-    }
+    targetBranchIds.forEach(bid => emitToBusiness(req, businessId, 'inventory_updated', { branch_id: bid, action: 'create' }));
 
     return res.json({
       success: true,
@@ -550,6 +676,7 @@ router.post('/', authenticateToken, async (req, res) => {
   } catch (err) {
     await connection.rollback();
     connection.release();
+    if (handleScopeError(res, err)) return;
     console.error('Create product error:', err);
     return res.status(500).json({ success: false, message: 'Failed to create product: ' + err.message });
   }
@@ -581,8 +708,20 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     const item = existing[0];
+
+    // Branch admin: product must belong to their business and be stocked in their branch
+    if (req.user.role !== 'super_admin') {
+      const { branchId } = await resolveScope(req, { level: 'branch' });
+      const [inBranch] = await connection.query('SELECT id FROM product_branch_stock WHERE product_id = ? AND branch_id = ?', [productId, branchId]);
+      if (!assertProductInUserBusiness(req.user, item) || inBranch.length === 0) {
+        await connection.rollback(); connection.release();
+        return res.status(403).json({ success: false, message: 'Access denied: this product is not in your branch.' });
+      }
+    }
+
     const newMin = parseInt(minimum_quantity ?? min_quantity ?? item.min_quantity);
-    const newStatus = status || item.status;
+    // 'out_of_stock' is no longer a stored status (it is derived from each branch's quantity)
+    const newStatus = status === 'discontinued' ? 'discontinued' : (status ? 'available' : (item.status === 'discontinued' ? 'discontinued' : 'available'));
 
     await connection.query(
       `UPDATE products SET
@@ -632,13 +771,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
       [productId]
     );
 
-    const io = req.app.get('io');
-    if (io) io.emit('inventory_updated', { product_id: productId, action: 'update' });
+    emitToBusiness(req, item.business_id, 'inventory_updated', { product_id: productId, action: 'update' });
 
     return res.json({ success: true, message: 'Product updated successfully!', item: updated[0] });
   } catch (err) {
     await connection.rollback();
     connection.release();
+    if (handleScopeError(res, err)) return;
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -654,11 +793,20 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid item, adjustment type, and quantity > 0 are required.' });
     }
 
-    // Determine the branch to adjust
-    const targetBranch = getEffectiveBranchId(req.user, branch_id);
+    // Determine the branch to adjust: admin → own branch; super_admin → body branch_id
+    const targetBranch = req.user.role === 'super_admin'
+      ? (parseInt(branch_id, 10) || null)
+      : (await resolveScope(req, { level: 'branch' })).branchId;
     if (!targetBranch) {
         connection.release();
         return res.status(400).json({ success: false, message: 'Branch ID is required for stock adjustment.' });
+    }
+    if (store_id) {
+      const [storeRows] = await connection.query('SELECT id FROM stores WHERE id = ? AND branch_id = ?', [store_id, targetBranch]);
+      if (storeRows.length === 0) {
+        connection.release();
+        return res.status(403).json({ success: false, message: 'That store does not belong to this branch.' });
+      }
     }
 
     const adjQty = parseInt(quantity);
@@ -705,13 +853,6 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
 
     await connection.query('UPDATE product_branch_stock SET quantity = ? WHERE product_id = ? AND branch_id = ?', [newQty, item_id, targetBranch]);
 
-    // Update product status globally if stock changes (as per requirements)
-    if (newQty === 0 && product.status !== 'discontinued') {
-        await connection.query('UPDATE products SET status = ? WHERE id = ?', ['out_of_stock', item_id]);
-    } else if (newQty > 0 && product.status === 'out_of_stock') {
-        await connection.query('UPDATE products SET status = ? WHERE id = ?', ['available', item_id]);
-    }
-
     await connection.query(
       `INSERT INTO stock_movements
          (branch_id, store_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, payment_method, note, performed_by, created_at)
@@ -724,13 +865,13 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
 
     await recordAuditLog(req.user.id, req.user.role, `STOCK_${adjustment_type.toUpperCase()}`, 'product_branch_stock', stocks[0].id, { old_qty: curQty }, { new_qty: newQty }, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('inventory_updated', { branch_id: targetBranch, item_id, new_qty: newQty });
+    emitToBusiness(req, product.business_id, 'inventory_updated', { branch_id: targetBranch, item_id, new_qty: newQty });
 
     return res.json({ success: true, message: `Stock updated successfully! New balance: ${newQty} units.`, new_quantity: newQty });
   } catch (err) {
     await connection.rollback();
     connection.release();
+    if (handleScopeError(res, err)) return;
     return res.status(500).json({ success: false, message: 'Stock adjustment failed: ' + err.message });
   }
 });
@@ -752,6 +893,23 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     const product = products[0];
+
+    // Branch admin: deletion purges the product from EVERY branch, so it is only allowed when the
+    // product belongs to their business and is stocked in no branch other than their own.
+    if (req.user.role !== 'super_admin') {
+      const { branchId } = await resolveScope(req, { level: 'branch' });
+      const [stockBranches] = await connection.query('SELECT branch_id FROM product_branch_stock WHERE product_id = ?', [productId]);
+      const inOwnBranch = stockBranches.some(r => r.branch_id === branchId);
+      const inOtherBranch = stockBranches.some(r => r.branch_id !== branchId);
+      if (!assertProductInUserBusiness(req.user, product) || !inOwnBranch) {
+        connection.release();
+        return res.status(403).json({ success: false, message: 'Access denied: this product is not in your branch.' });
+      }
+      if (inOtherBranch) {
+        connection.release();
+        return res.status(403).json({ success: false, message: 'This product is also stocked in other branches of your business. Only a Super Admin can delete it.' });
+      }
+    }
 
     // Find any matching legacy stock_items by item_code (SKU) or id
     const [legacyItems] = await connection.query(
@@ -852,11 +1010,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
 
     // 13. Emit real-time WebSocket events
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('inventory_updated', { product_id: productId, deleted: true });
-      io.emit('product_deleted', { product_id: productId, sku: product.sku });
-    }
+    emitToBusiness(req, product.business_id, 'inventory_updated', { product_id: productId, deleted: true });
+    emitToBusiness(req, product.business_id, 'product_deleted', { product_id: productId, sku: product.sku });
 
     return res.json({
       success: true,
@@ -865,6 +1020,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (err) {
     await connection.rollback();
     connection.release();
+    if (handleScopeError(res, err)) return;
     console.error('Delete product error:', err);
     return res.status(500).json({ success: false, message: 'Failed to delete product: ' + err.message });
   }

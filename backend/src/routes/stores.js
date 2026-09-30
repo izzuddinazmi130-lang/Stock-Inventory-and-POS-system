@@ -49,9 +49,24 @@ async function syncStoreStatuses() {
   }
 }
 
+// Branch admin may only access stores of their own branch. Sends 404/403 and returns false otherwise.
+async function assertStoreAccess(req, res, storeId) {
+  const [rows] = await pool.query('SELECT branch_id FROM stores WHERE id = ?', [storeId]);
+  if (rows.length === 0) {
+    res.status(404).json({ success: false, message: 'Store not found' });
+    return false;
+  }
+  if (req.user.role !== 'super_admin' && (!req.user.branch_id || parseInt(req.user.branch_id, 10) !== rows[0].branch_id)) {
+    res.status(403).json({ success: false, message: 'Access denied: this store does not belong to your branch.' });
+    return false;
+  }
+  return true;
+}
+
 // GET /:id - get store detail
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (!(await assertStoreAccess(req, res, req.params.id))) return;
     await syncStoreStatuses();
 
     const [stores] = await pool.query(`
@@ -289,6 +304,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // GET /:id/report - store sales & movement report with payment method breakdown
 router.get('/:id/report', authenticateToken, async (req, res) => {
   try {
+    if (!(await assertStoreAccess(req, res, req.params.id))) return;
     await syncStoreStatuses();
 
     const [movements] = await pool.query(`
@@ -339,6 +355,7 @@ router.get('/:id/report', authenticateToken, async (req, res) => {
 // GET /:id/payment-breakdown
 router.get('/:id/payment-breakdown', authenticateToken, async (req, res) => {
   try {
+    if (!(await assertStoreAccess(req, res, req.params.id))) return;
     const [rows] = await pool.query(`
       SELECT 
         COALESCE(payment_method, 'cash') as payment_method,

@@ -8,6 +8,7 @@ import {
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { Modal, FormSection, Field, Input, Select, Textarea, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
 
 // Helper: format full datetime string nicely (e.g. "18 Sep 2026, 10:00 AM")
 function formatDateTime(val) {
@@ -326,8 +327,9 @@ export default function StoreList() {
       person_in_charge: s.person_in_charge || '',
       contact_phone: s.contact_phone || '',
       notes: s.notes || s.description || '',
-      status: s.status || 'auto'
+      status: 'auto'
     });
+    setMessage(null);
     setShowEditModal(true);
   };
 
@@ -387,7 +389,7 @@ export default function StoreList() {
             <span>Branch Floor Sales</span>
           </Link>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setMessage(null); setShowAddModal(true); }}
             className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
           >
             <Plus size={16} />
@@ -459,7 +461,7 @@ export default function StoreList() {
             Create your first booth, bazaar, or temporary sales event under this branch.
           </p>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setMessage(null); setShowAddModal(true); }}
             className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus size={16} /> Add Store Event
@@ -686,312 +688,118 @@ export default function StoreList() {
         </div>
       )}
 
-      {/* ── Add Store Event Modal (with Date + Time fields) ── */}
+      {/* ── Add Store Event Modal ── */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Add New Store Sales Event</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Specify venue, dates, and exact operational start/end times</p>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Store / Event Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Mega Ramadan Bazaar 2026"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Venue / Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mid Valley Southkey, Ground Floor Booth 12"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={addForm.venue}
-                  onChange={(e) => setAddForm({ ...addForm, venue: e.target.value })}
-                />
-              </div>
-
-              {/* Start Date & Start Time */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> Start Date &amp; Time *
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={addForm.start_date}
-                      onChange={(e) => setAddForm({ ...addForm, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Time</label>
-                    <input
-                      type="time"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={addForm.start_time}
-                      onChange={(e) => setAddForm({ ...addForm, start_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* End Date & End Time */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> End Date &amp; Time *
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={addForm.end_date}
-                      onChange={(e) => setAddForm({ ...addForm, end_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Time</label>
-                    <input
-                      type="time"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={addForm.end_time}
-                      onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Person in Charge & Contact Phone */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Person-in-Charge</label>
-                  <input
-                    type="text"
-                    placeholder="Event Lead / Manager"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={addForm.person_in_charge}
-                    onChange={(e) => setAddForm({ ...addForm, person_in_charge: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Contact Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+60 12-345 6789"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                    value={addForm.contact_phone}
-                    onChange={(e) => setAddForm({ ...addForm, contact_phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Description</label>
-                <textarea
-                  rows="2"
-                  placeholder="Booth specifications, footfall expectation, special instructions..."
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={addForm.notes}
-                  onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 mt-5">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Save Store Event
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          icon={Store}
+          title="Add a store event"
+          description={`A pop-up, bazaar or booth run by ${branch?.name || 'this branch'}. Sales made during it are reported separately.`}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Create event</PrimaryButton>
+          </>}
+        >
+          <StoreFields form={addForm} setForm={setAddForm} />
+        </Modal>
       )}
 
-      {/* ── Edit Store Event Modal (with Date + Time fields) ── */}
+      {/* ── Edit Store Event Modal ── */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Edit Store Event Schedule</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Modify date, operational hours, or event details</p>
-              </div>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Store / Event Name *</label>
-                <input
-                  type="text"
-                  required
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Venue</label>
-                <input
-                  type="text"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.venue}
-                  onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })}
-                />
-              </div>
-
-              {/* Start Date & Time */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> Start Date &amp; Time *
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={editForm.start_date}
-                      onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Time</label>
-                    <input
-                      type="time"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={editForm.start_time}
-                      onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* End Date & Time */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <div className="text-xs font-semibold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> End Date &amp; Time *
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={editForm.end_date}
-                      onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-[11px] font-medium text-slate-500">Time</label>
-                    <input
-                      type="time"
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                      value={editForm.end_time}
-                      onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Override */}
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Status Setting</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="auto">Auto-Calculate (Follows Current Date &amp; Time)</option>
-                  <option value="upcoming">Force UPCOMING</option>
-                  <option value="active">Force ACTIVE (Happening Now)</option>
-                  <option value="ended">Force ENDED (Concluded)</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Person-in-Charge</label>
-                  <input
-                    type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    value={editForm.person_in_charge}
-                    onChange={(e) => setEditForm({ ...editForm, person_in_charge: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-slate-700">Contact Phone</label>
-                  <input
-                    type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                    value={editForm.contact_phone}
-                    onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-medium text-slate-700">Notes</label>
-                <textarea
-                  rows="2"
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={editForm.notes}
-                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 mt-5">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          icon={Edit3}
+          title={`Edit ${editForm.name || 'store event'}`}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Save changes</PrimaryButton>
+          </>}
+        >
+          <StoreFields form={editForm} setForm={setEditForm} showStatus />
+        </Modal>
       )}
     </Layout>
+  );
+}
+
+// "18 Sep, 9:00 AM" for the schedule summary
+function formatScheduleEnd(date, time) {
+  const d = new Date(`${date}T${time || '00:00'}`);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-MY', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+// Fields shared by the Add and Edit store-event forms
+function StoreFields({ form, setForm, showStatus = false }) {
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const start = form.start_date ? new Date(`${form.start_date}T${form.start_time || '00:00'}`) : null;
+  const end = form.end_date ? new Date(`${form.end_date}T${form.end_time || '00:00'}`) : null;
+  const endBeforeStart = start && end && end < start;
+  const days = start && end && !endBeforeStart
+    ? Math.round((new Date(form.end_date) - new Date(form.start_date)) / 86400000) + 1
+    : null;
+
+  return (
+    <>
+      <FormSection title="Event">
+        <Field label="Event name" required>
+          <Input required placeholder="e.g. Ramadan Bazaar 2026" value={form.name} onChange={set('name')} />
+        </Field>
+        <Field label="Venue" optional>
+          <Input placeholder="e.g. Mid Valley Southkey, Ground Floor, Booth 12" value={form.venue} onChange={set('venue')} />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Schedule" description="The event goes live and ends automatically at these times.">
+        <div className="grid grid-cols-[4rem_1fr_7.5rem] gap-2 items-center">
+          <span className="text-sm font-medium text-slate-700">Starts<span className="text-rose-500">*</span></span>
+          <Input type="date" required value={form.start_date}
+            onChange={e => setForm({ ...form, start_date: e.target.value, end_date: form.end_date || e.target.value })} />
+          <Input type="time" required value={form.start_time} onChange={set('start_time')} />
+
+          <span className="text-sm font-medium text-slate-700">Ends<span className="text-rose-500">*</span></span>
+          <Input type="date" required min={form.start_date || undefined} value={form.end_date} onChange={set('end_date')} error={endBeforeStart} />
+          <Input type="time" required value={form.end_time} onChange={set('end_time')} error={endBeforeStart} />
+        </div>
+        {endBeforeStart ? (
+          <p className="text-xs text-rose-600">The end is before the start. Check the dates and times.</p>
+        ) : days ? (
+          <p className="text-xs text-slate-500">
+            Runs {days === 1 ? '1 day' : `${days} days`}: {formatScheduleEnd(form.start_date, form.start_time)} → {formatScheduleEnd(form.end_date, form.end_time)}
+          </p>
+        ) : null}
+
+        {showStatus && (
+          <Field label="Status" hint="Leave on Automatic unless you need to open or close the event early.">
+            <Select value={form.status} onChange={set('status')}>
+              <option value="auto">Automatic (follows the schedule above)</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="active">Live now</option>
+              <option value="ended">Ended</option>
+            </Select>
+          </Field>
+        )}
+      </FormSection>
+
+      <FormSection title="Person in charge">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Name" optional>
+            <Input placeholder="Event lead" value={form.person_in_charge} onChange={set('person_in_charge')} />
+          </Field>
+          <Field label="Phone" optional>
+            <Input type="tel" placeholder="+60 12-345 6789" value={form.contact_phone} onChange={set('contact_phone')} />
+          </Field>
+        </div>
+        <Field label="Notes" optional>
+          <Textarea rows={2} placeholder="Booth size, expected crowd, special instructions…" value={form.notes} onChange={set('notes')} />
+        </Field>
+      </FormSection>
+    </>
   );
 }

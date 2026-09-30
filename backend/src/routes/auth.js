@@ -156,6 +156,24 @@ router.post('/logout', authenticateToken, async (req, res) => {
   return res.json({ success: true, message: 'Logged out successfully' });
 });
 
+// GET /api/auth/register-options (Public) - minimal id/name lists for the self-registration form.
+// ?business_id=X returns that business's active branches. Nothing beyond id and name is exposed.
+router.get('/register-options', async (req, res) => {
+  try {
+    if (req.query.business_id) {
+      const [branches] = await pool.query(
+        'SELECT id, name FROM branches WHERE business_id = ? AND is_active = 1 ORDER BY name',
+        [req.query.business_id]
+      );
+      return res.json({ success: true, data: branches });
+    }
+    const [businesses] = await pool.query('SELECT id, name FROM businesses ORDER BY name');
+    return res.json({ success: true, data: businesses });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/auth/register (Public Self-Registration)
 router.post('/register', async (req, res) => {
   try {

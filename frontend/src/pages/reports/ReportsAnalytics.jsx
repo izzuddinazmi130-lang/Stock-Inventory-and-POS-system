@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   FileBarChart, Filter, ArrowUpRight, ArrowDownLeft, RefreshCw,
   Layers, AlertTriangle, RotateCcw, Calendar, Clock
@@ -56,9 +57,13 @@ const getDateRangeParams = (range) => {
 export default function ReportsAnalytics() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { socket } = useSocket();
+  const { user } = useAuth();
+  // Branch admins are locked to their own business + branch (enforced server-side too);
+  // business_id / branch_id URL params are ignored for them.
+  const isScopedAdmin = user?.role !== 'super_admin';
 
-  const queryBusinessId = searchParams.get('business_id') || '';
-  const queryBranchId = searchParams.get('branch_id') || '';
+  const queryBusinessId = isScopedAdmin ? '' : (searchParams.get('business_id') || '');
+  const queryBranchId = isScopedAdmin ? '' : (searchParams.get('branch_id') || '');
   const queryStoreId = searchParams.get('store_id') || '';
 
   const [loading, setLoading] = useState(true);
@@ -72,9 +77,10 @@ export default function ReportsAnalytics() {
     damaged_count: 0
   });
 
-  // Filter state
+  // Filter state (for a branch admin, business/branch are fixed to their own)
   const [businessId, setBusinessId] = useState(queryBusinessId);
   const [branchId, setBranchId] = useState(queryBranchId);
+  const storeBranchId = isScopedAdmin ? (user?.branch_id ? String(user.branch_id) : '') : branchId;
   const [storeId, setStoreId] = useState(queryStoreId);
   const [movementType, setMovementType] = useState('all');
   const [dateRange, setDateRange] = useState('all'); // all, today, 7days, 30days, 90days
@@ -102,14 +108,15 @@ export default function ReportsAnalytics() {
     }
   }, [queryBranchId, queryBusinessId]);
 
-  // Fetch businesses on mount
+  // Fetch businesses on mount (super admin only)
   useEffect(() => {
+    if (isScopedAdmin) return;
     api.get('/businesses').then(res => {
       if (res.data.success) {
         setBusinesses(res.data.businesses || res.data.data || []);
       }
     }).catch(() => {});
-  }, []);
+  }, [isScopedAdmin]);
 
   // Fetch branches when businessId changes
   useEffect(() => {
@@ -124,10 +131,10 @@ export default function ReportsAnalytics() {
     }
   }, [businessId]);
 
-  // Fetch stores when branchId changes
+  // Fetch stores when the (effective) branch changes
   useEffect(() => {
-    if (branchId) {
-      api.get(`/branches/${branchId}/stores`).then(res => {
+    if (storeBranchId) {
+      api.get(`/branches/${storeBranchId}/stores`).then(res => {
         if (res.data.success) {
           setStores(res.data.stores || res.data.data || []);
         }
@@ -135,7 +142,7 @@ export default function ReportsAnalytics() {
     } else {
       setStores([]);
     }
-  }, [branchId]);
+  }, [storeBranchId]);
 
   const fetchReports = useCallback(async () => {
     try {
@@ -143,8 +150,8 @@ export default function ReportsAnalytics() {
       const { startDate, endDate } = getDateRangeParams(dateRange);
       
       let queryParams = `movement_type=${movementType}`;
-      if (businessId) queryParams += `&business_id=${businessId}`;
-      if (branchId) queryParams += `&branch_id=${branchId}`;
+      if (!isScopedAdmin && businessId) queryParams += `&business_id=${businessId}`;
+      if (!isScopedAdmin && branchId) queryParams += `&branch_id=${branchId}`;
       if (storeId) queryParams += `&store_id=${storeId}`;
       if (startDate) queryParams += `&start_date=${startDate}`;
       if (endDate) queryParams += `&end_date=${endDate}`;
@@ -165,7 +172,7 @@ export default function ReportsAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, [businessId, branchId, storeId, movementType, dateRange]);
+  }, [isScopedAdmin, businessId, branchId, storeId, movementType, dateRange]);
 
   useEffect(() => {
     fetchReports();
@@ -203,8 +210,9 @@ export default function ReportsAnalytics() {
   };
 
   const hasActiveFilters = businessId || branchId || storeId || movementType !== 'all' || dateRange !== 'all';
-  const activeBranchName = branches.find(b => String(b.id) === String(branchId))?.name;
-  const activeBusinessName = businesses.find(b => String(b.id) === String(businessId))?.name;
+  const activeBranchName = isScopedAdmin ? user?.branch_name : branches.find(b => String(b.id) === String(branchId))?.name;
+  const activeBusinessName = isScopedAdmin ? user?.business_name : businesses.find(b => String(b.id) === String(businessId))?.name;
+  const scopeLabel = `${user?.business_name || 'My Business'} - ${user?.branch_name || 'My Branch'}`;
 
   return (
     <Layout>
@@ -227,7 +235,7 @@ export default function ReportsAnalytics() {
           <div className="flex items-center gap-2 text-xs text-indigo-700">
             <Filter className="w-4 h-4 text-indigo-500" />
             <span>
-              Filtered Report Scope: <strong className="font-bold">{activeBusinessName || 'Selected Business'}</strong>
+              Filtered Report Scope: <strong className="font-bold">{activeBusinessName || (businessId ? 'Selected Business' : 'All Businesses')}</strong>
               {activeBranchName && <> &rarr; <strong className="font-bold">{activeBranchName}</strong></>}
               {dateRange !== 'all' && <> &bull; Timeline: <strong className="font-bold">{TIMELINE_LABELS[dateRange]}</strong></>}
             </span>
@@ -344,7 +352,16 @@ export default function ReportsAnalytics() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        {isScopedAdmin && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700">
+              Scope: {scopeLabel}
+            </span>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isScopedAdmin ? 'md:grid-cols-3' : 'md:grid-cols-5'} gap-3`}>
+          {!isScopedAdmin && (<>
           {/* Business Filter */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Business</label>
@@ -375,6 +392,7 @@ export default function ReportsAnalytics() {
               ))}
             </select>
           </div>
+          </>)}
 
           {/* Store Filter */}
           <div>
@@ -382,7 +400,7 @@ export default function ReportsAnalytics() {
             <select
               value={storeId}
               onChange={(e) => setStoreId(e.target.value)}
-              disabled={!branchId || stores.length === 0}
+              disabled={!storeBranchId || stores.length === 0}
               className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               <option value="">All Stores</option>
@@ -495,10 +513,10 @@ export default function ReportsAnalytics() {
                         <span className="text-violet-600">{m.quantity}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100 font-mono text-xs">
+                    <td className="px-4 py-3 text-slate-900 border-b border-slate-100 font-mono text-xs">
                       <span className="text-slate-500">{m.qty_before}</span> &rarr; <span className="text-emerald-600 font-bold">{m.qty_after}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100 text-xs">
+                    <td className="px-4 py-3 text-xs text-slate-900 border-b border-slate-100">
                       <span className="block font-medium">{m.performed_by_name || 'System'}</span>
                       <span className="text-slate-500 font-mono text-[11px] block">{m.performed_by_email || '—'}</span>
                     </td>

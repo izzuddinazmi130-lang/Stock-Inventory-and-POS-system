@@ -5,7 +5,7 @@ import { useBusiness } from '../context/BusinessContext';
 import {
   LayoutDashboard, Package, Camera, Users,
   FileBarChart, History, Building2, AlertTriangle, Store,
-  ShieldCheck, ArrowLeftRight
+  ShieldCheck, ArrowLeftRight, Receipt, PackageX
 } from 'lucide-react';
 
 const SECTION_LABEL = 'px-4 mb-1 mt-5 text-[10px] font-semibold tracking-widest uppercase text-slate-400';
@@ -51,7 +51,8 @@ export default function Sidebar() {
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Overview" />
               <NavItem to="/businesses" icon={Building2} label="Businesses" />
               <NavItem to="/products" icon={Package} label="Products" />
-              <NavItem to="/reports" icon={ArrowLeftRight} label="Stock Movements" />
+              <NavItem to="/low-stock" icon={PackageX} label="Low Stock" />
+              <NavItem to="/sales" icon={Receipt} label="Sales History" />
             </nav>
 
             {/* Section 2 — HQ Controls */}
@@ -69,8 +70,10 @@ export default function Sidebar() {
             <nav className="space-y-0.5">
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem to="/products" icon={Package} label="Products" />
+              <NavItem to="/low-stock" icon={PackageX} label="Low Stock" />
               <NavItem to={`/branches/${user?.branch_id}/stores`} icon={Store} label="Stores" />
               <NavItem to="/qr/scan" icon={Camera} label="QR & POS" />
+              <NavItem to="/sales" icon={Receipt} label="Sales History" />
               <NavItem to="/damage" icon={AlertTriangle} label="Damage Records" />
               <NavItem to="/reports" icon={FileBarChart} label="Reports" />
             </nav>

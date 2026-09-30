@@ -8,6 +8,7 @@ import {
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { Modal, FormSection, Field, Input, Select, Textarea, MoneyInput, SecondaryButton } from '../../components/ui/Form';
 
 const REASON_CATEGORIES = [
   { value: 'transit_damage', label: 'Transit Damage', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -91,10 +92,21 @@ export default function DamageProducts() {
         })
         .catch(err => console.error('Failed to load branches:', err));
     } else if (user?.branch_id) {
-      setFilterBranch(user.branch_id);
+      // Branch admin: may view damage records across all branches of their own business
+      // (/branches is already scoped to it server-side); writes stay limited to their own branch.
+      api.get('/branches')
+        .then(res => {
+          if (res.data.success) {
+            setBranches(res.data.branches || []);
+          }
+        })
+        .catch(err => console.error('Failed to load branches:', err));
       setModalBranchId(user.branch_id);
     }
   }, [user, isSuperAdmin]);
+
+  // Branch admins may delete only records from their own branch (enforced server-side too)
+  const canDeleteReport = (r) => isSuperAdmin || String(r.branch_id) === String(user?.branch_id);
 
   // When super_admin selects business in filter, cascade to branches
   const filteredBranchOptions = useMemo(() => {
@@ -213,10 +225,12 @@ export default function DamageProducts() {
     });
     setSelectedPhotos([]);
     setPhotoPreviews([]);
-    const defaultBranch = (filterBranch && filterBranch !== 'all') 
-      ? filterBranch 
-      : (isSuperAdmin ? (branches[0]?.id || '') : (user?.branch_id || ''));
+    // Reporting damage is always fixed to the admin's own branch, whatever the list filter shows
+    const defaultBranch = !isSuperAdmin
+      ? (user?.branch_id || '')
+      : ((filterBranch && filterBranch !== 'all') ? filterBranch : (branches[0]?.id || ''));
     setModalBranchId(defaultBranch);
+    setMessage(null);
     setShowAddModal(true);
   };
 
@@ -314,7 +328,7 @@ export default function DamageProducts() {
 
   const resetFilters = () => {
     setFilterBusiness('');
-    setFilterBranch(isSuperAdmin ? '' : (user?.branch_id || ''));
+    setFilterBranch('');
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
@@ -460,21 +474,19 @@ export default function DamageProducts() {
             </div>
           )}
 
-          {/* Branch Selector */}
-          {isSuperAdmin && (
-            <div className="min-w-[160px]">
-              <select
-                value={filterBranch}
-                onChange={e => setFilterBranch(e.target.value)}
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">All Branches</option>
-                {filteredBranchOptions.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Branch Selector (admin: branches of their own business only) */}
+          <div className="min-w-[160px]">
+            <select
+              value={filterBranch}
+              onChange={e => setFilterBranch(e.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">{isSuperAdmin ? 'All Branches' : 'All branches in my business'}</option>
+              {filteredBranchOptions.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Date Range: Start Date */}
           <div className="flex items-center gap-2">
@@ -704,14 +716,20 @@ export default function DamageProducts() {
                             <Eye size={13} />
                             <span>View</span>
                           </button>
-                          <button
-                            onClick={() => setDeleteTarget(r)}
-                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-lg transition-colors"
-                            title="Delete Damage Report"
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
+                          {canDeleteReport(r) ? (
+                            <button
+                              onClick={() => setDeleteTarget(r)}
+                              className="inline-flex items-center gap-1 h-8 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-lg transition-colors"
+                              title="Delete Damage Report"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic px-1" title="Records from other branches are read-only">
+                              Read-only
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -727,332 +745,191 @@ export default function DamageProducts() {
       {/* ADD DAMAGE REPORT MODAL                                                   */}
       {/* ========================================================================= */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-xl w-full p-6 relative my-8">
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
-                  <AlertTriangle size={20} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Log Damaged Inventory</h2>
-                  <p className="text-xs text-slate-400">Deducts stock and records replacement cost snapshot</p>
-                </div>
+        <Modal
+          size="lg"
+          icon={AlertTriangle}
+          title="Report damaged stock"
+          description="The damaged quantity is removed from branch stock and the loss is recorded."
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddModal(false)} disabled={submitting}>Cancel</SecondaryButton>
+            <button
+              type="submit"
+              disabled={submitting || !selectedProduct}
+              className="inline-flex items-center gap-2 h-10 px-4 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50"
+            >
+              {submitting
+                ? <><RefreshCw size={16} className="animate-spin" /> Submitting…</>
+                : <><PackageX size={16} /> Report &amp; remove {parseInt(formData.quantity, 10) || 0} from stock</>}
+            </button>
+          </>}
+        >
+          {/* 1. What */}
+          <FormSection title="1. What was damaged?">
+            {isSuperAdmin ? (
+              <Field label="Branch" required>
+                <Select
+                  required
+                  value={modalBranchId}
+                  onChange={e => { setModalBranchId(e.target.value); setSelectedProduct(null); setProductSearch(''); }}
+                >
+                  <option value="">Choose a branch…</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>)}
+                </Select>
+              </Field>
+            ) : (
+              <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-600 flex items-center gap-2">
+                <Building2 size={14} className="text-slate-400" />
+                Branch: <strong>{user?.branch_name || 'My Branch'}</strong>
               </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            )}
 
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              {/* Branch Selector (if super_admin) */}
-              {isSuperAdmin ? (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Branch Location *
-                  </label>
-                  <select
-                    required
-                    value={modalBranchId}
-                    onChange={e => {
-                      setModalBranchId(e.target.value);
-                      setSelectedProduct(null);
-                      setProductSearch('');
-                    }}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select Branch...</option>
-                    {branches.map(b => (
-                      <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>
-                    ))}
-                  </select>
+            <Field label="Product" required>
+              {selectedProduct ? (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 text-sm truncate">{selectedProduct.name || selectedProduct.item_name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      <span className="font-mono text-indigo-600">{selectedProduct.sku || selectedProduct.item_code}</span>
+                      {' · '}{selectedProduct.quantity || 0} in stock
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => { setSelectedProduct(null); setProductSearch(''); }} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex-shrink-0">
+                    Change
+                  </button>
                 </div>
               ) : (
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-600 flex items-center gap-2">
-                  <Building2 size={16} className="text-slate-400" />
-                  <span>Branch: <strong>{user?.branch_name || 'My Branch'}</strong></span>
+                <div>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Input
+                      className="pl-9"
+                      placeholder={loadingProducts ? 'Loading products…' : 'Search by product name or SKU…'}
+                      value={productSearch}
+                      onChange={e => setProductSearch(e.target.value)}
+                      disabled={loadingProducts || (isSuperAdmin && !modalBranchId)}
+                    />
+                  </div>
+                  <div className="mt-1 border border-slate-200 rounded-lg max-h-52 overflow-y-auto bg-white divide-y divide-slate-100">
+                    {isSuperAdmin && !modalBranchId ? (
+                      <div className="p-3 text-center text-xs text-slate-400">Choose a branch first.</div>
+                    ) : loadingProducts ? (
+                      <div className="p-3 text-center text-xs text-slate-400">Loading products…</div>
+                    ) : branchProducts.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">This branch has no products.</div>
+                    ) : productSearchResults.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">No products match “{productSearch}”.</div>
+                    ) : productSearchResults.map(p => {
+                      const stockQty = parseInt(p.quantity || 0, 10);
+                      return (
+                        <button
+                          key={`${p.id}-${p.branch_id}`}
+                          type="button"
+                          disabled={stockQty <= 0}
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setFormData(prev => ({ ...prev, quantity: Math.min(parseInt(prev.quantity, 10) || 1, stockQty), cost_per_unit: p.cost_price || '' }));
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-indigo-50/50 flex items-center justify-between gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-slate-900">{p.name || p.item_name}</span>
+                            <span className="block text-[11px] text-slate-500"><span className="font-mono">{p.sku || p.item_code}</span>{p.category && <> · {p.category}</>}</span>
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0 ${stockQty > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                            {stockQty > 0 ? `${stockQty} in stock` : 'No stock'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
+            </Field>
+          </FormSection>
 
-              {/* Product Selection with Search Dropdown */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Damaged Product *
-                </label>
-                
-                {selectedProduct ? (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                    <div className="min-w-0 pr-3">
-                      <div className="font-bold text-slate-900 text-sm">
-                        {selectedProduct.name || selectedProduct.item_name}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
-                        <span className="font-mono bg-white px-2 py-0.5 border border-slate-200 rounded text-slate-700 font-semibold">
-                          {selectedProduct.sku || selectedProduct.item_code}
-                        </span>
-                        {selectedProduct.category && <span>· {selectedProduct.category}</span>}
-                        <span>· In Stock: <strong className="text-slate-900">{selectedProduct.quantity || 0} units</strong></span>
-                        <span>· Base Cost: <strong className="text-slate-900">RM {parseFloat(selectedProduct.cost_price || 0).toFixed(2)}</strong></span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedProduct(null);
-                        setProductSearch('');
-                      }}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline flex-shrink-0 ml-2"
-                    >
-                      Change Product
+          {/* 2. How many */}
+          <FormSection title="2. How many, and what is the loss?">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field
+                label="Damaged quantity"
+                required
+                hint={selectedProduct ? `Up to ${selectedProduct.quantity || 0} (current stock).` : undefined}
+                error={selectedProduct && parseInt(formData.quantity, 10) > parseInt(selectedProduct.quantity || 0, 10) ? `Only ${selectedProduct.quantity || 0} in stock.` : undefined}
+              >
+                <Input
+                  type="number" min="1" step="1" required
+                  max={selectedProduct ? (selectedProduct.quantity || 1) : undefined}
+                  value={formData.quantity}
+                  onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                />
+              </Field>
+              <Field label="Cost per unit" hint="Filled in from the product's cost price. Change it if needed.">
+                <MoneyInput value={formData.cost_per_unit} onChange={e => setFormData({ ...formData, cost_per_unit: e.target.value })} />
+              </Field>
+            </div>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center justify-between">
+              <span className="text-xs text-rose-800">
+                Total loss: {parseInt(formData.quantity, 10) || 0} × RM {parseFloat(formData.cost_per_unit || selectedProduct?.cost_price || 0).toFixed(2)}
+              </span>
+              <span className="text-base font-bold text-rose-700">RM {computedTotalLoss}</span>
+            </div>
+          </FormSection>
+
+          {/* 3. Why */}
+          <FormSection title="3. What happened?">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {REASON_CATEGORIES.map(c => {
+                const active = formData.reason_category === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, reason_category: c.value })}
+                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-colors ${active ? 'border-indigo-500 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-500' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+            <Field label="Details" optional>
+              <Textarea
+                rows={2}
+                value={formData.reason_details}
+                onChange={e => setFormData({ ...formData, reason_details: e.target.value })}
+                placeholder="What happened? Batch number, courier, where it was found…"
+              />
+            </Field>
+          </FormSection>
+
+          {/* 4. Photos */}
+          <FormSection title="4. Photos (optional)" description={`Up to 5 photos as evidence (JPG, PNG or WebP). ${selectedPhotos.length}/5 added.`}>
+            {photoPreviews.length > 0 && (
+              <div className="grid grid-cols-5 gap-2">
+                {photoPreviews.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-100">
+                    <img src={url} alt="Evidence preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-black/80" aria-label="Remove photo">
+                      <X size={12} />
                     </button>
                   </div>
-                ) : (
-                  <div className="relative">
-                    <div className="relative">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder={loadingProducts ? 'Loading branch items...' : 'Search by product name or SKU...'}
-                        value={productSearch}
-                        onChange={e => setProductSearch(e.target.value)}
-                        disabled={loadingProducts}
-                        className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    {/* Results dropdown */}
-                    {loadingProducts ? (
-                      <div className="mt-1 p-3 text-center text-xs text-slate-400 bg-white border border-slate-200 rounded-lg">
-                        Loading branch inventory items...
-                      </div>
-                    ) : branchProducts.length === 0 ? (
-                      <div className="mt-1 p-3 text-center text-xs text-slate-400 bg-white border border-slate-200 rounded-lg">
-                        No products available at this branch.
-                      </div>
-                    ) : (
-                      <div className="mt-1 border border-slate-200 rounded-lg max-h-56 overflow-y-auto bg-white shadow-lg divide-y divide-slate-100 z-10 relative">
-                        {productSearchResults.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-400">
-                            No matching products found matching "{productSearch}".
-                          </div>
-                        ) : (
-                          productSearchResults.map(p => {
-                            const prodName = p.name || p.item_name || 'Product';
-                            const prodSku = p.sku || p.item_code || 'N/A';
-                            const stockQty = parseInt(p.quantity || 0, 10);
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedProduct(p);
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    cost_per_unit: p.cost_price || ''
-                                  }));
-                                }}
-                                className="w-full text-left p-2.5 hover:bg-indigo-50/50 flex items-center justify-between text-xs transition-colors group cursor-pointer"
-                              >
-                                <div className="min-w-0 pr-3">
-                                  <div className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                                    {prodName}
-                                  </div>
-                                  <div className="flex items-center gap-1.5 mt-0.5 text-slate-500 font-mono text-[11px]">
-                                    <span className="bg-slate-100 px-1.5 py-0.2 rounded text-slate-700 font-medium">
-                                      {prodSku}
-                                    </span>
-                                    {p.category && <span className="text-slate-400">· {p.category}</span>}
-                                  </div>
-                                </div>
-                                <div className="text-right flex-shrink-0">
-                                  <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] ${
-                                    stockQty > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                                  }`}>
-                                    {stockQty} in stock
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                ))}
               </div>
-
-              {/* Quantity and Unit Cost row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Damaged Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={selectedProduct ? (selectedProduct.quantity || 1) : 9999}
-                    required
-                    value={formData.quantity}
-                    onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  {selectedProduct && (
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Max available: {selectedProduct.quantity || 0} units
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                    Cost Per Unit (RM)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Product cost price"
-                    value={formData.cost_per_unit}
-                    onChange={e => setFormData({ ...formData, cost_per_unit: e.target.value })}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Pre-filled with base cost; editable if adjusted.
-                  </p>
-                </div>
-              </div>
-
-              {/* Live Cost Snapshot Computation Highlight */}
-              <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-semibold tracking-wider uppercase text-rose-600 block">
-                    Calculated Financial Loss Snapshot
-                  </span>
-                  <div className="text-xs text-rose-800 mt-0.5">
-                    {formData.quantity || 0} units × RM {parseFloat(formData.cost_per_unit || (selectedProduct?.cost_price || 0)).toFixed(2)}
-                  </div>
-                </div>
-                <div className="text-lg font-bold text-rose-700 tracking-tight">
-                  RM {computedTotalLoss}
-                </div>
-              </div>
-
-              {/* Reason Category */}
+            )}
+            {selectedPhotos.length < 5 && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Damage Reason Category *
+                <input type="file" ref={fileInputRef} multiple accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="hidden" id="damage-photo-upload" />
+                <label htmlFor="damage-photo-upload" className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-colors text-xs text-slate-600">
+                  <Upload size={16} className="text-slate-400" /> Add photos
                 </label>
-                <select
-                  required
-                  value={formData.reason_category}
-                  onChange={e => setFormData({ ...formData, reason_category: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {REASON_CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
               </div>
-
-              {/* Reason Details */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Damage Incident Details
-                </label>
-                <textarea
-                  rows="2"
-                  value={formData.reason_details}
-                  onChange={e => setFormData({ ...formData, reason_details: e.target.value })}
-                  placeholder="Describe incident specifics, batch codes, or carrier details..."
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              {/* Evidence Photos Upload (up to 5) */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Evidence Photos (Max 5)
-                  </label>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {selectedPhotos.length} / 5 photos
-                  </span>
-                </div>
-
-                {/* Previews grid */}
-                {photoPreviews.length > 0 && (
-                  <div className="grid grid-cols-5 gap-2 mb-3">
-                    {photoPreviews.map((url, idx) => (
-                      <div key={idx} className="relative group aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-100">
-                        <img src={url} alt="Preview" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(idx)}
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-80 hover:opacity-100 transition-opacity"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {selectedPhotos.length < 5 && (
-                  <div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      multiple
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handlePhotoSelect}
-                      className="hidden"
-                      id="damage-photo-upload"
-                    />
-                    <label
-                      htmlFor="damage-photo-upload"
-                      className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-colors text-xs text-slate-600"
-                    >
-                      <Upload size={16} className="text-slate-400" />
-                      <span>Click to upload evidence photos (JPG, PNG, WebP)</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  disabled={submitting}
-                  className="h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedProduct}
-                  className="inline-flex items-center gap-2 h-10 px-5 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <RefreshCw size={16} className="animate-spin" />
-                      <span>Submitting Report...</span>
-                    </>
-                  ) : (
-                    <>
-                      <PackageX size={16} />
-                      <span>Confirm & Deduct Stock</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            )}
+          </FormSection>
+        </Modal>
       )}
 
       {/* ========================================================================= */}

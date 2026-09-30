@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
+const { emitToBusiness } = require('../utils/realtime');
 
 // GET / - list branches. super_admin: all. admin: their business branches.
 router.get('/', authenticateToken, async (req, res) => {
@@ -62,8 +63,7 @@ router.post('/', authenticateToken, requireRole('super_admin'), async (req, res)
 
     await recordAuditLog(req.user.id, req.user.role, 'CREATE_BRANCH', 'branches', result.insertId, null, { business_id, name }, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('branch_updated', { branch_id: result.insertId, action: 'create' });
+    emitToBusiness(req, business_id, 'branch_updated', { branch_id: result.insertId, action: 'create' });
 
     return res.json({ success: true, message: `Branch '${name.trim()}' created successfully!`, data: { id: result.insertId } });
   } catch (err) {
@@ -271,8 +271,7 @@ router.put('/:id', authenticateToken, requireRole('super_admin'), async (req, re
 
     await recordAuditLog(req.user.id, req.user.role, 'UPDATE_BRANCH', 'branches', req.params.id, existing[0], { name }, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('branch_updated', { branch_id: req.params.id, action: 'update' });
+    emitToBusiness(req, existing[0].business_id, 'branch_updated', { branch_id: req.params.id, action: 'update' });
 
     return res.json({ success: true, message: 'Branch details updated successfully!' });
   } catch (err) {
@@ -301,12 +300,20 @@ router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req,
       });
     }
 
+    // Sales history (receipts) must be kept, so a branch that has made sales cannot be deleted
+    const [[salesRow]] = await pool.query('SELECT COUNT(*) AS count FROM sales WHERE branch_id = ?', [branchId]);
+    if (salesRow.count > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete branch '${existing[0].name}': it has ${salesRow.count} sale(s) in Sales history. Mark it inactive instead.`
+      });
+    }
+
     await pool.query('DELETE FROM branches WHERE id = ?', [branchId]);
 
     await recordAuditLog(req.user.id, req.user.role, 'DELETE_BRANCH', 'branches', branchId, existing[0], null, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('branch_updated', { branch_id: branchId, action: 'delete' });
+    emitToBusiness(req, existing[0].business_id, 'branch_updated', { branch_id: branchId, action: 'delete' });
 
     return res.json({ success: true, message: `Branch '${existing[0].name}' deleted successfully.` });
   } catch (err) {

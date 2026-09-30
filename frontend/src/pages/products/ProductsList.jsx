@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { Modal, FormSection, Field, Input, Select, MoneyInput, ChoiceCards, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
 import {
   Package, Plus, Search, Filter, Edit3, Trash2, ArrowDownLeft,
   QrCode, AlertTriangle, X, RotateCcw, Hash,
@@ -11,7 +12,13 @@ import {
   Layers, Printer, ArrowUpDown, CheckSquare, Square
 } from 'lucide-react';
 
-const FASHION_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size', 'Custom'];
+// Business form-config options may be a JSON array, a JSON string or a comma list
+function parseFormOptions(options) {
+  if (Array.isArray(options)) return options;
+  if (typeof options !== 'string') return [];
+  try { const parsed = JSON.parse(options); return Array.isArray(parsed) ? parsed : []; }
+  catch { return options.split(',').map(o => o.trim()).filter(Boolean); }
+}
 
 export default function ProductsList() {
   const { user } = useAuth();
@@ -41,6 +48,7 @@ export default function ProductsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
   const [success, setSuccess] = useState('');
+  const [modalError, setModalError] = useState('');
 
   // Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -54,7 +62,7 @@ export default function ProductsList() {
     branch_id: '',
     adjustment_type: 'in',
     quantity: 1,
-    note: 'Counter adjustment',
+    note: '',
     payment_method: 'cash'
   });
   const [editForm, setEditForm] = useState({});
@@ -69,6 +77,7 @@ export default function ProductsList() {
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading]   = useState(false);
   const [catalogSearch, setCatalogSearch]     = useState('');
+  const [addToBranchResult, setAddToBranchResult] = useState(null);
 
   // QR Modal State
   const [qrData, setQrData] = useState(null);
@@ -175,10 +184,11 @@ export default function ProductsList() {
         });
       }
       const entry = map.get(pid);
-      const minQ = parseInt(item.minimum_quantity || item.min_quantity || 5);
+      const minQ = parseInt(item.minimum_quantity ?? item.min_quantity ?? 0, 10) || 0;
       const q = parseInt(item.quantity || 0);
-      const isCrit = q <= 0 || item.status === 'out_of_stock';
-      const isLow = !isCrit && q <= minQ;
+      // Stock level comes from this branch's quantity (server sends stock_status), never from product status
+      const isCrit = item.stock_status ? item.stock_status === 'out' : q <= 0;
+      const isLow = item.stock_status ? item.stock_status === 'low' : (!isCrit && q <= minQ);
 
       if (isCrit) entry.has_critical = true;
       if (isLow) entry.has_low = true;
@@ -209,24 +219,43 @@ export default function ProductsList() {
   // ── Adjust Stock ──
   const openAdjustModal = (item, specificBranchId = null) => {
     setSelectedItem(item);
+    setModalError('');
     setAdjustForm({
       branch_id: specificBranchId || item.branch_id || '',
       adjustment_type: 'in',
       quantity: 1,
-      note: 'Counter adjustment',
+      note: '',
       payment_method: 'cash'
     });
     setShowAdjustModal(true);
   };
 
+  // Current stock of the selected item in the branch being adjusted (null if unknown)
+  const adjustCurrentQty = (() => {
+    if (!selectedItem) return null;
+    const bid = String(adjustForm.branch_id || selectedItem.branch_id || '');
+    const fromBranches = (selectedItem.branches || []).find(b => String(b.branch_id) === bid);
+    if (fromBranches) return parseInt(fromBranches.quantity || 0, 10);
+    if (String(selectedItem.branch_id) === bid) return parseInt(selectedItem.quantity || 0, 10);
+    return null;
+  })();
+  const adjustQty = parseInt(adjustForm.quantity, 10) || 0;
+  const adjustNewQty = adjustCurrentQty == null ? null
+    : adjustForm.adjustment_type === 'in' ? adjustCurrentQty + adjustQty
+    : adjustForm.adjustment_type === 'out' ? adjustCurrentQty - adjustQty
+    : adjustQty;
+
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
-    setError(''); setSuccess('');
+    setError(''); setSuccess(''); setModalError('');
+    if (adjustQty < 1) { setModalError('Enter a quantity of at least 1.'); return; }
+    if (adjustNewQty != null && adjustNewQty < 0) { setModalError(`Only ${adjustCurrentQty} in stock. You can't remove ${adjustQty}.`); return; }
     try {
       const res = await api.post('/products/adjust-stock', {
         item_id: selectedItem.id,
+        ...adjustForm,
         branch_id: adjustForm.branch_id || selectedItem.branch_id,
-        ...adjustForm
+        note: adjustForm.note.trim() || undefined
       });
       if (res.data.success) {
         setSuccess(res.data.message);
@@ -234,41 +263,59 @@ export default function ProductsList() {
         fetchItems();
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setModalError(err.response?.data?.message || err.message);
     }
   };
 
   // ── Edit Product ──
+  // The edit form shows the same categories and extra fields as the business's Add Product form.
+  const [editConfig, setEditConfig] = useState({ categories: [], attributes: [], loading: false });
+
   const openEditModal = (item) => {
     setSelectedItem(item);
+    setModalError('');
     setEditForm({
       item_name:        item.item_name || item.name || '',
       category:         item.category || '',
-      variant_color:    item.variant_color || item.colour || '',
-      size:             item.size || '',
-      model:            item.model || '',
-      status:           item.status || 'available',
-      minimum_quantity: item.minimum_quantity || item.min_quantity || 5,
-      selling_price:    item.selling_price || item.price_customer || 0,
-      price_dealer:     item.price_dealer || 0,
-      price_staff:      item.price_staff || 0,
-      unit_price:       item.cost_price || item.unit_price || 0,
+      variants:         { ...(item.variants || {}) },
+      status:           item.status === 'discontinued' ? 'discontinued' : 'available',
+      minimum_quantity: item.minimum_quantity ?? item.min_quantity ?? 5,
+      selling_price:    item.selling_price ?? item.price_customer ?? '',
+      price_dealer:     item.price_dealer ?? '',
+      price_staff:      item.price_staff ?? '',
+      unit_price:       item.cost_price ?? item.unit_price ?? '',
     });
     setShowEditModal(true);
+    setEditConfig({ categories: [], attributes: [], loading: true });
+    api.get('/products/form-config', { params: { business_id: item.business_id } })
+      .then(r => setEditConfig({ categories: r.data.categories || [], attributes: r.data.attributes || [], loading: false }))
+      .catch(() => setEditConfig({ categories: [], attributes: [], loading: false }));
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setError(''); setSuccess('');
+    setError(''); setSuccess(''); setModalError('');
+    if (!editForm.item_name.trim()) { setModalError('Product name is required.'); return; }
+    const num = (v) => (v === '' || v == null ? 0 : parseFloat(v) || 0);
     try {
-      const res = await api.put(`/products/${selectedItem.id}`, editForm);
+      const res = await api.put(`/products/${selectedItem.id}`, {
+        item_name: editForm.item_name.trim(),
+        category: editForm.category,
+        status: editForm.status,
+        variants: editForm.variants,
+        minimum_quantity: parseInt(editForm.minimum_quantity, 10) || 0,
+        selling_price: num(editForm.selling_price),
+        price_dealer: num(editForm.price_dealer),
+        price_staff: num(editForm.price_staff),
+        unit_price: num(editForm.unit_price)
+      });
       if (res.data.success) {
         setSuccess(res.data.message);
         setShowEditModal(false);
         fetchItems();
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setModalError(err.response?.data?.message || err.message);
     }
   };
 
@@ -331,17 +378,23 @@ export default function ProductsList() {
       product_ids: [],
       product_quantities: {}
     });
+    setAddToBranchResult(null);
     setShowAddToBranchModal(true);
     if (defaultBiz) {
-      loadCatalogForBusiness(defaultBiz);
+      loadCatalogForBusiness(defaultBiz, defaultBranchIds);
     }
   };
 
-  const loadCatalogForBusiness = async (bizId) => {
+  // in_branch / branch_qty are computed for one target branch: the admin's own branch, or
+  // (super admin) the single selected branch. With several branches selected there is no badge.
+  const loadCatalogForBusiness = async (bizId, targetBranchIds = []) => {
     try {
       setCatalogLoading(true);
+      const catalogParams = isSuperAdmin
+        ? { business_id: bizId, branch_id: targetBranchIds.length === 1 ? targetBranchIds[0] : undefined }
+        : {};
       const [catRes, brRes] = await Promise.all([
-        api.get('/products/catalog', { params: { business_id: bizId } }),
+        api.get('/products/catalog', { params: catalogParams }),
         api.get(`/businesses/${bizId}/branches`)
       ]);
       if (catRes.data.success) setCatalogProducts(catRes.data.products || []);
@@ -352,6 +405,15 @@ export default function ProductsList() {
       setCatalogLoading(false);
     }
   };
+
+  // Super admin: refresh the in-branch badges when the branch selection changes
+  const targetBranchKey = addToBranchForm.branch_ids.length === 1 ? String(addToBranchForm.branch_ids[0]) : '';
+  useEffect(() => {
+    if (showAddToBranchModal && isSuperAdmin && addToBranchForm.business_id) {
+      loadCatalogForBusiness(addToBranchForm.business_id, addToBranchForm.branch_ids);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetBranchKey]);
 
   const handleAddToBranchSubmit = async (e) => {
     e.preventDefault();
@@ -367,17 +429,34 @@ export default function ProductsList() {
 
     try {
       const res = await api.post('/products/add-to-branch', addToBranchForm);
-      if (res.data.success) {
-        setSuccess(res.data.message);
+      const data = res.data;
+      const results = data.results || [];
+      const doneIds = new Set(results.filter(r => r.action !== 'skipped').map(r => r.product_id));
+      const skippedIds = new Set(results.filter(r => r.action === 'skipped').map(r => r.product_id));
+      if (doneIds.size > 0) fetchItems();
+
+      if (data.success && !data.partial) {
+        // Everything went through: close and show the summary on the page
+        setSuccess(data.message);
         setShowAddToBranchModal(false);
-        fetchItems();
+        setAddToBranchResult(null);
+      } else {
+        // Partial or total failure: keep the modal open with per-item results
+        setAddToBranchResult({ message: data.message, results });
+        if (doneIds.size > 0) {
+          loadCatalogForBusiness(addToBranchForm.business_id, addToBranchForm.branch_ids);
+          // Deselect fully-successful products so a retry only re-sends what was skipped
+          setAddToBranchForm(f => ({
+            ...f,
+            product_ids: f.product_ids.filter(id => skippedIds.has(id) || !doneIds.has(id))
+          }));
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setAddToBranchResult({ message: err.response?.data?.message || err.message, results: [] });
     }
   };
 
-  const isFashion = (item) => item?.business_type === 'fashion';
   const hasFilterQuery = Boolean(filterBusiness || filterBranch || selectedCategory !== 'All' || selectedStockStatus !== 'all');
   const activeBranchName   = branches.find(b => String(b.id) === String(filterBranch))?.name;
   const activeBusinessName = businesses.find(b => String(b.id) === String(filterBusiness))?.name;
@@ -396,7 +475,7 @@ export default function ProductsList() {
             className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
           >
             <Building className="w-4 h-4 text-indigo-600" />
-            <span>Stock Existing Product</span>
+            <span>Add to branch / Restock</span>
           </button>
           <Link
             to="/products/add"
@@ -534,10 +613,9 @@ export default function ProductsList() {
             onChange={e => setSelectedProductStatus(e.target.value)}
             className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="active">Active Products</option>
-            <option value="available">Available Only</option>
-            <option value="discontinued">Discontinued Only</option>
-            <option value="All">All Lifecycles</option>
+            <option value="active">Selling (not discontinued)</option>
+            <option value="discontinued">Discontinued only</option>
+            <option value="All">All products</option>
           </select>
 
           {/* Sort Dropdown */}
@@ -611,10 +689,10 @@ export default function ProductsList() {
                   </tr>
                 ) : (
                   items.map((item) => {
-                    const minQty = parseInt(item.minimum_quantity || item.min_quantity || 5);
+                    const minQty = parseInt(item.minimum_quantity ?? item.min_quantity ?? 0, 10) || 0;
                     const qty = parseInt(item.quantity || 0);
-                    const isOutOfStock = qty <= 0 || item.status === 'out_of_stock';
-                    const isLow = !isOutOfStock && qty <= minQty;
+                    const isOutOfStock = item.stock_status ? item.stock_status === 'out' : qty <= 0;
+                    const isLow = item.stock_status ? item.stock_status === 'low' : (!isOutOfStock && qty <= minQty);
                     const isHighlighted = String(item.id) === String(queryProductId);
 
                     const stockBadgeClass = isOutOfStock
@@ -912,282 +990,156 @@ export default function ProductsList() {
         </div>
       </div>
 
-      {/* ── Modal 1: Adjust Stock Modal ── */}
+      {/* ── Modal 1: Adjust Stock ── */}
       {showAdjustModal && selectedItem && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <div>
-                <h5 className="font-bold text-slate-900 text-base">Adjust Stock</h5>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  {selectedItem.item_name} <span className="font-mono text-indigo-600">({selectedItem.item_code})</span>
-                </div>
-              </div>
-              <button onClick={() => setShowAdjustModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
+        <Modal
+          icon={ArrowUpDown}
+          title="Adjust stock"
+          description={<>{selectedItem.item_name} <span className="font-mono text-indigo-600">({selectedItem.item_code})</span></>}
+          onClose={() => setShowAdjustModal(false)}
+          onSubmit={handleAdjustSubmit}
+          error={modalError}
+          onDismissError={() => setModalError('')}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAdjustModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Save adjustment</PrimaryButton>
+          </>}
+        >
+          {branches.length > 1 && (
+            <Field label="Branch" required>
+              <Select required value={adjustForm.branch_id} onChange={e => setAdjustForm({ ...adjustForm, branch_id: e.target.value })}>
+                <option value="">Choose a branch…</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            </Field>
+          )}
 
-            <form onSubmit={handleAdjustSubmit} className="space-y-4">
-              {/* Branch Selector for Adjustment */}
-              {branches.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Branch *</label>
-                  <select
-                    value={adjustForm.branch_id}
-                    onChange={e => setAdjustForm({ ...adjustForm, branch_id: e.target.value })}
-                    required
-                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                  >
-                    <option value="">-- Choose Branch --</option>
-                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-              )}
+          <Field label="What happened?">
+            <ChoiceCards
+              columns={3}
+              value={adjustForm.adjustment_type}
+              onChange={v => setAdjustForm({ ...adjustForm, adjustment_type: v })}
+              options={[
+                { value: 'in', icon: ArrowDownLeft, activeColor: 'text-emerald-600', label: 'Stock in', description: 'New stock arrived.' },
+                { value: 'out', icon: ShoppingBag, activeColor: 'text-rose-600', label: 'Stock out', description: 'Sold or taken out.' },
+                { value: 'adjust', icon: Hash, activeColor: 'text-violet-600', label: 'Set count', description: 'After a stock take.' }
+              ]}
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Adjustment Type</label>
-                <select
-                  value={adjustForm.adjustment_type}
-                  onChange={e => setAdjustForm({ ...adjustForm, adjustment_type: e.target.value })}
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                >
-                  <option value="in">STOCK IN (Add Stock)</option>
-                  <option value="out">STOCK OUT (Deduct Stock / Sale)</option>
-                  <option value="adjust">SET QUANTITY (Manual Override)</option>
-                </select>
-              </div>
-
-              {adjustForm.adjustment_type === 'out' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
-                  <select
-                    value={adjustForm.payment_method || 'cash'}
-                    onChange={e => setAdjustForm({ ...adjustForm, payment_method: e.target.value })}
-                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="qr">QR / e-Wallet</option>
-                    <option value="online_banking">Online Banking</option>
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={adjustForm.quantity}
-                  onChange={e => setAdjustForm({ ...adjustForm, quantity: e.target.value })}
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Note / Reason</label>
-                <input
-                  type="text"
-                  value={adjustForm.note}
-                  onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })}
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAdjustModal(false)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Confirm Adjustment
-                </button>
-              </div>
-            </form>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label={adjustForm.adjustment_type === 'adjust' ? 'Actual count on shelf' : 'Quantity'} required>
+              <Input type="number" min="1" step="1" required value={adjustForm.quantity} onChange={e => setAdjustForm({ ...adjustForm, quantity: e.target.value })} className="font-mono" />
+            </Field>
+            {adjustForm.adjustment_type === 'out' && (
+              <Field label="Payment method" hint="Used in the sales report.">
+                <Select value={adjustForm.payment_method || 'cash'} onChange={e => setAdjustForm({ ...adjustForm, payment_method: e.target.value })}>
+                  <option value="cash">Cash</option>
+                  <option value="qr">QR / e-Wallet</option>
+                  <option value="online_banking">Online Banking</option>
+                </Select>
+              </Field>
+            )}
           </div>
-        </div>
+
+          {adjustCurrentQty != null && (
+            <div className={`p-3 rounded-lg border text-sm flex items-center justify-between ${adjustNewQty < 0 ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+              <span>Stock after saving</span>
+              <span className="font-mono font-semibold">{adjustCurrentQty} → <span className={adjustNewQty < 0 ? 'text-rose-700' : 'text-indigo-700'}>{adjustNewQty}</span></span>
+            </div>
+          )}
+
+          <Field label="Note" optional>
+            <Input placeholder="e.g. Delivery from supplier, invoice #1234" value={adjustForm.note} onChange={e => setAdjustForm({ ...adjustForm, note: e.target.value })} />
+          </Field>
+        </Modal>
       )}
 
-      {/* ── Modal 2: Edit Master Product Modal ── */}
+      {/* ── Modal 2: Edit Product ── */}
       {showEditModal && selectedItem && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <div>
-                <h5 className="font-bold text-slate-900 text-base">Edit Master Product</h5>
-                <p className="text-xs text-slate-500 mt-0.5">Editing updates product info across all branches at once</p>
-              </div>
-              <button onClick={() => setShowEditModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-
-            {/* Read-only Locked SKU banner */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5 flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                <Hash className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold tracking-wide uppercase text-slate-400">System SKU (Locked &amp; Immutable)</div>
-                <div className="font-mono text-indigo-600 font-bold text-sm">{selectedItem.item_code}</div>
-              </div>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Product Status *</label>
-                <select
-                  value={editForm.status || 'available'}
-                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full font-medium"
-                >
-                  <option value="available">Available</option>
-                  <option value="out_of_stock">Out of Stock</option>
+        <Modal
+          size="lg"
+          icon={Edit3}
+          title="Edit product"
+          description={<>SKU <span className="font-mono text-indigo-600">{selectedItem.item_code}</span> (cannot be changed). Changes apply in every branch that carries this product.</>}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={modalError}
+          onDismissError={() => setModalError('')}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton><CheckCircle className="w-4 h-4" /> Save changes</PrimaryButton>
+          </>}
+        >
+          <FormSection title="Product">
+            <Field label="Product name" required>
+              <Input required value={editForm.item_name} onChange={e => setEditForm({ ...editForm, item_name: e.target.value })} />
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Category" required>
+                <Select required value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} disabled={editConfig.loading}>
+                  <option value="">Choose a category…</option>
+                  {/* Keep the current value selectable even if it was removed from the business's list */}
+                  {editForm.category && !editConfig.categories.some(c => c.name === editForm.category) && (
+                    <option value={editForm.category}>{editForm.category}</option>
+                  )}
+                  {editConfig.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </Select>
+              </Field>
+              <Field label="Status" hint={editForm.status === 'discontinued' ? 'Hidden from the POS and the product list.' : 'Out of stock / low stock is worked out from each branch’s quantity.'}>
+                <Select value={editForm.status || 'available'} onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                  <option value="available">Selling</option>
                   <option value="discontinued">Discontinued</option>
-                </select>
+                </Select>
+              </Field>
+            </div>
+            {editConfig.attributes.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {editConfig.attributes.map(attr => {
+                  const value = editForm.variants?.[attr.attribute_key] || '';
+                  const setValue = (v) => setEditForm({ ...editForm, variants: { ...editForm.variants, [attr.attribute_key]: v } });
+                  const options = parseFormOptions(attr.options);
+                  return (
+                    <Field key={attr.attribute_key} label={attr.label} optional>
+                      {attr.input_type === 'select' ? (
+                        <Select value={value} onChange={e => setValue(e.target.value)}>
+                          <option value="">Choose…</option>
+                          {value && !options.includes(value) && <option value={value}>{value}</option>}
+                          {options.map(o => <option key={o} value={o}>{o}</option>)}
+                        </Select>
+                      ) : (
+                        <Input value={value} onChange={e => setValue(e.target.value)} placeholder={attr.label} />
+                      )}
+                    </Field>
+                  );
+                })}
               </div>
+            )}
+          </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Product Name *</label>
-                <input
-                  type="text"
-                  required
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                  value={editForm.item_name}
-                  onChange={e => setEditForm({ ...editForm, item_name: e.target.value })}
-                />
-              </div>
+          <FormSection title="Prices" description="Which price is charged depends on the tier chosen at the POS.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Customer price" hint="Normal walk-in price.">
+                <MoneyInput value={editForm.selling_price} onChange={e => setEditForm({ ...editForm, selling_price: e.target.value })} />
+              </Field>
+              <Field label="Dealer price" hint="For resellers / wholesale.">
+                <MoneyInput value={editForm.price_dealer} onChange={e => setEditForm({ ...editForm, price_dealer: e.target.value })} />
+              </Field>
+              <Field label="Staff price" hint="Employee purchase price.">
+                <MoneyInput value={editForm.price_staff} onChange={e => setEditForm({ ...editForm, price_staff: e.target.value })} />
+              </Field>
+              <Field label="Cost price" hint="What you paid. Internal only, used for damage loss.">
+                <MoneyInput value={editForm.unit_price} onChange={e => setEditForm({ ...editForm, unit_price: e.target.value })} />
+              </Field>
+            </div>
+          </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1"><Tag className="w-3.5 h-3.5 inline mr-1 text-purple-600" />Category</label>
-                <input
-                  type="text"
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                  value={editForm.category}
-                  onChange={e => setEditForm({ ...editForm, category: e.target.value })}
-                />
-              </div>
-
-              {/* Fashion fields */}
-              {isFashion(selectedItem) && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1"><Palette className="w-3.5 h-3.5 inline mr-1 text-pink-500" />Colour / Variant</label>
-                      <input
-                        type="text"
-                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                        placeholder="e.g. Black, Mint Green"
-                        value={editForm.variant_color}
-                        onChange={e => setEditForm({ ...editForm, variant_color: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1"><Ruler className="w-3.5 h-3.5 inline mr-1 text-amber-500" />Size</label>
-                      <select
-                        className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                        value={editForm.size}
-                        onChange={e => setEditForm({ ...editForm, size: e.target.value })}
-                      >
-                        <option value="">-- Select --</option>
-                        {FASHION_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                        <option value={editForm.size && !FASHION_SIZES.includes(editForm.size) ? editForm.size : ''}>
-                          {editForm.size && !FASHION_SIZES.includes(editForm.size) ? editForm.size : 'Other'}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1"><Tag className="w-3.5 h-3.5 inline mr-1 text-purple-600" />Style / Model</label>
-                    <input
-                      type="text"
-                      className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                      value={editForm.model}
-                      onChange={e => setEditForm({ ...editForm, model: e.target.value })}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Tech model */}
-              {!isFashion(selectedItem) && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Model / Part Number</label>
-                  <input
-                    type="text"
-                    className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full"
-                    placeholder="e.g. WH-1000XM5"
-                    value={editForm.model}
-                    onChange={e => setEditForm({ ...editForm, model: e.target.value })}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-amber-500" />Low Stock Threshold
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full font-mono"
-                  value={editForm.minimum_quantity}
-                  onChange={e => setEditForm({ ...editForm, minimum_quantity: e.target.value })}
-                />
-              </div>
-
-              {/* 3-Tier Pricing */}
-              <div>
-                <div className="flex items-center gap-1 mb-2">
-                  <DollarSign className="w-4 h-4 text-indigo-600" />
-                  <label className="block text-sm font-medium text-slate-700">3-Tier Pricing</label>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { label: 'Customer Price', key: 'selling_price', icon: ShoppingBag, color: 'text-emerald-600' },
-                    { label: 'Dealer Price',   key: 'price_dealer',  icon: Briefcase,   color: 'text-indigo-600'  },
-                    { label: 'Staff Price',    key: 'price_staff',   icon: Users,       color: 'text-purple-600'  },
-                  ].map(p => (
-                    <div key={p.key} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                      <p.icon className={`w-4 h-4 flex-shrink-0 ${p.color}`} />
-                      <span className="text-xs text-slate-600 w-32 flex-shrink-0">{p.label}</span>
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-2.5 text-slate-500 text-xs font-bold">RM</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9 font-mono"
-                          value={editForm[p.key]}
-                          onChange={e => setEditForm({ ...editForm, [p.key]: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4" /> Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          <FormSection title="Stock alert">
+            <Field label="Low-stock alert at" hint="The product is flagged “low stock” when a branch has this many or fewer.">
+              <Input type="number" min="0" step="1" value={editForm.minimum_quantity} onChange={e => setEditForm({ ...editForm, minimum_quantity: e.target.value })} className="font-mono sm:max-w-[10rem]" />
+            </Field>
+          </FormSection>
+        </Modal>
       )}
 
       {/* ── Modal 3: Quick QR Label Modal (Click to View QR) ── */}
@@ -1266,208 +1218,181 @@ export default function ProductsList() {
         </div>
       )}
 
-      {/* ── Modal 4: Add Existing Product to Branch Modal ── */}
+      {/* ── Modal 4: Add Existing Product to Branch / Restock ── */}
       {showAddToBranchModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <div>
-                <h5 className="font-bold text-slate-900 text-base">Add Existing Product to Branch</h5>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {isSuperAdmin 
-                    ? 'Allocate an existing product from the business catalog into one or more operational branches'
-                    : 'Add products from your business catalog to your branch inventory'}
-                </p>
-              </div>
-              <button onClick={() => setShowAddToBranchModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-
-            <form onSubmit={handleAddToBranchSubmit} className="space-y-5">
-              {/* Business Selector */}
-              {user?.role === 'super_admin' ? (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Select Business *</label>
-                  <select
+        <Modal
+          size="lg"
+          icon={Building}
+          title="Add to branch / Restock"
+          description="Put products that already exist in the business catalog into a branch, or top up ones the branch already carries."
+          onClose={() => setShowAddToBranchModal(false)}
+          onSubmit={handleAddToBranchSubmit}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddToBranchModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton disabled={addToBranchForm.product_ids.length === 0 || (isSuperAdmin && addToBranchForm.branch_ids.length === 0)}>
+              Add / Restock {addToBranchForm.product_ids.length > 0 ? `${addToBranchForm.product_ids.length} product${addToBranchForm.product_ids.length === 1 ? '' : 's'}` : ''}
+            </PrimaryButton>
+          </>}
+        >
+          <FormSection title="1. Where">
+            {isSuperAdmin ? (
+              <>
+                <Field label="Business" required>
+                  <Select
+                    required
                     value={addToBranchForm.business_id}
                     onChange={e => {
                       const bid = e.target.value;
                       setAddToBranchForm({ ...addToBranchForm, business_id: bid, branch_ids: [], product_ids: [], product_quantities: {} });
-                      loadCatalogForBusiness(bid);
+                      setAddToBranchResult(null);
+                      if (bid) loadCatalogForBusiness(bid);
                     }}
-                    required
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="">-- Choose Business --</option>
+                    <option value="">Choose a business…</option>
                     {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Business</label>
-                  <div className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
-                    {businesses.find(b => String(b.id) === String(user?.business_id))?.name || 'Your Business'}
-                  </div>
-                </div>
-              )}
-
-              {/* Target Branches Checkboxes */}
-              {user?.role === 'super_admin' ? (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Target Branch(es) *</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (addToBranchForm.branch_ids.length === branches.length) {
-                          setAddToBranchForm(f => ({ ...f, branch_ids: [] }));
-                        } else {
-                          setAddToBranchForm(f => ({ ...f, branch_ids: branches.map(b => b.id) }));
-                        }
-                      }}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
-                    >
-                      {addToBranchForm.branch_ids.length === branches.length ? 'Deselect All' : 'Select All'}
-                    </button>
-                  </div>
+                  </Select>
+                </Field>
+                <Field label="Branches" required hint="Pick one branch to see which products it already has.">
                   {branches.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">Please select a business above to view its branches.</p>
+                    <p className="text-xs text-slate-400 italic">Choose a business first.</p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50">
-                      {branches.map(br => {
-                        const isChecked = addToBranchForm.branch_ids.includes(br.id);
-                        return (
-                          <button
-                            key={br.id}
-                            type="button"
-                            onClick={() => {
-                              setAddToBranchForm(f => ({
-                                ...f,
-                                branch_ids: isChecked ? f.branch_ids.filter(id => id !== br.id) : [...f.branch_ids, br.id]
-                              }));
-                            }}
-                            className={`flex items-center gap-2 p-2 rounded-lg text-left transition-colors text-xs ${
-                              isChecked ? 'bg-indigo-50 text-indigo-900 font-semibold border border-indigo-200' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                            <span className="truncate">{br.name}</span>
-                          </button>
-                        );
-                      })}
+                    <div>
+                      <div className="flex justify-end mb-1">
+                        <button
+                          type="button"
+                          onClick={() => setAddToBranchForm(f => ({ ...f, branch_ids: f.branch_ids.length === branches.length ? [] : branches.map(b => b.id) }))}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                        >
+                          {addToBranchForm.branch_ids.length === branches.length ? 'Clear all' : 'Select all'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                        {branches.map(br => {
+                          const isChecked = addToBranchForm.branch_ids.includes(br.id);
+                          return (
+                            <button
+                              key={br.id}
+                              type="button"
+                              onClick={() => setAddToBranchForm(f => ({ ...f, branch_ids: isChecked ? f.branch_ids.filter(id => id !== br.id) : [...f.branch_ids, br.id] }))}
+                              className={`flex items-center gap-2 p-2 rounded-lg text-left text-sm border transition-colors ${isChecked ? 'bg-indigo-50 text-indigo-900 font-semibold border-indigo-300' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                            >
+                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                              <span className="truncate">{br.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Branch</label>
-                  <div className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 flex items-center">
-                    {branches.find(b => String(b.id) === String(user?.branch_id))?.name || 'Your Branch'}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Products will be added to your assigned branch</p>
-                </div>
+                </Field>
+              </>
+            ) : (
+              <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-600 flex items-center gap-2">
+                <Building className="w-4 h-4 text-slate-400" />
+                <span><strong>{user?.branch_name || 'Your branch'}</strong> · {user?.business_name || 'Your business'}</span>
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection
+            title="2. Products and quantities"
+            description="For a product already in the branch, the quantity is added to its current stock. For a new one, it's the starting stock (0 is allowed)."
+          >
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by product name or SKU…"
+                  value={catalogSearch}
+                  onChange={e => setCatalogSearch(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <span className={`text-xs font-semibold whitespace-nowrap ${addToBranchForm.product_ids.length ? 'text-indigo-600' : 'text-slate-400'}`}>{addToBranchForm.product_ids.length} selected</span>
+            </div>
+
+            {catalogLoading ? (
+              <div className="py-8 text-center text-xs text-slate-400">Loading products…</div>
+            ) : catalogProducts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400 italic border border-dashed border-slate-200 rounded-xl">
+                {isSuperAdmin && !addToBranchForm.business_id ? 'Choose a business first.' : 'This business has no products yet.'}
+              </div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
+                {catalogProducts
+                  .filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase()))
+                  .map(p => {
+                    const isChecked = addToBranchForm.product_ids.includes(p.id);
+                    const toggle = () => setAddToBranchForm(f => ({
+                      ...f,
+                      product_ids: isChecked ? f.product_ids.filter(id => id !== p.id) : [...f.product_ids, p.id],
+                      product_quantities: isChecked
+                        ? Object.fromEntries(Object.entries(f.product_quantities || {}).filter(([id]) => String(id) !== String(p.id)))
+                        : { ...(f.product_quantities || {}), [p.id]: f.product_quantities?.[p.id] ?? 1 }
+                    }));
+                    return (
+                      <div key={p.id} className={`px-3 py-2 flex items-center gap-3 text-sm ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
+                        <button type="button" onClick={toggle} className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
+                          {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-slate-900">{p.name}</span>
+                            <span className="block text-[11px] text-slate-500">
+                              <span className="font-mono text-indigo-600">{p.sku}</span>
+                              {p.category && <> · {p.category}</>}
+                              {' · '}RM {parseFloat(p.price_customer || 0).toFixed(2)}
+                            </span>
+                          </span>
+                        </button>
+                        {p.in_branch
+                          ? <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 whitespace-nowrap">In branch · {p.branch_qty}</span>
+                          : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 whitespace-nowrap">New to branch</span>}
+                        {isChecked && (
+                          <label className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-shrink-0">
+                            {p.in_branch ? 'Add' : 'Start with'}
+                            <input
+                              type="number"
+                              min={p.in_branch ? 1 : 0}
+                              step="1"
+                              value={addToBranchForm.product_quantities?.[p.id] ?? 1}
+                              onChange={e => {
+                                const value = e.target.value;
+                                setAddToBranchForm(f => ({ ...f, product_quantities: { ...(f.product_quantities || {}), [p.id]: value } }));
+                              }}
+                              className="h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                              aria-label={p.in_branch ? `Quantity to add for ${p.name}` : `Starting stock for ${p.name}`}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </FormSection>
+
+          {addToBranchResult && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
+              <p className="font-semibold text-amber-900 mb-1">{addToBranchResult.message}</p>
+              {addToBranchResult.results.length > 0 && (
+                <ul className="space-y-0.5 max-h-32 overflow-y-auto">
+                  {addToBranchResult.results.map(r => {
+                    const prod = catalogProducts.find(cp => cp.id === r.product_id);
+                    const br = branches.find(b => b.id === r.branch_id);
+                    return (
+                      <li key={`${r.product_id}-${r.branch_id}`} className={r.action === 'skipped' ? 'text-red-700' : 'text-emerald-700'}>
+                        <span className="font-semibold uppercase">{r.action}</span>{' '}
+                        {prod ? `${prod.name} (${prod.sku})` : `Product #${r.product_id}`}
+                        {' → '}{br?.name || (isSuperAdmin ? `Branch #${r.branch_id}` : user?.branch_name)}
+                        {r.action === 'skipped' ? `: ${r.reason}` : ` (qty ${r.qty_before} → ${r.qty_after})`}
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
-
-              {/* Product Catalog Selector */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-slate-700">Choose Products from Catalog *</label>
-                  <span className="text-xs text-slate-400">{addToBranchForm.product_ids.length} selected</span>
-                </div>
-
-                <div className="relative mb-2">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    placeholder="Search catalog by SKU or product name..."
-                    value={catalogSearch}
-                    onChange={e => setCatalogSearch(e.target.value)}
-                    className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                {catalogLoading ? (
-                  <div className="py-8 text-center text-xs text-slate-400 font-mono">Loading product catalog...</div>
-                ) : catalogProducts.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400 italic">No products available in this business catalog yet.</div>
-                ) : (
-                  <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
-                    {catalogProducts
-                      .filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase()))
-                      .map(p => {
-                        const isChecked = addToBranchForm.product_ids.includes(p.id);
-                        return (
-                          <div
-                            key={p.id}
-                            onClick={() => {
-                              setAddToBranchForm(f => ({
-                                ...f,
-                                product_ids: isChecked ? f.product_ids.filter(id => id !== p.id) : [...f.product_ids, p.id],
-                                product_quantities: isChecked
-                                  ? Object.fromEntries(Object.entries(f.product_quantities || {}).filter(([id]) => String(id) !== String(p.id)))
-                                  : { ...(f.product_quantities || {}), [p.id]: f.product_quantities?.[p.id] ?? 1 }
-                              }));
-                            }}
-                            className={`p-2.5 flex items-center justify-between cursor-pointer transition-colors text-xs ${
-                              isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                              <div className="truncate">
-                                <span className="font-semibold text-slate-900">{p.name}</span>
-                                <span className="font-mono text-[11px] text-indigo-600 ml-2 font-bold">{p.sku}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 text-right flex-shrink-0">
-                              {isChecked && (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={addToBranchForm.product_quantities?.[p.id] ?? 1}
-                                  onClick={e => e.stopPropagation()}
-                                  onChange={e => {
-                                    const value = e.target.value;
-                                    setAddToBranchForm(f => ({
-                                      ...f,
-                                      product_quantities: {
-                                        ...(f.product_quantities || {}),
-                                        [p.id]: value
-                                      }
-                                    }));
-                                  }}
-                                  className="h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                                  aria-label={`Initial stock for ${p.name}`}
-                                />
-                              )}
-                              <span className="text-[11px] text-slate-400">{p.category}</span>
-                              <span className="font-mono font-semibold text-slate-800">RM {parseFloat(p.price_customer || 0).toFixed(2)}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAddToBranchModal(false)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addToBranchForm.product_ids.length === 0 || (isSuperAdmin && addToBranchForm.branch_ids.length === 0)}
-                  className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  Confirm Allocation
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          )}
+        </Modal>
       )}
     </Layout>
   );

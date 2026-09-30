@@ -8,9 +8,22 @@ import {
 import Layout from '../../components/Layout';
 import KpiCard from '../../components/KpiCard';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { Modal, PrimaryButton, SecondaryButton, toDateInput } from '../../components/ui/Form';
+import BranchFields from '../../components/forms/BranchFields';
+import CatalogPicker from '../../components/forms/CatalogPicker';
+
+// Collect the distinct skip reasons returned by /products/add-to-branch across several requests
+const collectSkipReasons = (settled) => [...new Set(settled.flatMap(r =>
+  r.status === 'fulfilled'
+    ? (r.value.data.results || []).filter(x => x.action === 'skipped').map(x => x.reason)
+    : [r.reason?.response?.data?.message || 'request failed']
+))].join('; ');
 
 export default function BranchDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [branch, setBranch] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +32,7 @@ export default function BranchDetail() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '', branch_code: '', address: '', city: '', state: '', postcode: '',
-    contact_person: '', contact_phone: '', contact_email: '', operating_hours: ''
+    contact_person: '', contact_phone: '', contact_email: '', operating_hours: '', opening_date: '', is_active: 1
   });
 
   // Add Existing Product to this Branch
@@ -45,7 +58,8 @@ export default function BranchDetail() {
           name: brData.name || '', branch_code: brData.branch_code || '', address: brData.address || '',
           city: brData.city || '', state: brData.state || '', postcode: brData.postcode || '',
           contact_person: brData.contact_person || '', contact_phone: brData.contact_phone || '',
-          contact_email: brData.contact_email || '', operating_hours: brData.operating_hours || ''
+          contact_email: brData.contact_email || '', operating_hours: brData.operating_hours || '',
+          opening_date: toDateInput(brData.opening_date), is_active: brData.is_active ?? 1
         });
       }
       if (productsRes.data.success) {
@@ -82,6 +96,7 @@ export default function BranchDetail() {
   const stockedProductIds = new Set(items.map(it => it.id));
 
   const openAddExistingModal = async () => {
+    setMessage(null);
     setStockSelections({});
     setCatalogSearch('');
     setShowAddExistingModal(true);
@@ -139,13 +154,13 @@ export default function BranchDetail() {
         setMessage({
           type: failed > 0 ? 'danger' : 'success',
           text: failed > 0
-            ? `${succeeded} product(s) added to ${branch.name}, but ${failed} failed.`
+            ? `${succeeded} product(s) added to ${branch.name}, but ${failed} failed (${collectSkipReasons(results)}).`
             : `${succeeded} product(s) successfully added to ${branch.name}'s stock.`
         });
         setShowAddExistingModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: 'Failed to add the selected product(s) to this branch.' });
+        setMessage({ type: 'danger', text: `Failed to add the selected product(s) to this branch: ${collectSkipReasons(results)}` });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to add products to this branch.' });
@@ -154,9 +169,8 @@ export default function BranchDetail() {
     }
   };
 
-  const availableCatalogProducts = catalogProducts
-    .filter(p => !stockedProductIds.has(p.id))
-    .filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase()));
+  // Search filtering happens inside CatalogPicker
+  const availableCatalogProducts = catalogProducts.filter(p => !stockedProductIds.has(p.id));
 
   if (loading) {
     return (
@@ -230,12 +244,14 @@ export default function BranchDetail() {
           <button onClick={openAddExistingModal} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
             <Layers size={14} className="text-indigo-600" /> Add Existing Product
           </button>
-          <Link to={`/products/add`} className="inline-flex items-center gap-2 h-9 px-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+          <Link to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             <Plus size={16} /> Add Product
           </Link>
-          <button onClick={() => setShowEditModal(true)} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-            <Edit3 size={14} /> Edit Branch
-          </button>
+          {isSuperAdmin && (
+            <button onClick={() => { setMessage(null); setShowEditModal(true); }} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+              <Edit3 size={14} /> Edit Branch
+            </button>
+          )}
           <Link to={`/reports?business_id=${branch.business_id}&branch_id=${id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-indigo-600 text-sm font-medium rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors">
             <Boxes className="w-4 h-4" /> Reports
           </Link>
@@ -418,170 +434,54 @@ export default function BranchDetail() {
       </div>
 
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900">Edit Branch Details</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Branch Name *</label>
-                  <input type="text" required
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Branch Code</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.branch_code} onChange={(e) => setEditForm({ ...editForm, branch_code: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">City</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">State</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.state} onChange={(e) => setEditForm({ ...editForm, state: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <label className="block mb-1.5 text-sm font-medium text-slate-700">Street Address</label>
-                <input type="text"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Person</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.contact_person} onChange={(e) => setEditForm({ ...editForm, contact_person: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block mb-1.5 text-sm font-medium text-slate-700">Contact Phone</label>
-                  <input type="text"
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    value={editForm.contact_phone} onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })} />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setShowEditModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button type="submit" className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          size="lg"
+          icon={Edit3}
+          title={`Edit ${branch.name}`}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleEditSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton>Save changes</PrimaryButton>
+          </>}
+        >
+          <BranchFields form={editForm} setForm={setEditForm} showStatus />
+        </Modal>
       )}
 
-      {/* ========================================================================= */}
-      {/* ADD EXISTING PRODUCT TO THIS BRANCH MODAL                                 */}
-      {/* ========================================================================= */}
       {showAddExistingModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-1 pb-4 border-b border-slate-100 px-6 pt-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Add Existing Product to {branch.name}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Map a product already used elsewhere in {branch.business_name} into this branch's own stock.</p>
-              </div>
-              <button onClick={() => setShowAddExistingModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="px-6 pb-6 pt-4">
-              <form onSubmit={handleAddExistingSubmit} className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-slate-700">Choose Products from Catalog *</label>
-                    <span className="text-xs text-slate-400">{Object.keys(stockSelections).length} selected</span>
-                  </div>
-
-                  <div className="relative mb-2">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder="Search catalog by SKU or product name..."
-                      value={catalogSearch}
-                      onChange={e => setCatalogSearch(e.target.value)}
-                      className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  {catalogLoading ? (
-                    <div className="py-8 text-center text-xs text-slate-400 font-mono">Loading product catalog...</div>
-                  ) : availableCatalogProducts.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400 italic">
-                      {catalogProducts.length === 0
-                        ? 'No products found in this business catalog yet.'
-                        : 'Every catalog product is already stocked at this branch.'}
-                    </div>
-                  ) : (
-                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
-                      {availableCatalogProducts.map(p => {
-                        const isChecked = p.id in stockSelections;
-                        return (
-                          <div key={p.id} className={`p-2.5 flex items-center justify-between gap-3 transition-colors text-xs ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
-                            <div
-                              onClick={() => toggleProductSelection(p.id)}
-                              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
-                            >
-                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                              <div className="truncate">
-                                <span className="font-semibold text-slate-900">{p.name}</span>
-                                <span className="font-mono text-[11px] text-indigo-600 ml-2 font-bold">{p.sku}</span>
-                                <div className="text-[11px] text-slate-400">
-                                  {p.category} · Already in {p.branch_count} branch{p.branch_count === 1 ? '' : 'es'}
-                                </div>
-                              </div>
-                            </div>
-                            {isChecked && (
-                              <input
-                                type="number"
-                                min="0"
-                                value={stockSelections[p.id]}
-                                onChange={e => updateProductQuantity(p.id, e.target.value)}
-                                onClick={e => e.stopPropagation()}
-                                placeholder="Qty"
-                                className="h-8 w-20 flex-shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <p className="text-[11px] text-slate-400 mt-1">Leave quantity at 0 to just map the product to this branch without any starting stock.</p>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                  <button type="button" onClick={() => setShowAddExistingModal(false)} className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button
-                    type="submit"
-                    disabled={Object.keys(stockSelections).length === 0 || addingExisting}
-                    className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  >
-                    {addingExisting ? (
-                      <>
-                        <RefreshCw size={14} className="animate-spin" /> Adding...
-                      </>
-                    ) : (
-                      <>
-                        <Layers size={14} /> Add to Branch
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        <Modal
+          icon={Layers}
+          title={`Add products to ${branch.name}`}
+          description={`Pick products that already exist in ${branch.business_name}'s catalog. Products already in this branch are not listed.`}
+          onClose={() => setShowAddExistingModal(false)}
+          onSubmit={handleAddExistingSubmit}
+          error={message?.type === 'danger' ? message.text : null}
+          onDismissError={() => setMessage(null)}
+          footer={<>
+            <SecondaryButton onClick={() => setShowAddExistingModal(false)}>Cancel</SecondaryButton>
+            <PrimaryButton disabled={Object.keys(stockSelections).length === 0 || addingExisting}>
+              {addingExisting
+                ? <><RefreshCw size={14} className="animate-spin" /> Adding…</>
+                : <><Layers size={14} /> Add {Object.keys(stockSelections).length || ''} to branch</>}
+            </PrimaryButton>
+          </>}
+        >
+          <CatalogPicker
+            products={availableCatalogProducts}
+            loading={catalogLoading}
+            search={catalogSearch}
+            onSearch={setCatalogSearch}
+            selections={stockSelections}
+            onToggle={toggleProductSelection}
+            onQuantity={updateProductQuantity}
+            emptyText={catalogProducts.length === 0
+              ? 'This business has no products yet.'
+              : 'Every catalog product is already in this branch.'}
+          />
+        </Modal>
       )}
     </Layout>
   );

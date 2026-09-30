@@ -10,6 +10,7 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+backend/.env
 
 # Logs
 *.log
@@ -17,3 +18,5 @@ Thumbs.db
 # Dependencies
 node_modules/
 venv/
+# Local database backups
+backend/backups/

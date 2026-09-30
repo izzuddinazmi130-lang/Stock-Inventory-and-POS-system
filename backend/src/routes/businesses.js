@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
+const { emitToBusiness } = require('../utils/realtime');
 
 const parseOptions = (options) => {
   if (Array.isArray(options)) return options.map(String).map(v => v.trim()).filter(Boolean);
@@ -21,22 +22,38 @@ const validateBusinessId = async (req, res, next) => {
   next();
 };
 
-// GET / - list all businesses with active_branch_count
-router.get('/', async (req, res) => {
+// GET / - list businesses. super_admin: all. admin: their own business only.
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const [businesses] = await pool.query(`
-      SELECT 
-        b.*,
-        (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id AND br.is_active = 1) AS active_branch_count,
-        (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id) AS total_branch_count
-      FROM businesses b
-      ORDER BY b.name ASC
-    `);
+    let businesses;
+    if (req.user.role === 'super_admin') {
+      [businesses] = await pool.query(`
+        SELECT 
+          b.*,
+          (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id AND br.is_active = 1) AS active_branch_count,
+          (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id) AS total_branch_count
+        FROM businesses b
+        ORDER BY b.name ASC
+      `);
+    } else {
+      if (!req.user.business_id) {
+        return res.status(403).json({ success: false, message: 'Access denied: your account is not assigned to a business.' });
+      }
+      [businesses] = await pool.query(`
+        SELECT 
+          b.*,
+          (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id AND br.is_active = 1) AS active_branch_count,
+          (SELECT COUNT(*) FROM branches br WHERE br.business_id = b.id) AS total_branch_count
+        FROM businesses b
+        WHERE b.id = ?
+      `, [req.user.business_id]);
+    }
     return res.json({ success: true, data: businesses, businesses });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
+
 
 // POST / - create business (super_admin only)
 router.post('/', authenticateToken, requireRole('super_admin'), async (req, res) => {
@@ -76,8 +93,7 @@ router.post('/', authenticateToken, requireRole('super_admin'), async (req, res)
 
     await recordAuditLog(req.user.id, req.user.role, 'CREATE_BUSINESS', 'businesses', result.insertId, null, { name }, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('business_updated', { business_id: result.insertId, action: 'create' });
+    emitToBusiness(req, result.insertId, 'business_updated', { business_id: result.insertId, action: 'create' });
 
     return res.json({
       success: true,
@@ -157,8 +173,11 @@ router.delete('/:id/variant-attributes/:fieldId', authenticateToken, requireRole
 });
 
 // GET /:id - get business details
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' && parseInt(req.params.id, 10) !== parseInt(req.user.business_id, 10)) {
+      return res.status(403).json({ success: false, message: 'Access denied: you may only view your own business.' });
+    }
     const [businesses] = await pool.query('SELECT * FROM businesses WHERE id = ?', [req.params.id]);
     if (businesses.length === 0) return res.status(404).json({ success: false, message: 'Business not found' });
     return res.json({ success: true, data: businesses[0], business: businesses[0] });
@@ -207,8 +226,7 @@ router.put('/:id', authenticateToken, requireRole('super_admin'), async (req, re
 
     await recordAuditLog(req.user.id, req.user.role, 'UPDATE_BUSINESS', 'businesses', req.params.id, existing[0], { name }, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('business_updated', { business_id: req.params.id, action: 'update' });
+    emitToBusiness(req, req.params.id, 'business_updated', { business_id: req.params.id, action: 'update' });
 
     return res.json({ success: true, message: 'Business details updated successfully!' });
   } catch (err) {
@@ -237,8 +255,7 @@ router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req,
 
     await recordAuditLog(req.user.id, req.user.role, 'DELETE_BUSINESS', 'businesses', businessId, existing[0], null, req);
 
-    const io = req.app.get('io');
-    if (io) io.emit('business_updated', { business_id: businessId, action: 'delete' });
+    emitToBusiness(req, businessId, 'business_updated', { business_id: businessId, action: 'delete' });
 
     return res.json({ success: true, message: `Business '${existing[0].name}' deleted successfully.` });
   } catch (err) {
@@ -247,8 +264,11 @@ router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req,
 });
 
 // GET /:id/branches - list branches for a business
-router.get('/:id/branches', async (req, res) => {
+router.get('/:id/branches', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' && parseInt(req.params.id, 10) !== parseInt(req.user.business_id, 10)) {
+      return res.status(403).json({ success: false, message: 'Access denied: you may only view your own business branches.' });
+    }
     const [branches] = await pool.query('SELECT * FROM branches WHERE business_id = ? ORDER BY name', [req.params.id]);
     return res.json({ success: true, data: branches, branches });
   } catch (err) {

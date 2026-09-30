@@ -2,16 +2,26 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
+const { resolveScope, handleScopeError, ScopeError } = require('../middleware/scope');
+
+// Scope for report queries. Admin: own business + branch (query business_id/branch_id ignored),
+// and store_id only if that store is in their branch. Super admin: any business / branch / store / all.
+async function resolveReportScope(req) {
+  const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
+  const storeId = req.query.store_id && req.query.store_id !== 'all' ? parseInt(req.query.store_id, 10) : null;
+  if (req.query.store_id && req.query.store_id !== 'all' && !storeId) throw new ScopeError(400, 'Invalid store_id');
+
+  if (storeId && req.user.role !== 'super_admin') {
+    const [rows] = await pool.query('SELECT id FROM stores WHERE id = ? AND branch_id = ?', [storeId, branchId]);
+    if (rows.length === 0) throw new ScopeError(403, 'Access denied: that store does not belong to your branch.');
+  }
+  return { businessId, branchId, storeId };
+}
 
 // GET /api/reports/movement
 router.get('/movement', authenticateToken, async (req, res) => {
   try {
-    let branchId = null;
-    if (req.user.role === 'admin') branchId = req.user.branch_id;
-    else if (req.query.branch_id) branchId = parseInt(req.query.branch_id);
-
-    const businessId = req.query.business_id ? parseInt(req.query.business_id) : null;
-    const storeId = req.query.store_id ? parseInt(req.query.store_id) : null;
+    const { businessId, branchId, storeId } = await resolveReportScope(req);
     const movementType = req.query.movement_type || null;
     const startDate = req.query.start_date || null;
     const endDate = req.query.end_date || null;
@@ -86,6 +96,7 @@ router.get('/movement', authenticateToken, async (req, res) => {
       movements
     });
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     console.error('Movement report error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch movement reports: ' + err.message });
   }
@@ -94,9 +105,7 @@ router.get('/movement', authenticateToken, async (req, res) => {
 // GET /api/reports/summary - Summary KPI metrics
 router.get('/summary', authenticateToken, async (req, res) => {
   try {
-    let branchId = req.user.role === 'admin' ? req.user.branch_id : (req.query.branch_id ? parseInt(req.query.branch_id) : null);
-    const businessId = req.query.business_id ? parseInt(req.query.business_id) : null;
-    const storeId = req.query.store_id ? parseInt(req.query.store_id) : null;
+    const { businessId, branchId, storeId } = await resolveReportScope(req);
     const startDate = req.query.start_date || null;
     const endDate = req.query.end_date || null;
 
@@ -159,6 +168,7 @@ router.get('/summary', authenticateToken, async (req, res) => {
     });
 
   } catch (err) {
+    if (handleScopeError(res, err)) return;
     console.error('Summary report error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch summary: ' + err.message });
   }

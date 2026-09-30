@@ -25,14 +25,47 @@ const io = new Server(server, {
 // Make io accessible in req.app
 app.set('io', io);
 
-// Socket connection event
-io.on('connection', (socket) => {
-  console.log(`🔌 Client connected to Socket.io [ID: ${socket.id}]`);
+// Socket authentication: verify the same JWT as the REST API (httpOnly cookie, or handshake auth token)
+const jwt = require('jsonwebtoken');
+const pool = require('./config/db');
+const { JWT_SECRET } = require('./middleware/auth');
 
-  socket.on('join_warehouse', (warehouseId) => {
-    socket.join(`warehouse_${warehouseId}`);
-    console.log(`Socket ${socket.id} joined room warehouse_${warehouseId}`);
-  });
+function readCookie(header, name) {
+  if (!header) return null;
+  const match = header.split(';').map(c => c.trim()).find(c => c.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+}
+
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token || readCookie(socket.handshake.headers.cookie, 'token');
+    if (!token) return next(new Error('Authentication required'));
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const [users] = await pool.query(
+      'SELECT id, role, business_id, branch_id, is_active FROM users WHERE id = ?',
+      [decoded.id]
+    );
+    if (users.length === 0 || !users[0].is_active) return next(new Error('Account is inactive or does not exist'));
+    socket.user = users[0];
+    next();
+  } catch (err) {
+    next(new Error('Invalid or expired token'));
+  }
+});
+
+// Socket connection event — rooms are assigned server-side from the verified user, never from client input
+io.on('connection', (socket) => {
+  const { role, business_id, branch_id } = socket.user;
+  if (role === 'super_admin') {
+    socket.join('super_admin');
+  } else {
+    if (business_id) socket.join(`business_${business_id}`);
+    if (branch_id) socket.join(`branch_${branch_id}`);
+  }
+  console.log(`🔌 Client connected to Socket.io [ID: ${socket.id}, user ${socket.user.id}]`);
+
+  // Legacy: rooms are now joined automatically on connect; kept so old clients don't error.
+  socket.on('join_warehouse', () => {});
 
   socket.on('disconnect', () => {
     console.log(`Client disconnected [ID: ${socket.id}]`);
@@ -62,6 +95,7 @@ app.use('/api/businesses', require('./routes/businesses'));
 app.use('/api/branches', require('./routes/branches'));
 app.use('/api/stores', require('./routes/stores'));
 app.use('/api/damage-reports', require('./routes/damage'));
+app.use('/api/sales', require('./routes/sales'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -20,6 +20,8 @@ import FloorReport from './pages/branches/FloorReport';
 import StoreReport from './pages/stores/StoreReport';
 import AddProductPage from './pages/products/AddProductPage';
 import DamageProducts from './pages/products/DamageProducts';
+import LowStock from './pages/products/LowStock';
+import SalesHistory from './pages/sales/SalesHistory';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -137,6 +139,8 @@ export default function App() {
             <Route path="/branches/:id/floor-report" element={<ProtectedRoute><FloorReport /></ProtectedRoute>} />
             <Route path="/stores/:id/report" element={<ProtectedRoute><StoreReport /></ProtectedRoute>} />
             <Route path="/damage" element={<ProtectedRoute><DamageProducts /></ProtectedRoute>} />
+            <Route path="/low-stock" element={<ProtectedRoute><LowStock /></ProtectedRoute>} />
+            <Route path="/sales" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

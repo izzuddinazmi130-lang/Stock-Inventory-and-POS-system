@@ -24,7 +24,7 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   React.useEffect(() => {
-    fetch('/api/businesses').then(r => r.json()).then(d => {
+    fetch('/api/auth/register-options').then(r => r.json()).then(d => {
       if (d.success) setBusinesses(d.data);
     }).catch(() => {});
   }, []);
@@ -33,7 +33,7 @@ export default function Login() {
     if (formData.business_id) {
       setBranches([]);
       setFormData(f => ({ ...f, branch_id: '' }));
-      fetch(`/api/businesses/${formData.business_id}/branches`)
+      fetch(`/api/auth/register-options?business_id=${encodeURIComponent(formData.business_id)}`)
         .then(r => r.json())
         .then(d => { if (d.success) setBranches(d.data); })
         .catch(() => {});
