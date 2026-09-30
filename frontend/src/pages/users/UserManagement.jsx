@@ -2,23 +2,20 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import KpiCard from '../../components/KpiCard';
-import { Modal, FormSection, Field, Input, Select, ChoiceCards, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
-import { 
-  Users, Plus, ShieldCheck, UserX, Trash2, CheckCircle, 
-  AlertCircle, X, Clock, Edit3, UserCheck, Check, Search, Filter, Building2, Store,
-  Eye, CheckCircle2, Lock
-} from 'lucide-react';
+import { Users, Plus, ShieldCheck, Trash2, Pencil, UserCheck, Check, X, Eye, PauseCircle, PlayCircle } from 'lucide-react';
+import {
+  Modal, FormSection, Field, Input, Select, Button, ButtonBase, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
+  SegmentedControl, StatusPill, BusinessDot, Table, THead, TBody, TH, TR, TD, TableState, useConfirm, useToast,
+} from '../../components/ui';
+import { RoleBadge, UserAccessFields, UserAccessModal, relativeTime } from './components/UserModals';
 
-const relativeTime = (dt) => {
-  if (!dt) return 'Never';
-  const diff = Date.now() - new Date(dt).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-};
+const STATUS_TABS = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'suspended', label: 'Suspended' },
+  { value: 'declined', label: 'Declined' },
+];
 
 export default function UserManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,12 +24,17 @@ export default function UserManagement() {
 
   const [users, setUsers] = useState([]);
   const [userStats, setUserStats] = useState({ total: 0, superadmins: 0, admins: 0, byBusiness: [] });
-  const STATUS_TABS = ['all', 'active', 'suspended', 'pending', 'declined'];
-  const [statusFilter, setStatusFilter] = useState('all');
+  // /users?tab=pending (e.g. "Review requests" on the dashboard) opens straight on pending accounts
+  const [statusFilter, setStatusFilter] = useState(initialTab === 'pending' ? 'pending' : 'all');
   const [pendingUsers, setPendingUsers] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // `message` only carries errors shown inside the add/edit form; page messages are toasts
   const [message, setMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   // Scope & Search Filters
   const [filterBusiness, setFilterBusiness] = useState(searchParams.get('business_id') || '');
@@ -93,6 +95,7 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const params = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (filterBusiness) params.business_id = filterBusiness;
@@ -116,7 +119,7 @@ export default function UserManagement() {
         setUserStats(resStats.data.stats);
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+      setLoadError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -185,86 +188,108 @@ export default function UserManagement() {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSaving(true);
       const res = await api.post('/users', {
         ...addForm,
         business_id: addForm.role === 'admin' ? parseInt(addForm.business_id) : null,
         branch_id: addForm.role === 'admin' ? parseInt(addForm.branch_id) : null
       });
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
+        setMessage(null);
         setShowAddModal(false);
         setAddForm({ full_name: '', email: '', password: '', role: 'admin', business_id: '', branch_id: '' });
         fetchUsers();
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSaving(true);
       const res = await api.put(`/users/${editForm.id}`, {
         role: editForm.role,
         business_id: editForm.role === 'admin' ? parseInt(editForm.business_id) : null,
         branch_id: editForm.role === 'admin' ? parseInt(editForm.branch_id) : null
       });
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
+        setMessage(null);
         setShowEditModal(false);
         fetchUsers();
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to permanently delete user account '${name}'?`)) return;
+    const ok = await confirm({ title: `Delete ${name}'s account?`, message: 'They lose access immediately. This cannot be undone.', confirmLabel: 'Delete account', tone: 'danger' });
+    if (!ok) return;
     try {
       const res = await api.delete(`/users/${id}`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
         fetchUsers();
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
-  const handleSuspend = async (id) => {
-    if (!window.confirm('Suspend this user?')) return;
-    await api.patch(`/users/${id}/suspend`);
+  const handleSuspend = async (id, name = 'this user') => {
+    const ok = await confirm({ title: `Suspend ${name}?`, message: 'They cannot sign in until you activate the account again.', confirmLabel: 'Suspend' });
+    if (!ok) return;
+    try {
+      await api.patch(`/users/${id}/suspend`);
+      toast.success(`${name} is suspended.`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    }
     fetchUsers();
   };
-  const handleActivate = async (id) => {
-    await api.patch(`/users/${id}/activate`);
+  const handleActivate = async (id, name = 'The user') => {
+    try {
+      await api.patch(`/users/${id}/activate`);
+      toast.success(`${name} can sign in again.`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    }
     fetchUsers();
   };
 
   const handleApprove = async (id, name) => {
-    if (!window.confirm(`Approve user registration for '${name}'? They will be granted immediate access.`)) return;
+    const ok = await confirm({ title: `Approve ${name}?`, message: 'They get access straight away.', confirmLabel: 'Approve' });
+    if (!ok) return;
     try {
       const res = await api.post(`/users/${id}/approve`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
         fetchUsers();
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
   const handleReject = async (id, name) => {
-    if (!window.confirm(`Decline registration request for '${name}'?`)) return;
+    const ok = await confirm({ title: `Decline ${name}'s request?`, confirmLabel: 'Decline', tone: 'danger' });
+    if (!ok) return;
     try {
       const res = await api.post(`/users/${id}/reject`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
         fetchUsers();
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
@@ -281,347 +306,133 @@ export default function UserManagement() {
     setShowEditModal(true);
   };
 
+  const hasFilters = Boolean(filterBusiness || filterBranch || searchQuery || statusFilter !== 'all');
+  const resetAll = () => { clearBranchFilter(); setStatusFilter('all'); };
+  const firstLoad = loading && users.length === 0;
+  const updateScopeParams = (business, branch) => {
+    const params = {};
+    if (activeTab === 'pending') params.tab = 'pending';
+    if (business) params.business_id = business;
+    if (branch) params.branch_id = branch;
+    setSearchParams(params);
+  };
+
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-ink">User Management</h1>
-          <p className="text-sm text-ink-muted mt-0.5">Administer system users, pending registration approvals, and branch roles</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm cursor-pointer">
-            <Plus className="w-4 h-4" /> Add New User
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Users & roles"
+        description="Who can sign in, what they can reach, and pending account requests."
+        actions={<Button icon={Plus} onClick={openAddModal}>Add user</Button>}
+      />
 
-      {/* Alerts */}
-      {message && (
-        <div className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${
-          message.type === 'success' ? 'bg-success-soft border-success-line text-success-fg' : 'bg-danger-soft border-danger-line text-danger-fg'
-        }`}>
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)} className="hover:opacity-75 transition-opacity"><X className="w-4 h-4" /></button>
-        </div>
-      )}
-
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <KpiCard title="Total Users" value={userStats.total} meta="Active accounts" icon={Users} color="indigo" />
-        <KpiCard title="Superadmins" value={userStats.superadmins} meta="Full system access" icon={ShieldCheck} color="purple" />
+        <KpiCard loading={firstLoad} label="Users" value={Number(userStats.total) || 0} icon={Users} tone="accent" meta="All accounts" />
+        <KpiCard loading={firstLoad} label="Super admins" value={Number(userStats.superadmins) || 0} icon={ShieldCheck} tone="violet" meta="Full HQ access" />
         <KpiCard
-          title="Admins"
-          value={userStats.admins}
-          meta={userStats.byBusiness.map(b => `${b.name} ${b.count}`).join(' · ') || 'No admins yet'}
+          loading={firstLoad}
+          label="Branch admins"
+          value={Number(userStats.admins) || 0}
           icon={UserCheck}
-          color="blue"
+          tone="info"
+          meta={userStats.byBusiness?.map(b => `${b.name} ${b.count}`).join(' · ') || 'None yet'}
         />
       </div>
 
-      {/* Active Scope Filter Banner */}
-      {(filterBusiness || filterBranch || searchQuery) && (
-        <div className="mb-4 p-3 bg-accent-soft/70 border border-accent-line rounded-xl flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2 text-xs text-accent-fg">
-            <Filter size={15} className="text-accent flex-shrink-0" />
-            <span>
-              Filtered to Branch Personnel: 
-              <strong className="text-accent-fg font-semibold ml-1">
-                {allBranches.find(b => String(b.id) === String(filterBranch))?.name 
-                  ? `${allBranches.find(b => String(b.id) === String(filterBranch))?.name}` 
-                  : ''}
-                {businesses.find(b => String(b.id) === String(filterBusiness))?.name 
-                  ? ` (${businesses.find(b => String(b.id) === String(filterBusiness))?.name})` 
-                  : ''}
-                {!filterBranch && filterBusiness 
-                  ? `All branches in ${businesses.find(b => String(b.id) === String(filterBusiness))?.name}` 
-                  : ''}
-              </strong>
-            </span>
-            <span className="text-[11px] text-accent-fg font-semibold bg-surface px-2 py-0.5 rounded-full border border-accent-line">
-              {users.length} {users.length === 1 ? 'user' : 'users'}
-            </span>
-          </div>
-          <button
-            onClick={clearBranchFilter}
-            className="text-xs font-semibold text-accent hover:text-accent-fg underline flex items-center gap-1 cursor-pointer"
-          >
-            <X size={13} />
-            <span>Clear Branch Filter (Show All)</span>
-          </button>
-        </div>
-      )}
+      <FilterBar onReset={resetAll} resetVisible={hasFilters}>
+        <SearchInput wrapperClassName="md:w-60" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search name or email…" aria-label="Search users" />
+        <Select wrapperClassName="md:w-44" aria-label="Business" value={filterBusiness} onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); updateScopeParams(e.target.value, ''); }}>
+          <option value="">All businesses</option>
+          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </Select>
+        <Select wrapperClassName="md:w-52" aria-label="Branch" value={filterBranch} onChange={e => { setFilterBranch(e.target.value); updateScopeParams(filterBusiness, e.target.value); }}>
+          <option value="">All branches</option>
+          {branchesForFilter.map(b => <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>)}
+        </Select>
+      </FilterBar>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-surface border border-line rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-        {/* Status Tabs */}
-        <div className="flex bg-sunken p-1 rounded-lg gap-1">
-          {STATUS_TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
-                statusFilter === tab ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink-secondary'
-              }`}
-            >
-              {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Business, Branch and Search filters */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Business Selector */}
-          <select
-            value={filterBusiness}
-            onChange={e => {
-              setFilterBusiness(e.target.value);
-              setFilterBranch('');
-              const params = {};
-              if (activeTab === 'pending') params.tab = 'pending';
-              if (e.target.value) params.business_id = e.target.value;
-              setSearchParams(params);
-            }}
-            className="h-9 rounded-lg border border-line bg-surface px-3 text-xs text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">All Businesses</option>
-            {businesses.map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-
-          {/* Branch Selector */}
-          <select
-            value={filterBranch}
-            onChange={e => {
-              setFilterBranch(e.target.value);
-              const params = {};
-              if (activeTab === 'pending') params.tab = 'pending';
-              if (filterBusiness) params.business_id = filterBusiness;
-              if (e.target.value) params.branch_id = e.target.value;
-              setSearchParams(params);
-            }}
-            className="h-9 rounded-lg border border-line bg-surface px-3 text-xs text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">All Branches</option>
-            {branchesForFilter.map(b => (
-              <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>
-            ))}
-          </select>
-
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search personnel..."
-              className="h-9 w-44 rounded-lg border border-line bg-surface pl-8 pr-2.5 text-xs text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
+      <Card className="overflow-hidden">
+        <CardHeader
+          title="Accounts"
+          description={firstLoad ? 'Loading…' : `${users.length} ${users.length === 1 ? 'account' : 'accounts'}`}
+          actions={<SegmentedControl size="sm" label="Account status" value={statusFilter} onChange={setStatusFilter} tabs={STATUS_TABS} className="max-w-full overflow-x-auto" />}
+        />
+        <Table minWidth="62rem">
+          <THead>
+            <TR>
+              <TH>User</TH>
+              <TH>Role</TH>
+              <TH>Business &amp; branch</TH>
+              <TH>Status</TH>
+              <TH>Last sign-in</TH>
+              <TH>Created</TH>
+              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={7}
+              loading={firstLoad}
+              error={!loading && loadError && users.length === 0 ? loadError : null}
+              onRetry={fetchUsers}
+              empty={!loading && !loadError && users.length === 0}
+              emptyIcon={Users}
+              emptyTitle={statusFilter === 'pending' ? 'No pending requests' : 'No users match these filters'}
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetAll}>Clear filters</Button> : null}
             />
-          </div>
+            {users.map((u, i) => (
+              <TR key={u.id} index={i}>
+                <TD>
+                  <ButtonBase onClick={() => setInspectUser(u)} className="text-left group rounded">
+                    <div className="font-medium text-ink group-hover:text-accent transition-colors">{u.full_name}</div>
+                    <div className="text-caption text-ink-muted">{u.email}</div>
+                  </ButtonBase>
+                </TD>
+                <TD><RoleBadge role={u.role} /></TD>
+                <TD>
+                  {u.role === 'super_admin' ? (
+                    <span className="text-sm text-ink-secondary">All businesses &amp; branches</span>
+                  ) : (
+                    <>
+                      <div className="text-sm text-ink flex items-center gap-1.5">
+                        <BusinessDot business={{ id: u.business_id, name: u.business_name }} size="sm" />
+                        {u.business_name || 'No business'}
+                      </div>
+                      <div className="text-caption text-ink-muted">
+                        {u.branch_name || 'No branch'}{u.branch_code && <span className="font-mono"> · {u.branch_code}</span>}
+                      </div>
+                    </>
+                  )}
+                </TD>
+                <TD><StatusPill kind="user" value={u.status} size="sm" /></TD>
+                <TD className="text-caption text-ink-muted whitespace-nowrap">{relativeTime(u.last_login)}</TD>
+                <TD className="text-caption text-ink-muted whitespace-nowrap tabular-nums">{new Date(u.created_at).toLocaleDateString('en-MY', { dateStyle: 'medium' })}</TD>
+                <TD>
+                  <div className="flex items-center justify-end gap-1">
+                    {u.status === 'pending' && (
+                      <>
+                        <Button variant="success" size="sm" icon={Check} onClick={() => handleApprove(u.id, u.full_name)}>Approve</Button>
+                        <Button variant="ghost" size="sm" icon={X} onClick={() => handleReject(u.id, u.full_name)}>Decline</Button>
+                      </>
+                    )}
+                    <Menu
+                      label={`Actions for ${u.full_name}`}
+                      items={[
+                        { label: 'View access', icon: Eye, onClick: () => setInspectUser(u) },
+                        { label: 'Change access', icon: Pencil, onClick: () => openEditModal(u) },
+                        { label: 'Suspend', icon: PauseCircle, onClick: () => handleSuspend(u.id, u.full_name), hidden: u.status !== 'active' },
+                        { label: 'Activate', icon: PlayCircle, onClick: () => handleActivate(u.id, u.full_name), hidden: u.status !== 'suspended' },
+                        { divider: true },
+                        { label: 'Delete account', icon: Trash2, tone: 'danger', onClick: () => handleDelete(u.id, u.full_name) },
+                      ]}
+                    />
+                  </div>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </Card>
 
-          {(filterBusiness || filterBranch || searchQuery) && (
-            <button
-              onClick={clearBranchFilter}
-              className="h-9 px-2.5 inline-flex items-center gap-1 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors cursor-pointer"
-              title="Reset filters"
-            >
-              <X size={13} />
-              <span>Reset</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Tab Content 1: Active Users Table */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-accent" />
-            <h3 className="font-semibold text-ink text-sm">System Accounts ({users.length})</h3>
-          </div>
-          {filterBranch && (
-            <span className="text-xs text-accent bg-accent-soft px-2.5 py-0.5 rounded-full font-medium border border-accent-muted">
-              Filtered: {allBranches.find(b => String(b.id) === String(filterBranch))?.name}
-            </span>
-          )}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">User Details</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Role</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Business</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Assigned Branch of Business</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Last Login</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Created At</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-right whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="text-center py-8 text-ink-muted text-sm border-b border-line-soft">
-                    No system users found matching the selected filters.
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => (
-                  <tr key={u.id} className="hover:bg-subtle transition-colors">
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <button
-                        onClick={() => setInspectUser(u)}
-                        className="text-left group cursor-pointer"
-                        title="Click to view full branch assignment profile"
-                      >
-                        <div className="font-bold text-ink group-hover:text-accent transition-colors flex items-center gap-1.5">
-                          <span>{u.full_name}</span>
-                          <Eye size={12} className="opacity-0 group-hover:opacity-100 text-accent transition-opacity" />
-                        </div>
-                        <div className="font-mono text-xs text-accent">{u.email}</div>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        u.role === 'super_admin' ? 'bg-violet-soft text-violet-fg' : 'bg-warning-soft text-warning-fg'
-                      }`}>
-                        {u.role === 'super_admin' ? 'Super Admin' : 'Branch Admin'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft text-xs">
-                      {u.role === 'super_admin' ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[11px] font-bold text-violet-fg">All Businesses</span>
-                          <div className="flex flex-wrap gap-1">
-                            {businesses.map(b => (
-                              <span key={b.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-sunken text-ink-secondary border border-line">
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: b.id === 1 ? '#B4502E' : '#2563EB' }} />
-                                {b.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-subtle text-ink border border-line">
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: u.business_id === 1 ? '#B4502E' : '#2563EB' }} />
-                          {u.business_name || 'Unassigned'}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      {u.role === 'super_admin' ? (
-                        <div className="flex flex-col gap-1.5 max-w-sm">
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold bg-violet-muted text-violet-fg border border-violet-line">
-                              <ShieldCheck size={12} className="text-violet-fg" />
-                              All Branches Scope (HQ)
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {allBranches.map(b => (
-                              <span
-                                key={b.id}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-sunken text-ink-secondary border border-line"
-                                title={`${b.business_name} • ${b.name}`}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: b.business_id === 1 ? '#B4502E' : '#2563EB' }} />
-                                <span>{b.name}</span>
-                                {b.branch_code && <span className="text-ink-muted font-mono">({b.branch_code})</span>}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <Building2 size={13} className="text-accent flex-shrink-0" />
-                            <span className="font-bold text-ink text-xs">
-                              {u.branch_name || 'Unassigned Branch'}
-                            </span>
-                            {u.branch_code && (
-                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-lg bg-sunken text-ink-secondary border border-line">
-                                {u.branch_code}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                      <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${
-                          u.status === 'active' ? 'bg-success-soft text-success-fg' :
-                          u.status === 'pending' ? 'bg-warning-soft text-warning-fg' :
-                          u.status === 'suspended' ? 'bg-warning-soft text-warning-fg' :
-                          u.status === 'declined' ? 'bg-danger-soft text-danger-fg' : 'bg-sunken text-ink-secondary'
-                        }`}>
-                          {u.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-ink-muted border-b border-line-soft text-xs">
-                        {relativeTime(u.last_login)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-ink-muted border-b border-line-soft font-mono text-xs">
-                        {new Date(u.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-ink border-b border-line-soft text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* View Branch Details Button */}
-                          <button
-                            onClick={() => setInspectUser(u)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle hover:text-accent transition-colors"
-                            title="View Branch Assignment Details"
-                          >
-                            <Eye size={14} />
-                          </button>
-
-                          {u.status === 'pending' && (
-                            <>
-                              <button onClick={() => handleApprove(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-success-soft text-success-fg text-xs font-medium rounded-lg hover:bg-success-muted transition-colors" title="Approve"><Check className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => handleReject(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-danger-soft text-danger-fg text-xs font-medium rounded-lg hover:bg-danger-muted transition-colors" title="Decline"><X className="w-3.5 h-3.5" /></button>
-                            </>
-                          )}
-                          {u.status === 'active' && (
-                            <button onClick={() => handleSuspend(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-warning-fg text-xs font-medium rounded-lg bg-warning-soft hover:bg-warning-muted border border-warning-line transition-colors">
-                              Suspend
-                            </button>
-                          )}
-                          {u.status === 'suspended' && (
-                            <button onClick={() => handleActivate(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-success-fg text-xs font-medium rounded-lg bg-success-soft hover:bg-success-muted border border-success-line transition-colors">
-                              Activate
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEditModal(u)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle hover:text-ink transition-colors"
-                            title="Edit User Assignment"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(u.id, u.full_name)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-danger-fg border border-line hover:bg-danger-soft hover:text-danger-fg transition-colors"
-                            title="Delete User"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      {/* Add Modal */}
       {showAddModal && (
         <Modal
           icon={Users}
@@ -632,8 +443,8 @@ export default function UserManagement() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton>Create user</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Create user</Button>
           </>}
         >
           <FormSection title="Account">
@@ -653,10 +464,9 @@ export default function UserManagement() {
         </Modal>
       )}
 
-      {/* Edit Modal */}
       {showEditModal && (
         <Modal
-          icon={Edit3}
+          icon={Pencil}
           title="Change user access"
           description={editForm.full_name ? `${editForm.full_name}${editForm.email ? ` · ${editForm.email}` : ''}` : undefined}
           onClose={() => setShowEditModal(false)}
@@ -664,212 +474,22 @@ export default function UserManagement() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton>Save changes</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save changes</Button>
           </>}
         >
           <UserAccessFields form={editForm} setForm={setEditForm} businesses={businesses} branches={editBranches} />
         </Modal>
       )}
 
-      {/* ── Inspect User Branch Access Modal ── */}
       {inspectUser && (
-        <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-line rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-line-soft">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base ${
-                  inspectUser.role === 'super_admin' ? 'bg-violet' : 'bg-accent'
-                }`}>
-                  {inspectUser.full_name ? inspectUser.full_name.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div>
-                  <h3 className="font-bold text-ink text-base flex items-center gap-2">
-                    <span>{inspectUser.full_name}</span>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      inspectUser.role === 'super_admin' ? 'bg-violet-soft text-violet-fg' : 'bg-accent-soft text-accent-fg'
-                    }`}>
-                      {inspectUser.role === 'super_admin' ? 'Super Admin' : 'Branch Admin'}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-ink-muted font-mono mt-0.5">{inspectUser.email}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setInspectUser(null)} 
-                className="text-ink-muted hover:text-ink-secondary p-1 rounded-lg hover:bg-sunken transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-4">
-              {/* Status and Login Info */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-                  <span className="block text-[10px] font-semibold uppercase text-ink-muted">Account Status</span>
-                  <span className={`inline-flex items-center gap-1 font-bold mt-1 uppercase ${
-                    inspectUser.status === 'active' ? 'text-success-fg' :
-                    inspectUser.status === 'suspended' ? 'text-warning-fg' : 'text-ink-secondary'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${inspectUser.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
-                    {inspectUser.status}
-                  </span>
-                </div>
-
-                <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-                  <span className="block text-[10px] font-semibold uppercase text-ink-muted">Last Activity</span>
-                  <span className="block font-bold text-ink mt-1">
-                    {relativeTime(inspectUser.last_login)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Branch Assignment Scope */}
-              <div>
-                <h4 className="text-xs font-bold text-ink uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Building2 size={14} className="text-accent" />
-                  Assigned Branch Scope &amp; Locations
-                </h4>
-
-                {inspectUser.role === 'super_admin' ? (
-                  <div className="space-y-3">
-                    <div className="p-3.5 bg-violet-soft border border-violet-line rounded-xl text-xs text-violet-fg leading-relaxed">
-                      <div className="font-bold flex items-center gap-1.5 text-violet-fg mb-1">
-                        <ShieldCheck size={15} className="text-violet-fg" />
-                        Universal Cross-Branch Authority (HQ Scope)
-                      </div>
-                      This user has global super-administrator privileges with unrestricted administrative access to manage all businesses and branches:
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {allBranches.map((br) => (
-                        <div key={br.id} className="p-2.5 bg-subtle border border-line rounded-lg flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 size={15} className="text-success-fg flex-shrink-0" />
-                            <div>
-                              <span className="font-bold text-ink">{br.name}</span>
-                              <span className="text-ink-muted text-[11px] ml-1.5">({br.business_name || 'Branch'})</span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-semibold text-violet-fg bg-violet-muted/70 px-2 py-0.5 rounded-lg">
-                            Full Admin Control
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Primary Assigned Branch */}
-                    <div className="p-3.5 bg-success-soft border border-success-line rounded-xl text-xs">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-success-fg flex items-center gap-1">
-                          <CheckCircle2 size={13} className="text-success-fg" /> Primary Branch Assigned
-                        </span>
-                        {inspectUser.branch_code && (
-                          <span className="font-mono font-bold text-[10px] bg-success-muted text-success-fg px-1.5 py-0.5 rounded-lg">
-                            {inspectUser.branch_code}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm font-bold text-success-fg mb-0.5">
-                        {inspectUser.branch_name || 'Unassigned Branch'}
-                      </div>
-                      <div className="text-success-fg text-[11px]">
-                        Business: <strong className="text-success-fg">{inspectUser.business_name || 'Unassigned'}</strong>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-success-line/60 text-[11px] text-success-fg leading-snug">
-                        ✓ Authorized to manage stock adjustments, stock out, QR code scans, and live sales stores for this branch.
-                      </div>
-                    </div>
-
-                    {/* Other Branches (Restricted) */}
-                    <div>
-                      <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">
-                        Other Branches in System (Access Restricted)
-                      </div>
-                      <div className="space-y-1.5">
-                        {allBranches
-                          .filter(br => String(br.id) !== String(inspectUser.branch_id))
-                          .map((br) => (
-                            <div key={br.id} className="p-2.5 bg-subtle border border-line rounded-lg flex items-center justify-between text-xs opacity-75">
-                              <div className="flex items-center gap-2">
-                                <Lock size={13} className="text-ink-muted flex-shrink-0" />
-                                <span className="font-medium text-ink-secondary">{br.name}</span>
-                                <span className="text-ink-muted text-[11px]">({br.business_name})</span>
-                              </div>
-                              <span className="text-[10px] font-medium text-ink-muted bg-sunken px-2 py-0.5 rounded-lg">
-                                No Access
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex justify-between items-center pt-4 border-t border-line-soft mt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const targetUser = inspectUser;
-                  setInspectUser(null);
-                  openEditModal(targetUser);
-                }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-fg hover:underline cursor-pointer"
-              >
-                <Edit3 size={13} />
-                <span>Edit User Branch Assignment</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setInspectUser(null)}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-ink text-white text-xs font-medium rounded-lg hover:bg-ink-hover transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <UserAccessModal
+          user={inspectUser}
+          allBranches={allBranches}
+          onClose={() => setInspectUser(null)}
+          onEdit={() => { const target = inspectUser; setInspectUser(null); openEditModal(target); }}
+        />
       )}
     </Layout>
-  );
-}
-
-// Role + business/branch assignment, shared by the Add and Edit user forms
-function UserAccessFields({ form, setForm, businesses, branches }) {
-  return (
-    <FormSection title="Access" description="Decide what this person can see and do.">
-      <ChoiceCards
-        value={form.role}
-        onChange={role => setForm({ ...form, role })}
-        options={[
-          { value: 'admin', icon: Store, label: 'Branch Admin', description: 'Runs one branch: products, POS, stores, damage and reports for that branch.' },
-          { value: 'super_admin', icon: ShieldCheck, label: 'Super Admin', description: 'HQ access to every business, branch, user and setting.' }
-        ]}
-      />
-      {form.role === 'admin' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Business" required>
-            <Select required value={form.business_id} onChange={e => setForm({ ...form, business_id: e.target.value, branch_id: '' })}>
-              <option value="">Choose a business…</option>
-              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </Field>
-          <Field label="Branch" required hint={form.business_id && branches.length === 0 ? 'This business has no branches yet.' : undefined}>
-            <Select required value={form.branch_id} onChange={e => setForm({ ...form, branch_id: e.target.value })} disabled={!form.business_id || branches.length === 0}>
-              <option value="">{form.business_id ? 'Choose a branch…' : 'Choose a business first'}</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </Field>
-        </div>
-      )}
-    </FormSection>
   );
 }
