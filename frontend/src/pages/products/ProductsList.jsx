@@ -466,20 +466,20 @@ export default function ProductsList() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Product Inventory Catalog</h1>
-          <p className="text-xs text-slate-500 mt-1">Manage master product variants, multi-branch stock levels, thresholds, and pricing</p>
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">Product Inventory Catalog</h1>
+          <p className="text-xs text-ink-muted mt-1">Manage master product variants, multi-branch stock levels, thresholds, and pricing</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={openAddToBranchModal}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors shadow-sm"
           >
-            <Building className="w-4 h-4 text-indigo-600" />
+            <Building className="w-4 h-4 text-accent" />
             <span>Add to branch / Restock</span>
           </button>
           <Link
             to="/products/add"
-            className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Add New Product</span>
@@ -489,17 +489,17 @@ export default function ProductsList() {
 
       {/* Filter Chip Banner */}
       {hasFilterQuery && (
-        <div className="mb-4 p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-indigo-700">
-            <Filter className="w-4 h-4 text-indigo-600" />
+        <div className="mb-4 p-3 rounded-xl bg-accent-soft border border-accent-line flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-accent-fg">
+            <Filter className="w-4 h-4 text-accent" />
             <span>Active Filters:
-              {activeBusinessName && <> Business: <strong className="text-indigo-900 font-bold mr-2">{activeBusinessName}</strong></>}
-              {activeBranchName && <> Branch: <strong className="text-indigo-900 font-bold mr-2">{activeBranchName}</strong></>}
-              {selectedCategory !== 'All' && <> Category: <strong className="text-indigo-900 font-bold mr-2">{selectedCategory}</strong></>}
-              {selectedStockStatus !== 'all' && <> Stock: <strong className="text-indigo-900 font-bold mr-2 uppercase">{selectedStockStatus.replace('_', ' ')}</strong></>}
+              {activeBusinessName && <> Business: <strong className="text-accent-fg font-bold mr-2">{activeBusinessName}</strong></>}
+              {activeBranchName && <> Branch: <strong className="text-accent-fg font-bold mr-2">{activeBranchName}</strong></>}
+              {selectedCategory !== 'All' && <> Category: <strong className="text-accent-fg font-bold mr-2">{selectedCategory}</strong></>}
+              {selectedStockStatus !== 'all' && <> Stock: <strong className="text-accent-fg font-bold mr-2 uppercase">{selectedStockStatus.replace('_', ' ')}</strong></>}
             </span>
           </div>
-          <button onClick={clearFilters} className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-semibold transition-colors">
+          <button onClick={clearFilters} className="text-xs text-accent hover:text-accent-fg flex items-center gap-1 font-semibold transition-colors">
             <RotateCcw className="w-3.5 h-3.5" /> Reset Filters
           </button>
         </div>
@@ -507,56 +507,56 @@ export default function ProductsList() {
 
       {/* Alerts */}
       {error && (
-        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
+        <div className="mb-4 p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm flex items-center justify-between">
           <span className="flex items-center gap-2"><AlertTriangle className="w-4 h-4" />{error}</span>
           <button onClick={() => setError('')}><X className="w-4 h-4" /></button>
         </div>
       )}
       {success && (
-        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
+        <div className="mb-4 p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm flex items-center justify-between">
           <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" />{success}</span>
           <button onClick={() => setSuccess('')}><X className="w-4 h-4" /></button>
         </div>
       )}
 
       {/* Controls Bar: Search, View Mode Toggle, Filters, Sorting */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-3">
+      <div className="bg-surface border border-line rounded-xl p-4 mb-4 space-y-3">
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
           {/* Search Box */}
           <div className="relative w-full lg:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
             <input
               type="text"
               placeholder="Search SKU, name, colour, model..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-9"
+              className="bg-surface border border-line rounded-lg px-3 h-10 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-full pl-9"
             />
           </div>
 
           {/* View Toggle: By Branch vs All Branches Combined */}
           {user?.role === 'super_admin' && (
-            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto justify-center">
+            <div className="flex items-center bg-sunken p-1 rounded-lg border border-line w-full sm:w-auto justify-center">
               <button
                 onClick={() => setViewMode('by_branch')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   viewMode === 'by_branch'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-surface text-ink shadow-sm border border-line'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
-                <Building className="w-3.5 h-3.5 text-indigo-600" />
+                <Building className="w-3.5 h-3.5 text-accent" />
                 <span>By Branch</span>
               </button>
               <button
                 onClick={() => setViewMode('combined')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   viewMode === 'combined'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-surface text-ink shadow-sm border border-line'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <Layers className="w-3.5 h-3.5 text-accent" />
                 <span>All Branches Combined</span>
               </button>
             </div>
@@ -564,13 +564,13 @@ export default function ProductsList() {
         </div>
 
         {/* Filter Dropdowns Row */}
-        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-100 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-line-soft text-xs">
           {user?.role === 'super_admin' && (
             <>
               <select
                 value={filterBusiness}
                 onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); }}
-                className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">All Businesses</option>
                 {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -580,7 +580,7 @@ export default function ProductsList() {
                 value={filterBranch}
                 onChange={e => setFilterBranch(e.target.value)}
                 disabled={!filterBusiness && branches.length === 0}
-                className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
               >
                 <option value="">All Branches</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -591,7 +591,7 @@ export default function ProductsList() {
           <select
             value={selectedCategory}
             onChange={e => setSelectedCategory(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="All">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -600,7 +600,7 @@ export default function ProductsList() {
           <select
             value={selectedStockStatus}
             onChange={e => setSelectedStockStatus(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="all">All Stock Statuses</option>
             <option value="in_stock">In Stock (Healthy)</option>
@@ -611,7 +611,7 @@ export default function ProductsList() {
           <select
             value={selectedProductStatus}
             onChange={e => setSelectedProductStatus(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="active">Selling (not discontinued)</option>
             <option value="discontinued">Discontinued only</option>
@@ -619,12 +619,12 @@ export default function ProductsList() {
           </select>
 
           {/* Sort Dropdown */}
-          <div className="ml-auto flex items-center gap-1.5 text-slate-500">
+          <div className="ml-auto flex items-center gap-1.5 text-ink-muted">
             <ArrowUpDown className="w-3.5 h-3.5" />
             <select
               value={selectedSort}
               onChange={e => setSelectedSort(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 h-9 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-surface border border-line rounded-lg px-2.5 h-9 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="date_desc">Newest Added</option>
               <option value="date_asc">Oldest Added</option>
@@ -639,11 +639,11 @@ export default function ProductsList() {
       </div>
 
       {/* Main Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
           <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-indigo-600" />
-            <h6 className="font-semibold text-slate-900">
+            <Package className="w-4 h-4 text-accent" />
+            <h6 className="font-semibold text-ink">
               {viewMode === 'by_branch'
                 ? `Inventory Items by Branch (${items.length})`
                 : `All Master Products (${combinedItems.length} unique products)`}
@@ -651,7 +651,7 @@ export default function ProductsList() {
           </div>
           <button
             onClick={fetchItems}
-            className="inline-flex items-center gap-2 h-8 px-2.5 text-slate-500 text-xs font-medium rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-2 h-8 px-2.5 text-ink-muted text-xs font-medium rounded-lg hover:bg-sunken hover:text-ink transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -663,26 +663,26 @@ export default function ProductsList() {
             /* ── BY BRANCH TABLE (Default) ── */
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">SKU &amp; Product</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Category / Variant</th>
+                <tr className="bg-subtle">
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">SKU &amp; Product</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Category / Variant</th>
                   {user?.role === 'super_admin' && (
-                    <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Branch</th>
+                    <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Branch</th>
                   )}
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Stock Status</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Pricing</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-right">Actions</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Stock Status</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Pricing</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-12 text-center text-slate-400 font-mono text-xs">Loading inventory catalog...</td></tr>
+                  <tr><td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-12 text-center text-ink-muted font-mono text-xs">Loading inventory catalog...</td></tr>
                 ) : items.length === 0 ? (
                   <tr>
                     <td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-12 text-center">
-                      <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 text-sm font-medium">No products found matching criteria.</p>
-                      <Link to="/products/add" className="text-indigo-600 hover:text-indigo-700 text-xs font-semibold mt-1 inline-block">
+                      <Package className="w-10 h-10 text-ink-subtle mx-auto mb-3" />
+                      <p className="text-ink-muted text-sm font-medium">No products found matching criteria.</p>
+                      <Link to="/products/add" className="text-accent hover:text-accent-fg text-xs font-semibold mt-1 inline-block">
                         Add New Product
                       </Link>
                     </td>
@@ -696,99 +696,99 @@ export default function ProductsList() {
                     const isHighlighted = String(item.id) === String(queryProductId);
 
                     const stockBadgeClass = isOutOfStock
-                      ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                      ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-danger-soft text-danger-fg border border-danger-line"
                       : isLow
-                      ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
-                      : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                      ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg border border-warning-line"
+                      : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg border border-success-line";
 
                     return (
-                      <tr key={`${item.id}-${item.branch_id}`} className={`hover:bg-slate-50 transition-colors ${isHighlighted ? 'bg-indigo-50/60 border-l-4 border-indigo-500' : ''}`}>
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
-                          <div className="font-bold text-slate-900 flex items-center">
+                      <tr key={`${item.id}-${item.branch_id}`} className={`hover:bg-subtle transition-colors ${isHighlighted ? 'bg-accent-soft/60 border-l-4 border-accent' : ''}`}>
+                        <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
+                          <div className="font-bold text-ink flex items-center">
                             <span>{item.item_name}</span>
                             {item.new_until && new Date(item.new_until) > new Date() && (
-                              <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 ml-2">NEW</span>
+                              <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-accent-muted text-accent-fg ml-2">NEW</span>
                             )}
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             <button
                               onClick={() => openQrModal(item)}
-                              className="font-mono text-[11px] text-indigo-600 hover:text-indigo-800 font-bold hover:underline flex items-center gap-1"
+                              className="font-mono text-[11px] text-accent hover:text-accent-fg font-bold hover:underline flex items-center gap-1"
                               title="Click to view QR label"
                             >
-                              <QrCode className="w-3 h-3 text-indigo-500" />
+                              <QrCode className="w-3 h-3 text-accent" />
                               {item.item_code}
                             </button>
-                            <span className="text-[10px] text-slate-400 capitalize">{item.business_name}</span>
+                            <span className="text-[10px] text-ink-muted capitalize">{item.business_name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
+                        <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
                           <div className="flex flex-wrap gap-1">
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{item.category}</span>
-                            {item.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{item.variant_color}</span>}
-                            {item.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{item.size}</span>}
-                            {item.model && <span className="text-[10px] text-slate-500 block mt-1 font-mono">{item.model}</span>}
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-violet-soft text-violet-fg">{item.category}</span>
+                            {item.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{item.variant_color}</span>}
+                            {item.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg">{item.size}</span>}
+                            {item.model && <span className="text-[10px] text-ink-muted block mt-1 font-mono">{item.model}</span>}
                           </div>
                         </td>
                         {user?.role === 'super_admin' && (
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-700 w-fit">
-                              <Building className="w-3 h-3 text-slate-500" />
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-sunken text-ink-secondary w-fit">
+                              <Building className="w-3 h-3 text-ink-muted" />
                               {item.branch_name || 'Main Branch'}
                             </span>
                           </td>
                         )}
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
+                        <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
                           <div className="flex items-center gap-2 font-mono font-bold">
                             <span className={stockBadgeClass}>
                               {item.quantity} units
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 font-mono">Min Threshold: {minQty}</div>
+                          <div className="text-[10px] text-ink-muted mt-0.5 font-mono">Min Threshold: {minQty}</div>
                         </td>
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white">
+                        <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface">
                           <div className="text-xs space-y-0.5">
-                            <div className="text-emerald-700 font-mono font-bold">
-                              RM {parseFloat(item.selling_price || 0).toFixed(2)} <span className="text-slate-400 font-normal">(cust)</span>
+                            <div className="text-success-fg font-mono font-bold">
+                              RM {parseFloat(item.selling_price || 0).toFixed(2)} <span className="text-ink-muted font-normal">(cust)</span>
                             </div>
                             {item.price_dealer > 0 && (
-                              <div className="text-indigo-700 font-mono text-[11px]">
-                                RM {parseFloat(item.price_dealer).toFixed(2)} <span className="text-slate-400">dealer</span>
+                              <div className="text-accent-fg font-mono text-[11px]">
+                                RM {parseFloat(item.price_dealer).toFixed(2)} <span className="text-ink-muted">dealer</span>
                               </div>
                             )}
                             {item.price_staff > 0 && (
-                              <div className="text-purple-700 font-mono text-[11px]">
-                                RM {parseFloat(item.price_staff).toFixed(2)} <span className="text-slate-400">staff</span>
+                              <div className="text-violet-fg font-mono text-[11px]">
+                                RM {parseFloat(item.price_staff).toFixed(2)} <span className="text-ink-muted">staff</span>
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 bg-white text-right">
+                        <td className="px-4 py-3 border-b border-line-soft text-sm text-ink bg-surface text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => openAdjustModal(item)}
-                              className="inline-flex items-center gap-1.5 h-8 px-2.5 text-emerald-600 text-xs font-medium rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                              className="inline-flex items-center gap-1.5 h-8 px-2.5 text-success-fg text-xs font-medium rounded-lg bg-success-soft hover:bg-success-muted transition-colors"
                               title="Stock In / Stock Out"
                             >
                               <ArrowDownLeft className="w-3.5 h-3.5" /> Adjust
                             </button>
                             <button
                               onClick={() => openQrModal(item)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-soft text-accent hover:bg-accent-muted transition-colors"
                               title="View & Print QR Code"
                             >
                               <QrCode className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => openEditModal(item)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-ink-muted hover:bg-sunken hover:text-ink transition-colors"
                               title="Edit Master Product Details"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDelete(item.id, item.item_name)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-danger-fg hover:bg-danger-soft hover:text-danger-fg transition-colors"
                               title="Permanently Delete Product"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -805,24 +805,24 @@ export default function ProductsList() {
             /* ── ALL BRANCHES COMBINED TABLE (Aggregated view with expand) ── */
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="w-10 px-3 py-3 border-b border-slate-200"></th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">SKU &amp; Product</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Category / Variant</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Branches Carrying</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Total Combined Stock</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-left">Pricing</th>
-                  <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-right">Actions</th>
+                <tr className="bg-subtle">
+                  <th className="w-10 px-3 py-3 border-b border-line"></th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">SKU &amp; Product</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Category / Variant</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Branches Carrying</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Total Combined Stock</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-left">Pricing</th>
+                  <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="7" className="px-4 py-12 text-center text-slate-400 font-mono text-xs">Loading combined inventory...</td></tr>
+                  <tr><td colSpan="7" className="px-4 py-12 text-center text-ink-muted font-mono text-xs">Loading combined inventory...</td></tr>
                 ) : combinedItems.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="px-4 py-12 text-center">
-                      <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 text-sm font-medium">No products found matching criteria.</p>
+                      <Package className="w-10 h-10 text-ink-subtle mx-auto mb-3" />
+                      <p className="text-ink-muted text-sm font-medium">No products found matching criteria.</p>
                     </td>
                   </tr>
                 ) : (
@@ -830,102 +830,102 @@ export default function ProductsList() {
                     const isExpanded = expandedProductIds.has(prod.id);
                     // Combined status reflects WORST branch status
                     const combinedBadge = prod.has_critical
-                      ? { label: 'Critical / Out of Stock at branch', cls: 'bg-rose-50 text-rose-700 border-rose-200' }
+                      ? { label: 'Critical / Out of Stock at branch', cls: 'bg-danger-soft text-danger-fg border-danger-line' }
                       : prod.has_low
-                      ? { label: 'Low Stock at branch', cls: 'bg-amber-50 text-amber-700 border-amber-200' }
-                      : { label: 'Healthy across all branches', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                      ? { label: 'Low Stock at branch', cls: 'bg-warning-soft text-warning-fg border-warning-line' }
+                      : { label: 'Healthy across all branches', cls: 'bg-success-soft text-success-fg border-success-line' };
 
                     return (
                       <React.Fragment key={prod.id}>
-                        <tr className="hover:bg-slate-50 transition-colors bg-white">
+                        <tr className="hover:bg-subtle transition-colors bg-surface">
                           {/* Expand chevron */}
-                          <td className="px-3 py-3 border-b border-slate-100 text-center">
+                          <td className="px-3 py-3 border-b border-line-soft text-center">
                             <button
                               onClick={() => toggleExpandProduct(prod.id)}
-                              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                              className="p-1 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-sunken transition-colors"
                               title="Expand / Collapse branch stock"
                             >
-                              {isExpanded ? <ChevronDown className="w-4 h-4 text-indigo-600" /> : <ChevronRight className="w-4 h-4" />}
+                              {isExpanded ? <ChevronDown className="w-4 h-4 text-accent" /> : <ChevronRight className="w-4 h-4" />}
                             </button>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900">
-                            <div className="font-bold text-slate-900 flex items-center">
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink">
+                            <div className="font-bold text-ink flex items-center">
                               <span>{prod.item_name}</span>
                               {prod.new_until && new Date(prod.new_until) > new Date() && (
-                                <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 ml-2">NEW</span>
+                                <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-accent-muted text-accent-fg ml-2">NEW</span>
                               )}
                             </div>
                             <div className="mt-1 flex items-center gap-2">
                               <button
                                 onClick={() => openQrModal(prod, prod.branches)}
-                                className="font-mono text-[11px] text-indigo-600 hover:text-indigo-800 font-bold hover:underline flex items-center gap-1"
+                                className="font-mono text-[11px] text-accent hover:text-accent-fg font-bold hover:underline flex items-center gap-1"
                                 title="Click to view QR label"
                               >
-                                <QrCode className="w-3 h-3 text-indigo-500" />
+                                <QrCode className="w-3 h-3 text-accent" />
                                 {prod.item_code}
                               </button>
-                              <span className="text-[10px] text-slate-400 capitalize">{prod.business_name}</span>
+                              <span className="text-[10px] text-ink-muted capitalize">{prod.business_name}</span>
                             </div>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900">
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink">
                             <div className="flex flex-wrap gap-1">
-                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-purple-50 text-purple-700">{prod.category}</span>
-                              {prod.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{prod.variant_color}</span>}
-                              {prod.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700">{prod.size}</span>}
-                              {prod.model && <span className="text-[10px] text-slate-500 block mt-1 font-mono">{prod.model}</span>}
+                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-violet-soft text-violet-fg">{prod.category}</span>
+                              {prod.variant_color && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{prod.variant_color}</span>}
+                              {prod.size && <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg">{prod.size}</span>}
+                              {prod.model && <span className="text-[10px] text-ink-muted block mt-1 font-mono">{prod.model}</span>}
                             </div>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900">
-                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-indigo-50 text-indigo-700">
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink">
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-accent-soft text-accent-fg">
                               <Building className="w-3 h-3" />
                               {prod.branches.length} branch{prod.branches.length !== 1 ? 'es' : ''}
                             </span>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900">
-                            <div className="font-mono font-bold text-slate-900 text-base">
-                              {prod.total_quantity} <span className="text-xs font-normal text-slate-500">units total</span>
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink">
+                            <div className="font-mono font-bold text-ink text-base">
+                              {prod.total_quantity} <span className="text-xs font-normal text-ink-muted">units total</span>
                             </div>
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border mt-1 ${combinedBadge.cls}`}>
                               {combinedBadge.label}
                             </span>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900">
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink">
                             <div className="text-xs space-y-0.5">
-                              <div className="text-emerald-700 font-mono font-bold">
-                                RM {parseFloat(prod.selling_price || 0).toFixed(2)} <span className="text-slate-400 font-normal">(cust)</span>
+                              <div className="text-success-fg font-mono font-bold">
+                                RM {parseFloat(prod.selling_price || 0).toFixed(2)} <span className="text-ink-muted font-normal">(cust)</span>
                               </div>
                               {prod.price_dealer > 0 && (
-                                <div className="text-indigo-700 font-mono text-[11px]">
-                                  RM {parseFloat(prod.price_dealer).toFixed(2)} <span className="text-slate-400">dealer</span>
+                                <div className="text-accent-fg font-mono text-[11px]">
+                                  RM {parseFloat(prod.price_dealer).toFixed(2)} <span className="text-ink-muted">dealer</span>
                                 </div>
                               )}
                             </div>
                           </td>
 
-                          <td className="px-4 py-3 border-b border-slate-100 text-sm text-slate-900 text-right">
+                          <td className="px-4 py-3 border-b border-line-soft text-sm text-ink text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => openQrModal(prod, prod.branches)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-soft text-accent hover:bg-accent-muted transition-colors"
                                 title="View QR Tag"
                               >
                                 <QrCode className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => openEditModal(prod)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-ink-muted hover:bg-sunken hover:text-ink transition-colors"
                                 title="Edit Master Product Details"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDelete(prod.id, prod.item_name)}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-danger-fg hover:bg-danger-soft hover:text-danger-fg transition-colors"
                                 title="Permanently Delete Product"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -936,38 +936,38 @@ export default function ProductsList() {
 
                         {/* Inline expanded per-branch breakdown */}
                         {isExpanded && (
-                          <tr className="bg-slate-50/70 border-b border-slate-200">
+                          <tr className="bg-subtle/70 border-b border-line">
                             <td colSpan="7" className="px-8 py-3.5">
-                              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                              <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
                                 Branch Stock Breakdown for {prod.item_name}
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                 {prod.branches.map(br => {
                                   const brBadge = br.is_critical
-                                    ? "bg-rose-100 text-rose-700 border-rose-200"
+                                    ? "bg-danger-muted text-danger-fg border-danger-line"
                                     : br.is_low
-                                    ? "bg-amber-100 text-amber-700 border-amber-200"
-                                    : "bg-emerald-100 text-emerald-700 border-emerald-200";
+                                    ? "bg-warning-muted text-warning-fg border-warning-line"
+                                    : "bg-success-muted text-success-fg border-success-line";
 
                                   return (
-                                    <div key={br.branch_id} className="bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between shadow-xs">
+                                    <div key={br.branch_id} className="bg-surface border border-line rounded-lg p-3 flex items-center justify-between shadow-xs">
                                       <div>
-                                        <div className="font-semibold text-slate-900 text-xs flex items-center gap-1.5">
-                                          <Building className="w-3.5 h-3.5 text-indigo-500" />
+                                        <div className="font-semibold text-ink text-xs flex items-center gap-1.5">
+                                          <Building className="w-3.5 h-3.5 text-accent" />
                                           {br.branch_name}
-                                          {br.branch_code && <span className="font-mono text-slate-400 font-normal">({br.branch_code})</span>}
+                                          {br.branch_code && <span className="font-mono text-ink-muted font-normal">({br.branch_code})</span>}
                                         </div>
-                                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                                        <div className="text-[11px] text-ink-muted font-mono mt-0.5">
                                           Min threshold: {br.min_quantity}
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md border ${brBadge}`}>
+                                        <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-lg border ${brBadge}`}>
                                           {br.quantity} units
                                         </span>
                                         <button
                                           onClick={() => openAdjustModal(prod, br.branch_id)}
-                                          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded transition-colors"
+                                          className="text-xs font-medium text-accent hover:text-accent-fg bg-accent-soft hover:bg-accent-muted px-2 py-1 rounded-lg transition-colors"
                                           title="Adjust Stock for this branch"
                                         >
                                           Adjust
@@ -995,7 +995,7 @@ export default function ProductsList() {
         <Modal
           icon={ArrowUpDown}
           title="Adjust stock"
-          description={<>{selectedItem.item_name} <span className="font-mono text-indigo-600">({selectedItem.item_code})</span></>}
+          description={<>{selectedItem.item_name} <span className="font-mono text-accent">({selectedItem.item_code})</span></>}
           onClose={() => setShowAdjustModal(false)}
           onSubmit={handleAdjustSubmit}
           error={modalError}
@@ -1020,9 +1020,9 @@ export default function ProductsList() {
               value={adjustForm.adjustment_type}
               onChange={v => setAdjustForm({ ...adjustForm, adjustment_type: v })}
               options={[
-                { value: 'in', icon: ArrowDownLeft, activeColor: 'text-emerald-600', label: 'Stock in', description: 'New stock arrived.' },
-                { value: 'out', icon: ShoppingBag, activeColor: 'text-rose-600', label: 'Stock out', description: 'Sold or taken out.' },
-                { value: 'adjust', icon: Hash, activeColor: 'text-violet-600', label: 'Set count', description: 'After a stock take.' }
+                { value: 'in', icon: ArrowDownLeft, activeColor: 'text-success-fg', label: 'Stock in', description: 'New stock arrived.' },
+                { value: 'out', icon: ShoppingBag, activeColor: 'text-danger-fg', label: 'Stock out', description: 'Sold or taken out.' },
+                { value: 'adjust', icon: Hash, activeColor: 'text-violet-fg', label: 'Set count', description: 'After a stock take.' }
               ]}
             />
           </Field>
@@ -1043,9 +1043,9 @@ export default function ProductsList() {
           </div>
 
           {adjustCurrentQty != null && (
-            <div className={`p-3 rounded-lg border text-sm flex items-center justify-between ${adjustNewQty < 0 ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+            <div className={`p-3 rounded-lg border text-sm flex items-center justify-between ${adjustNewQty < 0 ? 'bg-danger-soft border-danger-line text-danger-fg' : 'bg-subtle border-line text-ink-secondary'}`}>
               <span>Stock after saving</span>
-              <span className="font-mono font-semibold">{adjustCurrentQty} → <span className={adjustNewQty < 0 ? 'text-rose-700' : 'text-indigo-700'}>{adjustNewQty}</span></span>
+              <span className="font-mono font-semibold">{adjustCurrentQty} → <span className={adjustNewQty < 0 ? 'text-danger-fg' : 'text-accent-fg'}>{adjustNewQty}</span></span>
             </div>
           )}
 
@@ -1061,7 +1061,7 @@ export default function ProductsList() {
           size="lg"
           icon={Edit3}
           title="Edit product"
-          description={<>SKU <span className="font-mono text-indigo-600">{selectedItem.item_code}</span> (cannot be changed). Changes apply in every branch that carries this product.</>}
+          description={<>SKU <span className="font-mono text-accent">{selectedItem.item_code}</span> (cannot be changed). Changes apply in every branch that carries this product.</>}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={modalError}
@@ -1144,23 +1144,23 @@ export default function ProductsList() {
 
       {/* ── Modal 3: Quick QR Label Modal (Click to View QR) ── */}
       {showQrModal && selectedItem && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 text-center">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600">HQ Asset Tag</span>
-              <button onClick={() => setShowQrModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
+        <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-line rounded-xl shadow-xl max-w-md w-full p-6 text-center">
+            <div className="flex items-center justify-between pb-3 border-b border-line-soft mb-4">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent">HQ Asset Tag</span>
+              <button onClick={() => setShowQrModal(false)}><X className="w-5 h-5 text-ink-muted" /></button>
             </div>
 
             {/* If product carried in multiple branches, allow choosing branch */}
             {qrBranchOptions.length > 1 && (
               <div className="mb-4 text-left">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                <label className="block text-xs font-semibold text-ink-muted uppercase tracking-wide mb-1">
                   Branch Selection
                 </label>
                 <select
                   value={selectedQrBranchId}
                   onChange={e => setSelectedQrBranchId(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   {qrBranchOptions.map(b => (
                     <option key={b.branch_id} value={b.branch_id}>
@@ -1173,41 +1173,41 @@ export default function ProductsList() {
 
             {qrLoading ? (
               <div className="py-12">
-                <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
-                <p className="text-xs text-slate-500">Generating vector QR code...</p>
+                <RefreshCw className="w-8 h-8 text-accent animate-spin mx-auto mb-3" />
+                <p className="text-xs text-ink-muted">Generating vector QR code...</p>
               </div>
             ) : qrData ? (
               <div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">{selectedItem.item_name}</h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  {selectedItem.category} &bull; <span className="font-mono text-indigo-600 font-bold">SKU: {selectedItem.item_code}</span>
+                <h3 className="font-bold text-ink text-base mb-1">{selectedItem.item_name}</h3>
+                <p className="text-xs text-ink-muted mb-4">
+                  {selectedItem.category} &bull; <span className="font-mono text-accent font-bold">SKU: {selectedItem.item_code}</span>
                 </p>
 
                 {/* SVG Render */}
                 <div
-                  className="bg-white p-3 border border-slate-200 rounded-xl inline-block mb-3 shadow-xs"
+                  className="bg-surface p-3 border border-line rounded-xl inline-block mb-3 shadow-xs"
                   dangerouslySetInnerHTML={{ __html: qrData.qr_svg }}
                 />
 
-                <div className="bg-slate-50 p-2 rounded-lg font-mono text-xs font-bold text-indigo-600 mb-4 tracking-wider border border-slate-100">
+                <div className="bg-subtle p-2 rounded-lg font-mono text-xs font-bold text-accent mb-4 tracking-wider border border-line-soft">
                   {qrData.qr_code}
                 </div>
 
-                <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-100 mb-4">
-                  <span className="text-slate-500 font-medium">Selling Price</span>
-                  <span className="font-extrabold text-slate-900 text-sm">RM {parseFloat(selectedItem.selling_price || 0).toFixed(2)}</span>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-line-soft mb-4">
+                  <span className="text-ink-muted font-medium">Selling Price</span>
+                  <span className="font-extrabold text-ink text-sm">RM {parseFloat(selectedItem.selling_price || 0).toFixed(2)}</span>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 inline-flex items-center justify-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
                   >
                     <Printer className="w-4 h-4" /> Print Label
                   </button>
                   <Link
                     to={`/qr/generate?product_id=${selectedItem.id}`}
-                    className="inline-flex items-center justify-center px-4 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                    className="inline-flex items-center justify-center px-4 h-10 rounded-lg bg-surface border border-line text-ink-secondary text-sm font-medium hover:bg-subtle"
                   >
                     Full Page
                   </Link>
@@ -1254,14 +1254,14 @@ export default function ProductsList() {
                 </Field>
                 <Field label="Branches" required hint="Pick one branch to see which products it already has.">
                   {branches.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">Choose a business first.</p>
+                    <p className="text-xs text-ink-muted italic">Choose a business first.</p>
                   ) : (
                     <div>
                       <div className="flex justify-end mb-1">
                         <button
                           type="button"
                           onClick={() => setAddToBranchForm(f => ({ ...f, branch_ids: f.branch_ids.length === branches.length ? [] : branches.map(b => b.id) }))}
-                          className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                          className="text-xs text-accent hover:text-accent-fg font-semibold"
                         >
                           {addToBranchForm.branch_ids.length === branches.length ? 'Clear all' : 'Select all'}
                         </button>
@@ -1274,9 +1274,9 @@ export default function ProductsList() {
                               key={br.id}
                               type="button"
                               onClick={() => setAddToBranchForm(f => ({ ...f, branch_ids: isChecked ? f.branch_ids.filter(id => id !== br.id) : [...f.branch_ids, br.id] }))}
-                              className={`flex items-center gap-2 p-2 rounded-lg text-left text-sm border transition-colors ${isChecked ? 'bg-indigo-50 text-indigo-900 font-semibold border-indigo-300' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                              className={`flex items-center gap-2 p-2 rounded-lg text-left text-sm border transition-colors ${isChecked ? 'bg-accent-soft text-accent-fg font-semibold border-accent-line' : 'bg-surface text-ink-secondary border-line hover:bg-subtle'}`}
                             >
-                              {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                              {isChecked ? <CheckSquare className="w-4 h-4 text-accent flex-shrink-0" /> : <Square className="w-4 h-4 text-ink-muted flex-shrink-0" />}
                               <span className="truncate">{br.name}</span>
                             </button>
                           );
@@ -1287,8 +1287,8 @@ export default function ProductsList() {
                 </Field>
               </>
             ) : (
-              <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-600 flex items-center gap-2">
-                <Building className="w-4 h-4 text-slate-400" />
+              <div className="p-2.5 bg-subtle border border-line-soft rounded-lg text-sm text-ink-secondary flex items-center gap-2">
+                <Building className="w-4 h-4 text-ink-muted" />
                 <span><strong>{user?.branch_name || 'Your branch'}</strong> · {user?.business_name || 'Your business'}</span>
               </div>
             )}
@@ -1300,26 +1300,26 @@ export default function ProductsList() {
           >
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search by product name or SKU…"
                   value={catalogSearch}
                   onChange={e => setCatalogSearch(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="h-9 w-full rounded-lg border border-line bg-surface pl-8 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
-              <span className={`text-xs font-semibold whitespace-nowrap ${addToBranchForm.product_ids.length ? 'text-indigo-600' : 'text-slate-400'}`}>{addToBranchForm.product_ids.length} selected</span>
+              <span className={`text-xs font-semibold whitespace-nowrap ${addToBranchForm.product_ids.length ? 'text-accent' : 'text-ink-muted'}`}>{addToBranchForm.product_ids.length} selected</span>
             </div>
 
             {catalogLoading ? (
-              <div className="py-8 text-center text-xs text-slate-400">Loading products…</div>
+              <div className="py-8 text-center text-xs text-ink-muted">Loading products…</div>
             ) : catalogProducts.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400 italic border border-dashed border-slate-200 rounded-xl">
+              <div className="py-8 text-center text-xs text-ink-muted italic border border-dashed border-line rounded-xl">
                 {isSuperAdmin && !addToBranchForm.business_id ? 'Choose a business first.' : 'This business has no products yet.'}
               </div>
             ) : (
-              <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
+              <div className="max-h-64 overflow-y-auto divide-y divide-line-soft border border-line rounded-xl bg-surface">
                 {catalogProducts
                   .filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || p.sku.toLowerCase().includes(catalogSearch.toLowerCase()))
                   .map(p => {
@@ -1332,23 +1332,23 @@ export default function ProductsList() {
                         : { ...(f.product_quantities || {}), [p.id]: f.product_quantities?.[p.id] ?? 1 }
                     }));
                     return (
-                      <div key={p.id} className={`px-3 py-2 flex items-center gap-3 text-sm ${isChecked ? 'bg-indigo-50/70' : 'hover:bg-slate-50'}`}>
+                      <div key={p.id} className={`px-3 py-2 flex items-center gap-3 text-sm ${isChecked ? 'bg-accent-soft/70' : 'hover:bg-subtle'}`}>
                         <button type="button" onClick={toggle} className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
-                          {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-600 flex-shrink-0" /> : <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                          {isChecked ? <CheckSquare className="w-4 h-4 text-accent flex-shrink-0" /> : <Square className="w-4 h-4 text-ink-muted flex-shrink-0" />}
                           <span className="min-w-0">
-                            <span className="block truncate font-medium text-slate-900">{p.name}</span>
-                            <span className="block text-[11px] text-slate-500">
-                              <span className="font-mono text-indigo-600">{p.sku}</span>
+                            <span className="block truncate font-medium text-ink">{p.name}</span>
+                            <span className="block text-[11px] text-ink-muted">
+                              <span className="font-mono text-accent">{p.sku}</span>
                               {p.category && <> · {p.category}</>}
                               {' · '}RM {parseFloat(p.price_customer || 0).toFixed(2)}
                             </span>
                           </span>
                         </button>
                         {p.in_branch
-                          ? <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 whitespace-nowrap">In branch · {p.branch_qty}</span>
-                          : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 whitespace-nowrap">New to branch</span>}
+                          ? <span className="rounded-full bg-success-soft border border-success-line px-2 py-0.5 text-[10px] font-semibold text-success-fg whitespace-nowrap">In branch · {p.branch_qty}</span>
+                          : <span className="rounded-full bg-sunken px-2 py-0.5 text-[10px] font-semibold text-ink-muted whitespace-nowrap">New to branch</span>}
                         {isChecked && (
-                          <label className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-shrink-0">
+                          <label className="flex items-center gap-1.5 text-[11px] text-ink-muted flex-shrink-0">
                             {p.in_branch ? 'Add' : 'Start with'}
                             <input
                               type="number"
@@ -1359,7 +1359,7 @@ export default function ProductsList() {
                                 const value = e.target.value;
                                 setAddToBranchForm(f => ({ ...f, product_quantities: { ...(f.product_quantities || {}), [p.id]: value } }));
                               }}
-                              className="h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                              className="h-8 w-16 rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                               aria-label={p.in_branch ? `Quantity to add for ${p.name}` : `Starting stock for ${p.name}`}
                             />
                           </label>
@@ -1372,15 +1372,15 @@ export default function ProductsList() {
           </FormSection>
 
           {addToBranchResult && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
-              <p className="font-semibold text-amber-900 mb-1">{addToBranchResult.message}</p>
+            <div className="rounded-xl border border-warning-line bg-warning-soft p-3 text-xs">
+              <p className="font-semibold text-warning-fg mb-1">{addToBranchResult.message}</p>
               {addToBranchResult.results.length > 0 && (
                 <ul className="space-y-0.5 max-h-32 overflow-y-auto">
                   {addToBranchResult.results.map(r => {
                     const prod = catalogProducts.find(cp => cp.id === r.product_id);
                     const br = branches.find(b => b.id === r.branch_id);
                     return (
-                      <li key={`${r.product_id}-${r.branch_id}`} className={r.action === 'skipped' ? 'text-red-700' : 'text-emerald-700'}>
+                      <li key={`${r.product_id}-${r.branch_id}`} className={r.action === 'skipped' ? 'text-danger-fg' : 'text-success-fg'}>
                         <span className="font-semibold uppercase">{r.action}</span>{' '}
                         {prod ? `${prod.name} (${prod.sku})` : `Product #${r.product_id}`}
                         {' → '}{br?.name || (isSuperAdmin ? `Branch #${r.branch_id}` : user?.branch_name)}

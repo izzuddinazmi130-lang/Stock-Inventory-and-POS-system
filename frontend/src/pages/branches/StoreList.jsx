@@ -336,61 +336,61 @@ export default function StoreList() {
   return (
     <Layout>
       {/* Breadcrumb Navigation */}
-      <nav className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
+      <nav className="text-sm text-ink-muted mb-4 flex items-center gap-1.5">
         {isSuperAdmin ? (
           <>
-            <Link to="/businesses" className="hover:text-slate-900 transition-colors">Businesses</Link>
+            <Link to="/businesses" className="hover:text-ink transition-colors">Businesses</Link>
             <span>/</span>
-            <Link to={`/businesses/${branch?.business_id}/branches`} className="hover:text-slate-900 transition-colors">{branch?.business_name || 'Business'}</Link>
+            <Link to={`/businesses/${branch?.business_id}/branches`} className="hover:text-ink transition-colors">{branch?.business_name || 'Business'}</Link>
             <span>/</span>
-            <Link to={`/branches/${id}`} className="hover:text-slate-900 transition-colors">{branch?.name || 'Branch'}</Link>
+            <Link to={`/branches/${id}`} className="hover:text-ink transition-colors">{branch?.name || 'Branch'}</Link>
             <span>/</span>
           </>
         ) : (
           <>
-            <Link to="/dashboard" className="hover:text-slate-900 transition-colors">{branch?.name || user?.branch_name || 'My Branch'}</Link>
+            <Link to="/dashboard" className="hover:text-ink transition-colors">{branch?.name || user?.branch_name || 'My Branch'}</Link>
             <span>/</span>
           </>
         )}
-        <span className="text-slate-900 font-semibold">Store Events</span>
+        <span className="text-ink font-semibold">Store Events</span>
       </nav>
 
       {/* Notifications */}
       {message && (
         <div className={`mb-6 flex items-center justify-between transition-all ${
           message.type === 'success' 
-            ? 'p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm' 
-            : 'p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm'
+            ? 'p-3.5 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm' 
+            : 'p-3.5 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
         }`}>
           <div className="flex items-center gap-2 font-medium">
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />}
+            {message.type === 'success' ? <CheckCircle className="w-4 h-4 text-success-fg flex-shrink-0" /> : <AlertCircle className="w-4 h-4 text-danger-fg flex-shrink-0" />}
             <span>{message.text}</span>
           </div>
-          <button onClick={() => setMessage(null)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+          <button onClick={() => setMessage(null)} className="text-ink-muted hover:text-ink-secondary"><X className="w-4 h-4" /></button>
         </div>
       )}
 
       {/* Page Title & Add Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">
             Store Events &mdash; {branch ? branch.name : 'Branch'}
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-ink-muted mt-1">
             Track temporary physical sales events, dates, operating hours, and live checkout status.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to={`/branches/${id}/floor-report`}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors shadow-sm"
           >
-            <FileBarChart size={16} className="text-indigo-600" />
+            <FileBarChart size={16} className="text-accent" />
             <span>Branch Floor Sales</span>
           </Link>
           <button
             onClick={() => { setMessage(null); setShowAddModal(true); }}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
           >
             <Plus size={16} />
             <span>Add Store Event</span>
@@ -404,8 +404,8 @@ export default function StoreList() {
           onClick={() => setFilterTab('all')}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterTab === 'all'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              ? 'bg-ink text-white shadow-xs'
+              : 'bg-surface text-ink-secondary border border-line hover:bg-subtle'
           }`}
         >
           All Events ({phaseCounts.all})
@@ -415,11 +415,11 @@ export default function StoreList() {
           onClick={() => setFilterTab('during')}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterTab === 'during'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+              ? 'bg-success text-white shadow-xs'
+              : 'bg-success-soft text-success-fg border border-success-line hover:bg-success-muted'
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
           <span>Live Now ({phaseCounts.during})</span>
         </button>
 
@@ -427,8 +427,8 @@ export default function StoreList() {
           onClick={() => setFilterTab('before')}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterTab === 'before'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+              ? 'bg-warning text-white shadow-xs'
+              : 'bg-warning-soft text-warning-fg border border-warning-line hover:bg-warning-muted'
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
@@ -439,8 +439,8 @@ export default function StoreList() {
           onClick={() => setFilterTab('after')}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterTab === 'after'
-              ? 'bg-slate-700 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+              ? 'bg-ink-hover text-white shadow-xs'
+              : 'bg-sunken text-ink-secondary border border-line hover:bg-line'
           }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -450,37 +450,37 @@ export default function StoreList() {
 
       {/* Main Content Area */}
       {loading ? (
-        <div className="text-center py-16 text-slate-400 text-sm font-mono">
+        <div className="text-center py-16 text-ink-muted text-sm font-mono">
           Loading store sales events...
         </div>
       ) : stores.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center p-6">
-          <Store className="w-12 h-12 text-slate-300 mb-3" />
-          <p className="text-slate-800 font-bold text-base">No store events found</p>
-          <p className="text-xs text-slate-500 mb-4 max-w-sm">
+        <div className="text-center py-16 bg-surface border border-line rounded-xl flex flex-col items-center justify-center p-6">
+          <Store className="w-12 h-12 text-ink-subtle mb-3" />
+          <p className="text-ink font-bold text-base">No store events found</p>
+          <p className="text-xs text-ink-muted mb-4 max-w-sm">
             Create your first booth, bazaar, or temporary sales event under this branch.
           </p>
           <button
             onClick={() => { setMessage(null); setShowAddModal(true); }}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
           >
             <Plus size={16} /> Add Store Event
           </button>
         </div>
       ) : filteredStores.length === 0 ? (
-        <div className="text-center py-12 bg-white border border-slate-200 rounded-xl p-6">
-          <p className="text-slate-600 font-medium text-sm">No events in this category.</p>
-          <button onClick={() => setFilterTab('all')} className="text-indigo-600 text-xs font-semibold mt-2 hover:underline">
+        <div className="text-center py-12 bg-surface border border-line rounded-xl p-6">
+          <p className="text-ink-secondary font-medium text-sm">No events in this category.</p>
+          <button onClick={() => setFilterTab('all')} className="text-accent text-xs font-semibold mt-2 hover:underline">
             View all events
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-            <h3 className="font-semibold text-slate-900 text-sm">
+        <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
+            <h3 className="font-semibold text-ink text-sm">
               Sales Events Schedule ({filteredStores.length})
             </h3>
-            <span className="text-[11px] font-mono text-slate-400">
+            <span className="text-[11px] font-mono text-ink-muted">
               System Time: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
@@ -488,28 +488,28 @@ export default function StoreList() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-left">
+                <tr className="bg-subtle">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">
                     Event &amp; Venue
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-left">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">
                     Exact Date &amp; Time
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-left">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">
                     Event Status &amp; Timing
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-left">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">
                     Status Context
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-left">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">
                     Person In Charge
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-right">
+                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-right">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line-soft">
                 {filteredStores.map((s) => {
                   const phase = getStorePhase(s);
                   const timingText = getTimingStatusText(s, phase);
@@ -517,76 +517,76 @@ export default function StoreList() {
                   return (
                     <tr
                       key={s.id}
-                      className={`hover:bg-slate-50 transition-colors ${
-                        phase === 'during' ? 'bg-emerald-50/20' : 'bg-white'
+                      className={`hover:bg-subtle transition-colors ${
+                        phase === 'during' ? 'bg-success-soft/20' : 'bg-surface'
                       }`}
                     >
                       {/* Event Name & Venue */}
-                      <td className="px-4 py-3.5 text-sm border-b border-slate-100">
-                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <td className="px-4 py-3.5 text-sm border-b border-line-soft">
+                        <div className="font-bold text-ink text-sm flex items-center gap-2">
                           <span>{s.name}</span>
                           {phase === 'during' && (
                             <span className="flex h-2 w-2 relative">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
                             </span>
                           )}
                         </div>
                         {s.venue ? (
-                          <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-0.5">
-                            <MapPin size={13} className="text-indigo-500 flex-shrink-0" />
+                          <div className="flex items-center gap-1.5 text-ink-muted text-xs mt-0.5">
+                            <MapPin size={13} className="text-accent flex-shrink-0" />
                             <span className="truncate max-w-xs">{s.venue}</span>
                           </div>
                         ) : (
-                          <div className="text-[11px] text-slate-400 italic mt-0.5">No venue specified</div>
+                          <div className="text-[11px] text-ink-muted italic mt-0.5">No venue specified</div>
                         )}
                       </td>
 
                       {/* Exact Date & Time */}
-                      <td className="px-4 py-3.5 text-xs text-slate-700 border-b border-slate-100">
+                      <td className="px-4 py-3.5 text-xs text-ink-secondary border-b border-line-soft">
                         <div className="space-y-1 font-mono">
-                          <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-                            <span className="text-[10px] uppercase font-sans text-slate-400 w-10">Start</span>
+                          <div className="flex items-center gap-1.5 text-ink font-semibold">
+                            <span className="text-[10px] uppercase font-sans text-ink-muted w-10">Start</span>
                             <span>{formatDateTime(s.start_date)}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <span className="text-[10px] uppercase font-sans text-slate-400 w-10">End</span>
+                          <div className="flex items-center gap-1.5 text-ink-secondary">
+                            <span className="text-[10px] uppercase font-sans text-ink-muted w-10">End</span>
                             <span>{formatDateTime(s.end_date)}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* Event Status Badge & Dynamic Timing */}
-                      <td className="px-4 py-3.5 text-sm border-b border-slate-100">
+                      <td className="px-4 py-3.5 text-sm border-b border-line-soft">
                         <div>
                           {phase === 'during' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-success-soft text-success-fg border border-success-line shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                               LIVE NOW
                             </span>
                           )}
                           {phase === 'before' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                              <Clock className="w-3 h-3 text-amber-600" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg border border-warning-line">
+                              <Clock className="w-3 h-3 text-warning-fg" />
                               UPCOMING
                             </span>
                           )}
                           {phase === 'after' && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                              <CheckCircle2 className="w-3 h-3 text-slate-500" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-sunken text-ink-secondary border border-line">
+                              <CheckCircle2 className="w-3 h-3 text-ink-muted" />
                               CONCLUDED
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] font-mono text-slate-500 mt-1 font-medium">
+                        <div className="text-[11px] font-mono text-ink-muted mt-1 font-medium">
                           {timingText}
                         </div>
                       </td>
 
                       {/* Phase Context (Differentiated info for before/during/after) */}
-                      <td className="px-4 py-3.5 text-xs border-b border-slate-100">
+                      <td className="px-4 py-3.5 text-xs border-b border-line-soft">
                         {phase === 'before' && (
-                          <div className="p-2 rounded-lg bg-amber-50/70 border border-amber-100 text-amber-900 max-w-xs">
+                          <div className="p-2 rounded-lg bg-warning-soft/70 border border-warning-muted text-warning-fg max-w-xs">
                             <div className="font-semibold flex items-center gap-1 text-[11px]">
                               <span>Scheduled Event</span>
                             </div>
@@ -594,16 +594,16 @@ export default function StoreList() {
                         )}
 
                         {phase === 'during' && (
-                          <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-900 max-w-xs">
-                            <div className="font-bold flex items-center gap-1 text-[11px] text-emerald-800">
+                          <div className="p-2 rounded-lg bg-success-soft/70 border border-success-muted text-success-fg max-w-xs">
+                            <div className="font-bold flex items-center gap-1 text-[11px] text-success-fg">
                               <span>Active Checkout</span>
                             </div>
                           </div>
                         )}
 
                         {phase === 'after' && (
-                          <div className="p-2 rounded-lg bg-slate-100/80 border border-slate-200 text-slate-800 max-w-xs">
-                            <div className="font-semibold flex items-center gap-1 text-[11px] text-slate-700">
+                          <div className="p-2 rounded-lg bg-sunken/80 border border-line text-ink max-w-xs">
+                            <div className="font-semibold flex items-center gap-1 text-[11px] text-ink-secondary">
                               <span>Event Concluded</span>
                             </div>
                           </div>
@@ -611,28 +611,28 @@ export default function StoreList() {
                       </td>
 
                       {/* Person In Charge */}
-                      <td className="px-4 py-3.5 text-xs text-slate-900 border-b border-slate-100">
-                        <div className="font-medium text-slate-900">{s.person_in_charge || 'HQ Staff'}</div>
+                      <td className="px-4 py-3.5 text-xs text-ink border-b border-line-soft">
+                        <div className="font-medium text-ink">{s.person_in_charge || 'HQ Staff'}</div>
                         {s.contact_phone ? (
-                          <div className="text-slate-500 text-[11px] flex items-center gap-1 mt-0.5 font-mono">
-                            <Phone size={11} className="text-slate-400" />
+                          <div className="text-ink-muted text-[11px] flex items-center gap-1 mt-0.5 font-mono">
+                            <Phone size={11} className="text-ink-muted" />
                             <span>{s.contact_phone}</span>
                           </div>
                         ) : (
-                          <div className="text-slate-400 text-[11px]">—</div>
+                          <div className="text-ink-muted text-[11px]">—</div>
                         )}
                       </td>
 
                       {/* Action Buttons */}
-                      <td className="px-4 py-3.5 text-sm border-b border-slate-100 text-right">
+                      <td className="px-4 py-3.5 text-sm border-b border-line-soft text-right">
                         <div className="flex justify-end gap-1.5">
                           {/* View Report */}
                           <button
                             onClick={() => navigate(`/stores/${s.id}/report`)}
                             className={`inline-flex items-center justify-center h-8 px-2.5 rounded-lg text-xs font-medium transition-colors ${
                               phase === 'during'
-                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs'
-                                : 'bg-white text-indigo-600 border border-slate-200 hover:bg-indigo-50'
+                                ? 'bg-accent text-white hover:bg-accent-hover shadow-xs'
+                                : 'bg-surface text-accent border border-line hover:bg-accent-soft'
                             }`}
                             title={phase === 'during' ? 'View Live Sales Report' : 'View Store Report'}
                           >
@@ -644,7 +644,7 @@ export default function StoreList() {
                           {phase === 'during' && (
                             <button
                               onClick={() => handleClose(s.id, s.name)}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-amber-600 border border-slate-200 hover:bg-amber-50 transition-colors"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-warning-fg border border-line hover:bg-warning-soft transition-colors"
                               title="Close Event Early"
                             >
                               <CheckCircle size={14} />
@@ -654,7 +654,7 @@ export default function StoreList() {
                           {/* Edit Button */}
                           <button
                             onClick={() => openEditModal(s)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle transition-colors"
                             title="Edit Event & Timing Details"
                           >
                             <Edit3 size={14} />
@@ -666,8 +666,8 @@ export default function StoreList() {
                             disabled={phase === 'during'}
                             className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                               phase === 'during'
-                                ? 'bg-slate-100 text-slate-300 border border-slate-200 cursor-not-allowed opacity-50'
-                                : 'bg-white text-rose-600 border border-slate-200 hover:bg-rose-50'
+                                ? 'bg-sunken text-ink-subtle border border-line cursor-not-allowed opacity-50'
+                                : 'bg-surface text-danger-fg border border-line hover:bg-danger-soft'
                             }`}
                             title={
                               phase === 'during'
@@ -758,19 +758,19 @@ function StoreFields({ form, setForm, showStatus = false }) {
 
       <FormSection title="Schedule" description="The event goes live and ends automatically at these times.">
         <div className="grid grid-cols-[4rem_1fr_7.5rem] gap-2 items-center">
-          <span className="text-sm font-medium text-slate-700">Starts<span className="text-rose-500">*</span></span>
+          <span className="text-sm font-medium text-ink-secondary">Starts<span className="text-danger-fg">*</span></span>
           <Input type="date" required value={form.start_date}
             onChange={e => setForm({ ...form, start_date: e.target.value, end_date: form.end_date || e.target.value })} />
           <Input type="time" required value={form.start_time} onChange={set('start_time')} />
 
-          <span className="text-sm font-medium text-slate-700">Ends<span className="text-rose-500">*</span></span>
+          <span className="text-sm font-medium text-ink-secondary">Ends<span className="text-danger-fg">*</span></span>
           <Input type="date" required min={form.start_date || undefined} value={form.end_date} onChange={set('end_date')} error={endBeforeStart} />
           <Input type="time" required value={form.end_time} onChange={set('end_time')} error={endBeforeStart} />
         </div>
         {endBeforeStart ? (
-          <p className="text-xs text-rose-600">The end is before the start. Check the dates and times.</p>
+          <p className="text-xs text-danger-fg">The end is before the start. Check the dates and times.</p>
         ) : days ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ink-muted">
             Runs {days === 1 ? '1 day' : `${days} days`}: {formatScheduleEnd(form.start_date, form.start_time)} → {formatScheduleEnd(form.end_date, form.end_time)}
           </p>
         ) : null}

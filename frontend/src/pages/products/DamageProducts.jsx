@@ -11,19 +11,19 @@ import api from '../../services/api';
 import { Modal, FormSection, Field, Input, Select, Textarea, MoneyInput, SecondaryButton } from '../../components/ui/Form';
 
 const REASON_CATEGORIES = [
-  { value: 'transit_damage', label: 'Transit Damage', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'breakage', label: 'Breakage / Physical Impact', color: 'bg-rose-50 text-rose-700 border-rose-200' },
-  { value: 'water_damage', label: 'Water / Weather Damage', color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { value: 'expired', label: 'Expired / Past Shelf Life', color: 'bg-orange-50 text-orange-700 border-orange-200' },
-  { value: 'manufacturing_defect', label: 'Manufacturing Defect', color: 'bg-violet-50 text-violet-700 border-violet-200' },
-  { value: 'other', label: 'Other / Written-off', color: 'bg-slate-100 text-slate-700 border-slate-200' }
+  { value: 'transit_damage', label: 'Transit Damage', color: 'bg-warning-soft text-warning-fg border-warning-line' },
+  { value: 'breakage', label: 'Breakage / Physical Impact', color: 'bg-danger-soft text-danger-fg border-danger-line' },
+  { value: 'water_damage', label: 'Water / Weather Damage', color: 'bg-info-soft text-info-fg border-info-line' },
+  { value: 'expired', label: 'Expired / Past Shelf Life', color: 'bg-warning-soft text-warning-fg border-warning-line' },
+  { value: 'manufacturing_defect', label: 'Manufacturing Defect', color: 'bg-violet-soft text-violet-fg border-violet-line' },
+  { value: 'other', label: 'Other / Written-off', color: 'bg-sunken text-ink-secondary border-line' }
 ];
 
 function getCategoryMeta(catValue) {
   return REASON_CATEGORIES.find(c => c.value === catValue) || {
     value: catValue,
     label: catValue || 'Other',
-    color: 'bg-slate-100 text-slate-700 border-slate-200'
+    color: 'bg-sunken text-ink-secondary border-line'
   };
 }
 
@@ -340,8 +340,8 @@ export default function DamageProducts() {
       {message && (
         <div className={`p-4 mb-6 rounded-xl flex items-center justify-between border ${
           message.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-            : 'bg-rose-50 text-rose-800 border-rose-200'
+            ? 'bg-success-soft text-success-fg border-success-line' 
+            : 'bg-danger-soft text-danger-fg border-danger-line'
         }`}>
           <div className="flex items-center gap-2">
             {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
@@ -349,7 +349,7 @@ export default function DamageProducts() {
           </div>
           <button 
             onClick={() => setMessage(null)}
-            className="text-xs font-semibold px-2 py-1 rounded hover:bg-black/5"
+            className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-ink/5"
           >
             Dismiss
           </button>
@@ -359,13 +359,13 @@ export default function DamageProducts() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-slate-400 text-[11px] font-semibold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-ink-muted text-[11px] font-semibold uppercase tracking-wider mb-1">
             <span>Inventory</span>
             <span>/</span>
             <span>Damage & Loss Records</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Damage Products</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-ink tracking-tight">Damage Products</h1>
+          <p className="text-ink-muted text-sm mt-0.5">
             Log damaged items, snapshot financial loss, and inspect photographic proof.
           </p>
         </div>
@@ -374,14 +374,14 @@ export default function DamageProducts() {
           <button 
             onClick={fetchDamageReports} 
             disabled={loading}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-slate-400' : ''} />
+            <RefreshCw size={16} className={loading ? 'animate-spin text-ink-muted' : ''} />
             <span>Refresh</span>
           </button>
           <button 
             onClick={openAddModal} 
-            className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
           >
             <Plus size={18} />
             <span>Log Damage Report</span>
@@ -392,60 +392,60 @@ export default function DamageProducts() {
       {/* 3 Live KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {/* Card 1: Total Reports */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Total Reports Logged
             </span>
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+            <div className="p-2 rounded-lg bg-warning-soft text-warning-fg">
               <AlertTriangle className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
+            <span className="text-2xl font-bold text-ink block tracking-tight">
               {stats.totalReports}
             </span>
-            <span className="text-xs mt-1 block text-slate-500">
+            <span className="text-xs mt-1 block text-ink-muted">
               {hasActiveFilters ? 'Matching active filters' : 'Lifetime incident records'}
             </span>
           </div>
         </div>
 
         {/* Card 2: Total Items Damaged */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Total Items Damaged
             </span>
-            <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
+            <div className="p-2 rounded-lg bg-danger-soft text-danger-fg">
               <PackageX className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
-              {stats.totalQuantity.toLocaleString()} <span className="text-sm font-normal text-slate-500">units</span>
+            <span className="text-2xl font-bold text-ink block tracking-tight">
+              {stats.totalQuantity.toLocaleString()} <span className="text-sm font-normal text-ink-muted">units</span>
             </span>
-            <span className="text-xs mt-1 block text-rose-600 font-medium">
+            <span className="text-xs mt-1 block text-danger-fg font-medium">
               Written off from inventory
             </span>
           </div>
         </div>
 
         {/* Card 3: Total Financial Loss */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Total Financial Loss
             </span>
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="p-2 rounded-lg bg-success-soft text-success-fg">
               <DollarSign className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
+            <span className="text-2xl font-bold text-ink block tracking-tight">
               RM {stats.totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-xs mt-1 block text-slate-500">
+            <span className="text-xs mt-1 block text-ink-muted">
               Snapshotted replacement cost
             </span>
           </div>
@@ -453,7 +453,7 @@ export default function DamageProducts() {
       </div>
 
       {/* Filter Control Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 shadow-xs">
+      <div className="bg-surface border border-line rounded-xl p-4 mb-6 shadow-xs">
         <div className="flex flex-wrap items-center gap-3">
           {/* Business Selector (super_admin only) */}
           {isSuperAdmin && (
@@ -464,7 +464,7 @@ export default function DamageProducts() {
                   setFilterBusiness(e.target.value);
                   setFilterBranch('');
                 }}
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">All Businesses</option>
                 {businesses.map(b => (
@@ -479,7 +479,7 @@ export default function DamageProducts() {
             <select
               value={filterBranch}
               onChange={e => setFilterBranch(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{isSuperAdmin ? 'All Branches' : 'All branches in my business'}</option>
               {filteredBranchOptions.map(b => (
@@ -490,35 +490,35 @@ export default function DamageProducts() {
 
           {/* Date Range: Start Date */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">From:</span>
+            <span className="text-xs text-ink-muted font-medium">From:</span>
             <input
               type="date"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
           {/* Date Range: End Date */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">To:</span>
+            <span className="text-xs text-ink-muted font-medium">To:</span>
             <input
               type="date"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
           {/* Search Query */}
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search product, SKU, notes, reporter..."
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -526,7 +526,7 @@ export default function DamageProducts() {
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors"
+              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors"
             >
               <X size={14} />
               Reset Filters
@@ -536,12 +536,12 @@ export default function DamageProducts() {
       </div>
 
       {/* Main Records Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft bg-subtle/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-rose-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">Damage Incidents</h3>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+            <div className="w-2 h-2 rounded-full bg-danger" />
+            <h3 className="font-semibold text-ink text-sm">Damage Incidents</h3>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sunken text-ink-secondary">
               {reports.length} {reports.length === 1 ? 'record' : 'records'}
             </span>
           </div>
@@ -550,42 +550,42 @@ export default function DamageProducts() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50">
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200">
+              <tr className="bg-subtle">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
                   Report ID & Date
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
                   Product / SKU
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
                   Location
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-right">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">
                   Qty Damaged
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-right">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">
                   Value Lost
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
                   Reason & Note
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
                   Reported By
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-center">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-center">
                   Evidence
                 </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 px-4 py-3 border-b border-slate-200 text-center">
+                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-center">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-soft">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan="9" className="px-4 py-12 text-center text-ink-muted text-sm">
                     <div className="flex items-center justify-center gap-2">
-                      <RefreshCw size={16} className="animate-spin text-indigo-600" />
+                      <RefreshCw size={16} className="animate-spin text-accent" />
                       <span>Loading damage reports...</span>
                     </div>
                   </td>
@@ -593,9 +593,9 @@ export default function DamageProducts() {
               ) : reports.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="px-4 py-14 text-center">
-                    <PackageX className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-slate-700">No damage records found</p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    <PackageX className="w-12 h-12 text-ink-subtle mx-auto mb-3" strokeWidth={1.5} />
+                    <p className="text-sm font-medium text-ink-secondary">No damage records found</p>
+                    <p className="text-xs text-ink-muted mt-1 max-w-sm mx-auto">
                       {hasActiveFilters 
                         ? 'Try adjusting your search query or filter date range.' 
                         : 'No damaged or written-off items have been reported yet.'}
@@ -603,7 +603,7 @@ export default function DamageProducts() {
                     {hasActiveFilters && (
                       <button
                         onClick={resetFilters}
-                        className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                        className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg"
                       >
                         Reset active filters
                       </button>
@@ -625,92 +625,92 @@ export default function DamageProducts() {
                   });
 
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={r.id} className="hover:bg-subtle/80 transition-colors">
                       {/* ID & Date */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm">
-                        <div className="font-mono font-semibold text-indigo-600 text-xs">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm">
+                        <div className="font-mono font-semibold text-accent text-xs">
                           #DR-{r.id}
                         </div>
-                        <div className="text-xs text-slate-400 mt-0.5">{dateFormatted}</div>
-                        <div className="text-[10px] text-slate-400">{timeFormatted}</div>
+                        <div className="text-xs text-ink-muted mt-0.5">{dateFormatted}</div>
+                        <div className="text-[10px] text-ink-muted">{timeFormatted}</div>
                       </td>
 
                       {/* Product / SKU */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm">
-                        <div className="font-medium text-slate-900">{r.item_name}</div>
+                      <td className="px-4 py-3 border-b border-line-soft text-sm">
+                        <div className="font-medium text-ink">{r.item_name}</div>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[11px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
+                          <span className="font-mono text-[11px] px-1.5 py-0.2 bg-sunken text-ink-secondary rounded-lg">
                             {r.item_code}
                           </span>
                           {r.category && (
-                            <span className="text-[11px] text-slate-400">· {r.category}</span>
+                            <span className="text-[11px] text-ink-muted">· {r.category}</span>
                           )}
                         </div>
                       </td>
 
                       {/* Location */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm">
-                        <div className="text-slate-800 font-medium text-xs">{r.branch_name}</div>
-                        <div className="text-[11px] text-slate-400">{r.business_name}</div>
+                      <td className="px-4 py-3 border-b border-line-soft text-sm">
+                        <div className="text-ink font-medium text-xs">{r.branch_name}</div>
+                        <div className="text-[11px] text-ink-muted">{r.business_name}</div>
                       </td>
 
                       {/* Qty Damaged */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm text-right">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm text-right">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-danger-soft text-danger-fg">
                           -{r.quantity}
                         </span>
                       </td>
 
                       {/* Value Lost */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm text-right">
-                        <div className="font-semibold text-slate-900">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm text-right">
+                        <div className="font-semibold text-ink">
                           RM {parseFloat(r.total_value || 0).toFixed(2)}
                         </div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-ink-muted">
                           @ RM {parseFloat(r.cost_per_unit || 0).toFixed(2)}
                         </div>
                       </td>
 
                       {/* Reason */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm max-w-xs">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm max-w-xs">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${cat.color}`}>
                           {cat.label}
                         </span>
                         {r.reason_details && (
-                          <div className="text-xs text-slate-500 mt-1 truncate" title={r.reason_details}>
+                          <div className="text-xs text-ink-muted mt-1 truncate" title={r.reason_details}>
                             {r.reason_details}
                           </div>
                         )}
                       </td>
 
                       {/* Reported By */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm">
-                        <div className="text-xs font-medium text-slate-800">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm">
+                        <div className="text-xs font-medium text-ink">
                           {r.reported_by_name || 'System Admin'}
                         </div>
                         {r.reported_by_email && (
-                          <div className="text-[11px] text-slate-400">{r.reported_by_email}</div>
+                          <div className="text-[11px] text-ink-muted">{r.reported_by_email}</div>
                         )}
                       </td>
 
                       {/* Evidence Photo Count / Icon */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-center">
+                      <td className="px-4 py-3 border-b border-line-soft text-center">
                         {photoCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent-soft text-accent-fg">
                             <Camera size={12} />
                             {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-slate-400 italic">None</span>
+                          <span className="text-[11px] text-ink-muted italic">None</span>
                         )}
                       </td>
 
                       {/* Action */}
-                      <td className="px-4 py-3 border-b border-slate-100 text-center">
+                      <td className="px-4 py-3 border-b border-line-soft text-center">
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             onClick={() => setViewReport(r)}
-                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-sunken hover:bg-line text-ink-secondary text-xs font-medium rounded-lg transition-colors"
                             title="View Full Report & Photos"
                           >
                             <Eye size={13} />
@@ -719,14 +719,14 @@ export default function DamageProducts() {
                           {canDeleteReport(r) ? (
                             <button
                               onClick={() => setDeleteTarget(r)}
-                              className="inline-flex items-center gap-1 h-8 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-lg transition-colors"
+                              className="inline-flex items-center gap-1 h-8 px-2.5 bg-danger-soft hover:bg-danger-muted text-danger-fg text-xs font-medium rounded-lg transition-colors"
                               title="Delete Damage Report"
                             >
                               <Trash2 size={13} />
                               <span>Delete</span>
                             </button>
                           ) : (
-                            <span className="text-[11px] text-slate-400 italic px-1" title="Records from other branches are read-only">
+                            <span className="text-[11px] text-ink-muted italic px-1" title="Records from other branches are read-only">
                               Read-only
                             </span>
                           )}
@@ -759,7 +759,7 @@ export default function DamageProducts() {
             <button
               type="submit"
               disabled={submitting || !selectedProduct}
-              className="inline-flex items-center gap-2 h-10 px-4 bg-rose-600 text-white text-sm font-medium rounded-lg hover:bg-rose-700 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 h-10 px-4 bg-danger text-white text-sm font-medium rounded-lg hover:bg-danger-hover transition-colors disabled:opacity-50"
             >
               {submitting
                 ? <><RefreshCw size={16} className="animate-spin" /> Submitting…</>
@@ -781,30 +781,30 @@ export default function DamageProducts() {
                 </Select>
               </Field>
             ) : (
-              <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-600 flex items-center gap-2">
-                <Building2 size={14} className="text-slate-400" />
+              <div className="p-2.5 bg-subtle border border-line-soft rounded-lg text-xs text-ink-secondary flex items-center gap-2">
+                <Building2 size={14} className="text-ink-muted" />
                 Branch: <strong>{user?.branch_name || 'My Branch'}</strong>
               </div>
             )}
 
             <Field label="Product" required>
               {selectedProduct ? (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-3">
+                <div className="p-3 bg-subtle border border-line rounded-lg flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-900 text-sm truncate">{selectedProduct.name || selectedProduct.item_name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">
-                      <span className="font-mono text-indigo-600">{selectedProduct.sku || selectedProduct.item_code}</span>
+                    <div className="font-semibold text-ink text-sm truncate">{selectedProduct.name || selectedProduct.item_name}</div>
+                    <div className="text-xs text-ink-muted mt-0.5">
+                      <span className="font-mono text-accent">{selectedProduct.sku || selectedProduct.item_code}</span>
                       {' · '}{selectedProduct.quantity || 0} in stock
                     </div>
                   </div>
-                  <button type="button" onClick={() => { setSelectedProduct(null); setProductSearch(''); }} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex-shrink-0">
+                  <button type="button" onClick={() => { setSelectedProduct(null); setProductSearch(''); }} className="text-xs font-semibold text-accent hover:text-accent-fg flex-shrink-0">
                     Change
                   </button>
                 </div>
               ) : (
                 <div>
                   <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <Input
                       className="pl-9"
                       placeholder={loadingProducts ? 'Loading products…' : 'Search by product name or SKU…'}
@@ -813,15 +813,15 @@ export default function DamageProducts() {
                       disabled={loadingProducts || (isSuperAdmin && !modalBranchId)}
                     />
                   </div>
-                  <div className="mt-1 border border-slate-200 rounded-lg max-h-52 overflow-y-auto bg-white divide-y divide-slate-100">
+                  <div className="mt-1 border border-line rounded-lg max-h-52 overflow-y-auto bg-surface divide-y divide-line-soft">
                     {isSuperAdmin && !modalBranchId ? (
-                      <div className="p-3 text-center text-xs text-slate-400">Choose a branch first.</div>
+                      <div className="p-3 text-center text-xs text-ink-muted">Choose a branch first.</div>
                     ) : loadingProducts ? (
-                      <div className="p-3 text-center text-xs text-slate-400">Loading products…</div>
+                      <div className="p-3 text-center text-xs text-ink-muted">Loading products…</div>
                     ) : branchProducts.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-400">This branch has no products.</div>
+                      <div className="p-3 text-center text-xs text-ink-muted">This branch has no products.</div>
                     ) : productSearchResults.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-400">No products match “{productSearch}”.</div>
+                      <div className="p-3 text-center text-xs text-ink-muted">No products match “{productSearch}”.</div>
                     ) : productSearchResults.map(p => {
                       const stockQty = parseInt(p.quantity || 0, 10);
                       return (
@@ -833,13 +833,13 @@ export default function DamageProducts() {
                             setSelectedProduct(p);
                             setFormData(prev => ({ ...prev, quantity: Math.min(parseInt(prev.quantity, 10) || 1, stockQty), cost_per_unit: p.cost_price || '' }));
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-indigo-50/50 flex items-center justify-between gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                          className="w-full text-left px-3 py-2 hover:bg-accent-soft/50 flex items-center justify-between gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface"
                         >
                           <span className="min-w-0">
-                            <span className="block truncate font-medium text-slate-900">{p.name || p.item_name}</span>
-                            <span className="block text-[11px] text-slate-500"><span className="font-mono">{p.sku || p.item_code}</span>{p.category && <> · {p.category}</>}</span>
+                            <span className="block truncate font-medium text-ink">{p.name || p.item_name}</span>
+                            <span className="block text-[11px] text-ink-muted"><span className="font-mono">{p.sku || p.item_code}</span>{p.category && <> · {p.category}</>}</span>
                           </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0 ${stockQty > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0 ${stockQty > 0 ? 'bg-success-soft text-success-fg' : 'bg-danger-soft text-danger-fg'}`}>
                             {stockQty > 0 ? `${stockQty} in stock` : 'No stock'}
                           </span>
                         </button>
@@ -871,11 +871,11 @@ export default function DamageProducts() {
                 <MoneyInput value={formData.cost_per_unit} onChange={e => setFormData({ ...formData, cost_per_unit: e.target.value })} />
               </Field>
             </div>
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center justify-between">
-              <span className="text-xs text-rose-800">
+            <div className="p-3 bg-danger-soft border border-danger-line rounded-lg flex items-center justify-between">
+              <span className="text-xs text-danger-fg">
                 Total loss: {parseInt(formData.quantity, 10) || 0} × RM {parseFloat(formData.cost_per_unit || selectedProduct?.cost_price || 0).toFixed(2)}
               </span>
-              <span className="text-base font-bold text-rose-700">RM {computedTotalLoss}</span>
+              <span className="text-base font-bold text-danger-fg">RM {computedTotalLoss}</span>
             </div>
           </FormSection>
 
@@ -889,7 +889,7 @@ export default function DamageProducts() {
                     key={c.value}
                     type="button"
                     onClick={() => setFormData({ ...formData, reason_category: c.value })}
-                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-colors ${active ? 'border-indigo-500 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-500' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-colors ${active ? 'border-accent bg-accent-soft text-accent-fg ring-1 ring-accent' : 'border-line text-ink-secondary hover:border-line-strong'}`}
                   >
                     {c.label}
                   </button>
@@ -911,9 +911,9 @@ export default function DamageProducts() {
             {photoPreviews.length > 0 && (
               <div className="grid grid-cols-5 gap-2">
                 {photoPreviews.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg border border-slate-200 overflow-hidden bg-slate-100">
+                  <div key={idx} className="relative aspect-square rounded-lg border border-line overflow-hidden bg-sunken">
                     <img src={url} alt="Evidence preview" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-black/80" aria-label="Remove photo">
+                    <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-ink/60 text-white rounded-full p-1 hover:bg-ink/80" aria-label="Remove photo">
                       <X size={12} />
                     </button>
                   </div>
@@ -923,8 +923,8 @@ export default function DamageProducts() {
             {selectedPhotos.length < 5 && (
               <div>
                 <input type="file" ref={fileInputRef} multiple accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="hidden" id="damage-photo-upload" />
-                <label htmlFor="damage-photo-upload" className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-colors text-xs text-slate-600">
-                  <Upload size={16} className="text-slate-400" /> Add photos
+                <label htmlFor="damage-photo-upload" className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-line rounded-lg cursor-pointer hover:border-accent hover:bg-subtle transition-colors text-xs text-ink-secondary">
+                  <Upload size={16} className="text-ink-muted" /> Add photos
                 </label>
               </div>
             )}
@@ -936,12 +936,12 @@ export default function DamageProducts() {
       {/* VIEW DAMAGE REPORT DETAILS MODAL                                          */}
       {/* ========================================================================= */}
       {viewReport && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-xl w-full p-6 relative my-8">
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-xl w-full p-6 relative my-8">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-line-soft">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-bold text-indigo-600">
+                  <span className="font-mono text-sm font-bold text-accent">
                     #DR-{viewReport.id}
                   </span>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
@@ -950,13 +950,13 @@ export default function DamageProducts() {
                     {getCategoryMeta(viewReport.reason_category).label}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-ink-muted mt-1">
                   Recorded on {new Date(viewReport.created_at).toLocaleString('en-MY')}
                 </p>
               </div>
               <button
                 onClick={() => setViewReport(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-sunken transition-colors"
               >
                 <X size={18} />
               </button>
@@ -964,13 +964,13 @@ export default function DamageProducts() {
 
             <div className="space-y-4">
               {/* Product Info Card */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+              <div className="p-4 bg-subtle border border-line rounded-xl">
+                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">
                   Affected Inventory Item
                 </span>
-                <div className="text-base font-bold text-slate-900">{viewReport.item_name}</div>
-                <div className="flex items-center gap-2 text-xs text-slate-600 mt-1">
-                  <span className="font-mono bg-white px-2 py-0.5 border border-slate-200 rounded">
+                <div className="text-base font-bold text-ink">{viewReport.item_name}</div>
+                <div className="flex items-center gap-2 text-xs text-ink-secondary mt-1">
+                  <span className="font-mono bg-surface px-2 py-0.5 border border-line rounded-lg">
                     SKU: {viewReport.item_code}
                   </span>
                   {viewReport.category && <span>· Category: {viewReport.category}</span>}
@@ -979,21 +979,21 @@ export default function DamageProducts() {
 
               {/* Loss Metrics Grid */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Quantity</span>
-                  <span className="text-lg font-bold text-rose-600 mt-0.5 block">
+                <div className="p-3 bg-surface border border-line rounded-xl">
+                  <span className="text-[10px] uppercase font-semibold text-ink-muted block">Quantity</span>
+                  <span className="text-lg font-bold text-danger-fg mt-0.5 block">
                     -{viewReport.quantity} units
                   </span>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Unit Cost</span>
-                  <span className="text-lg font-bold text-slate-900 mt-0.5 block">
+                <div className="p-3 bg-surface border border-line rounded-xl">
+                  <span className="text-[10px] uppercase font-semibold text-ink-muted block">Unit Cost</span>
+                  <span className="text-lg font-bold text-ink mt-0.5 block">
                     RM {parseFloat(viewReport.cost_per_unit || 0).toFixed(2)}
                   </span>
                 </div>
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-rose-600 block">Total Loss</span>
-                  <span className="text-lg font-bold text-rose-700 mt-0.5 block">
+                <div className="p-3 bg-danger-soft border border-danger-line rounded-xl">
+                  <span className="text-[10px] uppercase font-semibold text-danger-fg block">Total Loss</span>
+                  <span className="text-lg font-bold text-danger-fg mt-0.5 block">
                     RM {parseFloat(viewReport.total_value || 0).toFixed(2)}
                   </span>
                 </div>
@@ -1001,31 +1001,31 @@ export default function DamageProducts() {
 
               {/* Location & Reporter Info */}
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Location</span>
-                  <div className="font-medium text-slate-900">{viewReport.branch_name}</div>
-                  <div className="text-slate-500">{viewReport.business_name}</div>
+                <div className="p-3 bg-subtle border border-line-soft rounded-xl">
+                  <span className="text-[10px] uppercase font-semibold text-ink-muted block mb-0.5">Location</span>
+                  <div className="font-medium text-ink">{viewReport.branch_name}</div>
+                  <div className="text-ink-muted">{viewReport.business_name}</div>
                 </div>
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Reported By</span>
-                  <div className="font-medium text-slate-900">{viewReport.reported_by_name || 'System Admin'}</div>
-                  <div className="text-slate-500">{viewReport.reported_by_email || '—'}</div>
+                <div className="p-3 bg-subtle border border-line-soft rounded-xl">
+                  <span className="text-[10px] uppercase font-semibold text-ink-muted block mb-0.5">Reported By</span>
+                  <div className="font-medium text-ink">{viewReport.reported_by_name || 'System Admin'}</div>
+                  <div className="text-ink-muted">{viewReport.reported_by_email || '—'}</div>
                 </div>
               </div>
 
               {/* Reason Details Note */}
               <div>
-                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1">
+                <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wider block mb-1">
                   Incident Explanation / Notes
                 </span>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 leading-relaxed min-h-[50px]">
+                <div className="p-3 bg-subtle border border-line rounded-xl text-xs text-ink-secondary leading-relaxed min-h-[50px]">
                   {viewReport.reason_details || 'No additional explanation was recorded.'}
                 </div>
               </div>
 
               {/* Evidence Photos Gallery */}
               <div>
-                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-2">
+                <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wider block mb-2">
                   Photographic Evidence ({viewReport.photos?.length || 0})
                 </span>
                 {viewReport.photos && viewReport.photos.length > 0 ? (
@@ -1034,31 +1034,31 @@ export default function DamageProducts() {
                       <div
                         key={p.id || i}
                         onClick={() => setLightboxPhoto(p.photo_path)}
-                        className="group relative aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-pointer shadow-xs"
+                        className="group relative aspect-square rounded-xl border border-line overflow-hidden bg-sunken cursor-pointer shadow-xs"
                       >
                         <img
                           src={p.photo_path}
                           alt={`Evidence #${i + 1}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <ExternalLink size={16} className="text-white drop-shadow" />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-center text-xs text-slate-400">
+                  <div className="p-4 bg-subtle border border-line-soft rounded-xl text-center text-xs text-ink-muted">
                     No photographic evidence was uploaded with this damage report.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-line-soft flex justify-end">
               <button
                 onClick={() => setViewReport(null)}
-                className="h-10 px-5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                className="h-10 px-5 bg-ink text-white text-sm font-medium rounded-lg hover:bg-ink-hover transition-colors"
               >
                 Close
               </button>
@@ -1071,24 +1071,24 @@ export default function DamageProducts() {
       {/* DELETE CONFIRMATION MODAL                                                 */}
       {/* ========================================================================= */}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-full bg-rose-50 text-rose-600">
+              <div className="p-2.5 rounded-full bg-danger-soft text-danger-fg">
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 text-sm">Delete Damage Report?</h3>
-                <p className="text-xs text-slate-400">#DR-{deleteTarget.id}</p>
+                <h3 className="font-semibold text-ink text-sm">Delete Damage Report?</h3>
+                <p className="text-xs text-ink-muted">#DR-{deleteTarget.id}</p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 mb-2">
+            <p className="text-sm text-ink-secondary mb-2">
               This will permanently delete this damage record for{' '}
-              <span className="font-medium text-slate-900">{deleteTarget.item_name}</span> and any
+              <span className="font-medium text-ink">{deleteTarget.item_name}</span> and any
               attached evidence photos.
             </p>
-            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 mb-5">
+            <p className="text-xs text-ink-muted bg-subtle border border-line rounded-lg p-3 mb-5">
               {deleteTarget.quantity} unit(s) will be restored back to {deleteTarget.branch_name}'s stock.
               This action cannot be undone.
             </p>
@@ -1097,14 +1097,14 @@ export default function DamageProducts() {
               <button
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="h-10 px-4 bg-sunken hover:bg-line text-ink-secondary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteReport}
                 disabled={deleting}
-                className="inline-flex items-center gap-2 h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 h-10 px-4 bg-danger hover:bg-danger-hover text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {deleting ? (
                   <>
@@ -1128,13 +1128,13 @@ export default function DamageProducts() {
       {/* ========================================================================= */}
       {lightboxPhoto && (
         <div 
-          className="fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4 backdrop-blur-xs"
+          className="fixed inset-0 bg-ink/85 z-[60] flex items-center justify-center p-4 backdrop-blur-xs"
           onClick={() => setLightboxPhoto(null)}
         >
           <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center">
             <button
               onClick={() => setLightboxPhoto(null)}
-              className="absolute -top-10 right-0 text-white/80 hover:text-white p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="absolute -top-10 right-0 text-white/80 hover:text-white p-1 rounded-full bg-surface/10 hover:bg-surface/20 transition-colors"
             >
               <X size={20} />
             </button>

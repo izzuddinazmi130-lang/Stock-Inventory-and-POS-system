@@ -175,7 +175,7 @@ export default function BranchDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="text-center py-12 text-slate-400 text-sm">
+        <div className="text-center py-12 text-ink-muted text-sm">
           Loading branch details & inventory...
         </div>
       </Layout>
@@ -185,7 +185,7 @@ export default function BranchDetail() {
   if (!branch) {
     return (
       <Layout>
-        <div className="text-center py-12 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+        <div className="text-center py-12 bg-subtle border border-line rounded-xl text-ink-secondary">
           Branch profile not found.
         </div>
       </Layout>
@@ -205,19 +205,19 @@ export default function BranchDetail() {
 
   return (
     <Layout>
-      <nav className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
-        <Link to="/businesses" className="hover:text-slate-900 transition-colors">Businesses</Link>
+      <nav className="text-sm text-ink-muted mb-4 flex items-center gap-1.5">
+        <Link to="/businesses" className="hover:text-ink transition-colors">Businesses</Link>
         <span>/</span>
-        <Link to={`/businesses/${branch.business_id}/branches`} className="hover:text-slate-900 transition-colors">{branch.business_name || 'Business'}</Link>
+        <Link to={`/businesses/${branch.business_id}/branches`} className="hover:text-ink transition-colors">{branch.business_name || 'Business'}</Link>
         <span>/</span>
-        <span className="text-slate-900 font-semibold">{branch.name}</span>
+        <span className="text-ink font-semibold">{branch.name}</span>
       </nav>
 
       {message && (
         <div className={`mb-6 flex items-center justify-between transition-all ${
           message.type === 'success' 
-            ? 'p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm' 
-            : 'p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm'
+            ? 'p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm' 
+            : 'p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
         }`}>
           <div className="flex items-center gap-2 font-semibold">
             {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
@@ -230,108 +230,108 @@ export default function BranchDetail() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{branch.name}</h1>
-            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-indigo-50 text-indigo-700 font-mono">
+            <h1 className="text-2xl font-extrabold text-ink tracking-tight">{branch.name}</h1>
+            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-accent-soft text-accent-fg font-mono">
               Code: {branch.branch_code || `BR-${branch.id}`}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-ink-muted mt-1">
             Dedicated inventory catalog, stock threshold metrics, and management actions for {branch.name}.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={openAddExistingModal} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
-            <Layers size={14} className="text-indigo-600" /> Add Existing Product
+          <button onClick={openAddExistingModal} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors shadow-sm">
+            <Layers size={14} className="text-accent" /> Add Existing Product
           </button>
-          <Link to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+          <Link to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors">
             <Plus size={16} /> Add Product
           </Link>
           {isSuperAdmin && (
-            <button onClick={() => { setMessage(null); setShowEditModal(true); }} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+            <button onClick={() => { setMessage(null); setShowEditModal(true); }} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors">
               <Edit3 size={14} /> Edit Branch
             </button>
           )}
-          <Link to={`/reports?business_id=${branch.business_id}&branch_id=${id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-indigo-600 text-sm font-medium rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors">
+          <Link to={`/reports?business_id=${branch.business_id}&branch_id=${id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-accent text-sm font-medium rounded-lg border border-accent-line hover:bg-accent-soft transition-colors">
             <Boxes className="w-4 h-4" /> Reports
           </Link>
-          <Link to={`/branches/${id}/stores`} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-amber-600 text-sm font-medium rounded-lg border border-amber-200 hover:bg-amber-50 transition-colors">
+          <Link to={`/branches/${id}/stores`} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-warning-fg text-sm font-medium rounded-lg border border-warning-line hover:bg-warning-soft transition-colors">
             <Store className="w-4 h-4" /> Pop-Up Stores
           </Link>
-          <button onClick={fetchData} className="inline-flex items-center gap-2 h-9 px-3 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors" title="Refresh Data">
+          <button onClick={fetchData} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors" title="Refresh Data">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm" style={{ borderLeft: `3px solid ${bColor}` }}>
-        <div className="flex items-center gap-3 text-slate-700">
-          <MapPin className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+      <div className="bg-surface border border-line rounded-xl p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm" style={{ borderLeft: `3px solid ${bColor}` }}>
+        <div className="flex items-center gap-3 text-ink-secondary">
+          <MapPin className="w-5 h-5 text-accent flex-shrink-0" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[11px] font-semibold uppercase">Location</span>
-            <span className="font-medium text-slate-900">{branch.city ? `${branch.city}, ${branch.state || ''}` : branch.address || 'Standard Location'}</span>
+            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Location</span>
+            <span className="font-medium text-ink">{branch.city ? `${branch.city}, ${branch.state || ''}` : branch.address || 'Standard Location'}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-slate-700">
-          <Users className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 text-ink-secondary">
+          <Users className="w-5 h-5 text-success-fg flex-shrink-0" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[11px] font-semibold uppercase">Branch Contact</span>
-            <span className="font-medium text-slate-900">{branch.contact_person || 'HQ Manager'}</span>
+            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Branch Contact</span>
+            <span className="font-medium text-ink">{branch.contact_person || 'HQ Manager'}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-slate-700">
-          <Phone className="w-5 h-5 text-amber-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 text-ink-secondary">
+          <Phone className="w-5 h-5 text-warning-fg flex-shrink-0" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[11px] font-semibold uppercase">Contact Phone</span>
-            <span className="font-mono font-medium text-slate-900">{branch.contact_phone || branch.contact_email || '—'}</span>
+            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Contact Phone</span>
+            <span className="font-mono font-medium text-ink">{branch.contact_phone || branch.contact_email || '—'}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-slate-700">
-          <Clock className="w-5 h-5 text-purple-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 text-ink-secondary">
+          <Clock className="w-5 h-5 text-violet-fg flex-shrink-0" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[11px] font-semibold uppercase">Operating Hours</span>
-            <span className="font-medium text-slate-900">{branch.operating_hours || 'Mon - Sun 10:00 - 22:00'}</span>
+            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Operating Hours</span>
+            <span className="font-medium text-ink">{branch.operating_hours || 'Mon - Sun 10:00 - 22:00'}</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
+          <div className="p-3 bg-accent-soft text-accent rounded-lg">
             <Package size={24} />
           </div>
           <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500">TOTAL PRODUCTS LISTED</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.totalItems}</p>
+            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">TOTAL PRODUCTS LISTED</p>
+            <p className="text-2xl font-bold text-ink">{stats.totalItems}</p>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
+          <div className="p-3 bg-success-soft text-success-fg rounded-lg">
             <Boxes size={24} />
           </div>
           <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500">TOTAL PHYSICAL UNITS</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.totalStock}</p>
+            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">TOTAL PHYSICAL UNITS</p>
+            <p className="text-2xl font-bold text-ink">{stats.totalStock}</p>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-          <div className={`p-3 rounded-lg ${stats.lowStockCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
+          <div className={`p-3 rounded-lg ${stats.lowStockCount > 0 ? 'bg-danger-soft text-danger-fg' : 'bg-warning-soft text-warning-fg'}`}>
             <AlertTriangle size={24} />
           </div>
           <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-slate-500">LOW STOCK ALERTS</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.lowStockCount}</p>
+            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">LOW STOCK ALERTS</p>
+            <p className="text-2xl font-bold text-ink">{stats.lowStockCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-8">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden mb-8">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
           <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-indigo-600" />
-            <h3 className="font-semibold text-slate-900 text-sm">Branch Products Catalog ({items.length})</h3>
+            <Package className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-ink text-sm">Branch Products Catalog ({items.length})</h3>
           </div>
-          <Link to={`/products?business_id=${branch.business_id}&branch_id=${id}`} className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">
+          <Link to={`/products?business_id=${branch.business_id}&branch_id=${id}`} className="text-sm text-accent hover:text-accent-fg font-semibold transition-colors">
             Open Full Products Manager &rarr;
           </Link>
         </div>
@@ -340,18 +340,18 @@ export default function BranchDetail() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left">SKU & Item Name</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left">Category</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left">Available Stock</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left">Selling Price</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-right">Actions</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">SKU & Item Name</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Category</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Available Stock</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Selling Price</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-soft">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500 text-sm bg-white">
-                    No products listed under <strong className="text-slate-900">{branch.name}</strong> yet.
+                  <td colSpan="5" className="p-8 text-center text-ink-muted text-sm bg-surface">
+                    No products listed under <strong className="text-ink">{branch.name}</strong> yet.
                   </td>
                 </tr>
               ) : (
@@ -361,43 +361,43 @@ export default function BranchDetail() {
                   const isOutOfStock = qty <= 0;
                   const isLow = !isOutOfStock && qty <= minQty;
                   const stockBadgeClass = isOutOfStock
-                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-danger-soft text-danger-fg border border-danger-line"
                     : isLow
-                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
-                    : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg border border-warning-line"
+                    : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg border border-success-line";
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors bg-white">
-                      <td className="px-4 py-3 text-sm border-b border-slate-100">
-                        <span className="font-bold text-slate-900 block">{item.item_name}</span>
-                        <span className="font-mono text-xs text-indigo-600 block">{item.item_code}</span>
+                    <tr key={item.id} className="hover:bg-subtle transition-colors bg-surface">
+                      <td className="px-4 py-3 text-sm border-b border-line-soft">
+                        <span className="font-bold text-ink block">{item.item_name}</span>
+                        <span className="font-mono text-xs text-accent block">{item.item_code}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm border-b border-slate-100">
-                        <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{item.category || 'General'}</span>
+                      <td className="px-4 py-3 text-sm border-b border-line-soft">
+                        <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{item.category || 'General'}</span>
                       </td>
-                      <td className="px-4 py-3 border-b border-slate-100 text-sm">
+                      <td className="px-4 py-3 border-b border-line-soft text-sm">
                         <div className="flex items-center gap-2 font-mono font-bold">
                           <span className={stockBadgeClass}>
                             {item.quantity} units
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-1 font-mono">Min: {minQty}</div>
+                        <div className="text-[10px] text-ink-muted mt-1 font-mono">Min: {minQty}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm font-mono text-slate-900 font-semibold border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-mono text-ink font-semibold border-b border-line-soft">
                         RM {parseFloat(item.selling_price || 0).toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-sm border-b border-slate-100 text-right">
+                      <td className="px-4 py-3 text-sm border-b border-line-soft text-right">
                         <div className="flex justify-end items-center gap-1.5">
                           <Link
                             to={`/products?business_id=${branch.business_id}&branch_id=${id}&product_id=${item.id}`}
-                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-success-soft text-success-fg text-xs font-medium rounded-lg border border-success-line hover:bg-success-muted transition-colors"
                             title="Manage Stock Balance for this Product"
                           >
                             <ArrowDownLeft className="w-3.5 h-3.5" /> Manage
                           </Link>
                           <Link
                             to={`/qr/generate?product_id=${item.id}`}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-indigo-600 border border-slate-200 hover:bg-indigo-50 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-accent border border-line hover:bg-accent-soft transition-colors"
                             title="Generate QR Code"
                           >
                             <QrCode className="w-4 h-4" />
@@ -413,21 +413,21 @@ export default function BranchDetail() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between mb-8 shadow-sm">
+      <div className="bg-surface border border-line rounded-xl p-5 flex items-center justify-between mb-8 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+          <div className="p-3 bg-accent-soft text-accent rounded-lg">
             <Users size={22} />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-sm">Assigned Personnel ({admins.length})</h4>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h4 className="font-bold text-ink text-sm">Assigned Personnel ({admins.length})</h4>
+            <p className="text-sm text-ink-muted mt-0.5">
               {admins.length > 0 ? admins.map(a => a.full_name).join(', ') : 'No dedicated branch admin assigned yet'}
             </p>
           </div>
         </div>
         <Link 
           to={`/users?business_id=${branch.business_id}&branch_id=${branch.id}`} 
-          className="inline-flex items-center gap-2 h-9 px-3 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-2 h-9 px-3 text-ink-secondary text-sm font-medium rounded-lg hover:bg-sunken hover:text-ink transition-colors"
         >
           Manage Personnel
         </Link>

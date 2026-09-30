@@ -8,7 +8,7 @@ import {
   ShieldCheck, ArrowLeftRight, Receipt, PackageX
 } from 'lucide-react';
 
-const SECTION_LABEL = 'px-4 mb-1 mt-5 text-[10px] font-semibold tracking-widest uppercase text-slate-400';
+const SECTION_LABEL = 'px-4 mb-1 mt-5 text-[10px] font-semibold tracking-widest uppercase text-ink-muted';
 
 function NavItem({ to, icon: Icon, label, count }) {
   return (
@@ -18,15 +18,15 @@ function NavItem({ to, icon: Icon, label, count }) {
       className={({ isActive }) =>
         `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium mx-2 transition-colors ${
           isActive
-            ? 'bg-[#DCE8FB] text-slate-900 font-semibold'
-            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+            ? 'bg-[#DCE8FB] text-ink font-semibold'
+            : 'text-ink-muted hover:text-ink hover:bg-subtle'
         }`
       }
     >
       <Icon className="w-4 h-4 flex-shrink-0" />
       <span className="flex-1 truncate">{label}</span>
       {count !== undefined && count !== null && (
-        <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{count}</span>
+        <span className="text-[10px] font-semibold bg-sunken text-ink-muted rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{count}</span>
       )}
     </NavLink>
   );
@@ -41,7 +41,7 @@ export default function Sidebar() {
   const scopeLabel = selectedBusiness ? selectedBusiness.name.toUpperCase() : 'ALL BUSINESSES';
 
   return (
-    <aside className="w-56 bg-white border-r border-slate-200 flex-shrink-0 min-h-[calc(100vh-64px)] flex flex-col py-3">
+    <aside className="w-56 bg-surface border-r border-line flex-shrink-0 min-h-[calc(100vh-64px)] flex flex-col py-3">
       <div className="flex-1">
         {isSuperAdmin ? (
           <>
@@ -82,12 +82,12 @@ export default function Sidebar() {
       </div>
 
       {/* Footer health card */}
-      <div className="mx-3 mb-3 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+      <div className="mx-3 mb-3 p-3 bg-subtle border border-line-soft rounded-xl">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          <ShieldCheck className="w-4 h-4 text-success-fg flex-shrink-0" />
           <div>
-            <div className="text-[12px] font-semibold text-slate-800">System healthy</div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wide">LAST SYNC · just now</div>
+            <div className="text-[12px] font-semibold text-ink">System healthy</div>
+            <div className="text-[10px] text-ink-muted uppercase tracking-wide">LAST SYNC · just now</div>
           </div>
         </div>
       </div>

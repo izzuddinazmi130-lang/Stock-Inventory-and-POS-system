@@ -286,11 +286,11 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">User Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Administer system users, pending registration approvals, and branch roles</p>
+          <h1 className="text-xl font-bold text-ink">User Management</h1>
+          <p className="text-sm text-ink-muted mt-0.5">Administer system users, pending registration approvals, and branch roles</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm cursor-pointer">
+          <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm cursor-pointer">
             <Plus className="w-4 h-4" /> Add New User
           </button>
         </div>
@@ -299,7 +299,7 @@ export default function UserManagement() {
       {/* Alerts */}
       {message && (
         <div className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${
-          message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
+          message.type === 'success' ? 'bg-success-soft border-success-line text-success-fg' : 'bg-danger-soft border-danger-line text-danger-fg'
         }`}>
           <div className="flex items-center gap-2 text-sm font-medium">
             {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -324,12 +324,12 @@ export default function UserManagement() {
 
       {/* Active Scope Filter Banner */}
       {(filterBusiness || filterBranch || searchQuery) && (
-        <div className="mb-4 p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2 text-xs text-indigo-900">
-            <Filter size={15} className="text-indigo-600 flex-shrink-0" />
+        <div className="mb-4 p-3 bg-accent-soft/70 border border-accent-line rounded-xl flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2 text-xs text-accent-fg">
+            <Filter size={15} className="text-accent flex-shrink-0" />
             <span>
               Filtered to Branch Personnel: 
-              <strong className="text-indigo-950 font-semibold ml-1">
+              <strong className="text-accent-fg font-semibold ml-1">
                 {allBranches.find(b => String(b.id) === String(filterBranch))?.name 
                   ? `${allBranches.find(b => String(b.id) === String(filterBranch))?.name}` 
                   : ''}
@@ -341,13 +341,13 @@ export default function UserManagement() {
                   : ''}
               </strong>
             </span>
-            <span className="text-[11px] text-indigo-700 font-semibold bg-white px-2 py-0.5 rounded-full border border-indigo-200">
+            <span className="text-[11px] text-accent-fg font-semibold bg-surface px-2 py-0.5 rounded-full border border-accent-line">
               {users.length} {users.length === 1 ? 'user' : 'users'}
             </span>
           </div>
           <button
             onClick={clearBranchFilter}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-semibold text-accent hover:text-accent-fg underline flex items-center gap-1 cursor-pointer"
           >
             <X size={13} />
             <span>Clear Branch Filter (Show All)</span>
@@ -356,15 +356,15 @@ export default function UserManagement() {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+      <div className="bg-surface border border-line rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-xs">
         {/* Status Tabs */}
-        <div className="flex bg-slate-100 p-1 rounded-lg gap-1">
+        <div className="flex bg-sunken p-1 rounded-lg gap-1">
           {STATUS_TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize transition-colors ${
-                statusFilter === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                statusFilter === tab ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink-secondary'
               }`}
             >
               {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -385,7 +385,7 @@ export default function UserManagement() {
               if (e.target.value) params.business_id = e.target.value;
               setSearchParams(params);
             }}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="h-9 rounded-lg border border-line bg-surface px-3 text-xs text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">All Businesses</option>
             {businesses.map(b => (
@@ -404,7 +404,7 @@ export default function UserManagement() {
               if (e.target.value) params.branch_id = e.target.value;
               setSearchParams(params);
             }}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="h-9 rounded-lg border border-line bg-surface px-3 text-xs text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">All Branches</option>
             {branchesForFilter.map(b => (
@@ -414,20 +414,20 @@ export default function UserManagement() {
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search personnel..."
-              className="h-9 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-9 w-44 rounded-lg border border-line bg-surface pl-8 pr-2.5 text-xs text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
           {(filterBusiness || filterBranch || searchQuery) && (
             <button
               onClick={clearBranchFilter}
-              className="h-9 px-2.5 inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors cursor-pointer"
+              className="h-9 px-2.5 inline-flex items-center gap-1 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors cursor-pointer"
               title="Reset filters"
             >
               <X size={13} />
@@ -438,14 +438,14 @@ export default function UserManagement() {
       </div>
 
       {/* Tab Content 1: Active Users Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">System Accounts ({users.length})</h3>
+            <Users className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-ink text-sm">System Accounts ({users.length})</h3>
           </div>
           {filterBranch && (
-            <span className="text-xs text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-medium border border-indigo-100">
+            <span className="text-xs text-accent bg-accent-soft px-2.5 py-0.5 rounded-full font-medium border border-accent-muted">
               Filtered: {allBranches.find(b => String(b.id) === String(filterBranch))?.name}
             </span>
           )}
@@ -455,53 +455,53 @@ export default function UserManagement() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">User Details</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Role</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Business</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Assigned Branch of Business</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Last Login</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-left whitespace-nowrap">Created At</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 bg-slate-50 border-b border-slate-200 text-right whitespace-nowrap">Actions</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">User Details</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Role</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Business</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Assigned Branch of Business</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Last Login</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left whitespace-nowrap">Created At</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-8 text-slate-500 text-sm border-b border-slate-100">
+                  <td colSpan="8" className="text-center py-8 text-ink-muted text-sm border-b border-line-soft">
                     No system users found matching the selected filters.
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">
+                  <tr key={u.id} className="hover:bg-subtle transition-colors">
+                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
                       <button
                         onClick={() => setInspectUser(u)}
                         className="text-left group cursor-pointer"
                         title="Click to view full branch assignment profile"
                       >
-                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                        <div className="font-bold text-ink group-hover:text-accent transition-colors flex items-center gap-1.5">
                           <span>{u.full_name}</span>
-                          <Eye size={12} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                          <Eye size={12} className="opacity-0 group-hover:opacity-100 text-accent transition-opacity" />
                         </div>
-                        <div className="font-mono text-xs text-indigo-600">{u.email}</div>
+                        <div className="font-mono text-xs text-accent">{u.email}</div>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">
+                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        u.role === 'super_admin' ? 'bg-violet-50 text-violet-700' : 'bg-amber-50 text-amber-700'
+                        u.role === 'super_admin' ? 'bg-violet-soft text-violet-fg' : 'bg-warning-soft text-warning-fg'
                       }`}>
                         {u.role === 'super_admin' ? 'Super Admin' : 'Branch Admin'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100 text-xs">
+                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft text-xs">
                       {u.role === 'super_admin' ? (
                         <div className="flex flex-col gap-1">
-                          <span className="text-[11px] font-bold text-violet-700">All Businesses</span>
+                          <span className="text-[11px] font-bold text-violet-fg">All Businesses</span>
                           <div className="flex flex-wrap gap-1">
                             {businesses.map(b => (
-                              <span key={b.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                              <span key={b.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-sunken text-ink-secondary border border-line">
                                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: b.id === 1 ? '#B4502E' : '#2563EB' }} />
                                 {b.name}
                               </span>
@@ -509,18 +509,18 @@ export default function UserManagement() {
                           </div>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-50 text-slate-800 border border-slate-200">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-subtle text-ink border border-line">
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: u.business_id === 1 ? '#B4502E' : '#2563EB' }} />
                           {u.business_name || 'Unassigned'}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">
+                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
                       {u.role === 'super_admin' ? (
                         <div className="flex flex-col gap-1.5 max-w-sm">
                           <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold bg-violet-100 text-violet-800 border border-violet-200">
-                              <ShieldCheck size={12} className="text-violet-700" />
+                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold bg-violet-muted text-violet-fg border border-violet-line">
+                              <ShieldCheck size={12} className="text-violet-fg" />
                               All Branches Scope (HQ)
                             </span>
                           </div>
@@ -528,12 +528,12 @@ export default function UserManagement() {
                             {allBranches.map(b => (
                               <span
                                 key={b.id}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-sunken text-ink-secondary border border-line"
                                 title={`${b.business_name} • ${b.name}`}
                               >
                                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: b.business_id === 1 ? '#B4502E' : '#2563EB' }} />
                                 <span>{b.name}</span>
-                                {b.branch_code && <span className="text-slate-400 font-mono">({b.branch_code})</span>}
+                                {b.branch_code && <span className="text-ink-muted font-mono">({b.branch_code})</span>}
                               </span>
                             ))}
                           </div>
@@ -541,12 +541,12 @@ export default function UserManagement() {
                       ) : (
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5">
-                            <Building2 size={13} className="text-indigo-600 flex-shrink-0" />
-                            <span className="font-bold text-slate-900 text-xs">
+                            <Building2 size={13} className="text-accent flex-shrink-0" />
+                            <span className="font-bold text-ink text-xs">
                               {u.branch_name || 'Unassigned Branch'}
                             </span>
                             {u.branch_code && (
-                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-lg bg-sunken text-ink-secondary border border-line">
                                 {u.branch_code}
                               </span>
                             )}
@@ -554,28 +554,28 @@ export default function UserManagement() {
                         </div>
                       )}
                     </td>
-                      <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ${
-                          u.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-                          u.status === 'pending' ? 'bg-amber-50 text-amber-700' :
-                          u.status === 'suspended' ? 'bg-orange-50 text-orange-700' :
-                          u.status === 'declined' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'
+                          u.status === 'active' ? 'bg-success-soft text-success-fg' :
+                          u.status === 'pending' ? 'bg-warning-soft text-warning-fg' :
+                          u.status === 'suspended' ? 'bg-warning-soft text-warning-fg' :
+                          u.status === 'declined' ? 'bg-danger-soft text-danger-fg' : 'bg-sunken text-ink-secondary'
                         }`}>
                           {u.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-500 border-b border-slate-100 text-xs">
+                      <td className="px-4 py-3 text-sm text-ink-muted border-b border-line-soft text-xs">
                         {relativeTime(u.last_login)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-500 border-b border-slate-100 font-mono text-xs">
+                      <td className="px-4 py-3 text-sm text-ink-muted border-b border-line-soft font-mono text-xs">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100 text-right">
+                      <td className="px-4 py-3 text-sm text-ink border-b border-line-soft text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* View Branch Details Button */}
                           <button
                             onClick={() => setInspectUser(u)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle hover:text-accent transition-colors"
                             title="View Branch Assignment Details"
                           >
                             <Eye size={14} />
@@ -583,30 +583,30 @@ export default function UserManagement() {
 
                           {u.status === 'pending' && (
                             <>
-                              <button onClick={() => handleApprove(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors" title="Approve"><Check className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => handleReject(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-rose-50 text-rose-700 text-xs font-medium rounded-lg hover:bg-rose-100 transition-colors" title="Decline"><X className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleApprove(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-success-soft text-success-fg text-xs font-medium rounded-lg hover:bg-success-muted transition-colors" title="Approve"><Check className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleReject(u.id, u.full_name)} className="inline-flex items-center gap-1 h-8 px-2 bg-danger-soft text-danger-fg text-xs font-medium rounded-lg hover:bg-danger-muted transition-colors" title="Decline"><X className="w-3.5 h-3.5" /></button>
                             </>
                           )}
                           {u.status === 'active' && (
-                            <button onClick={() => handleSuspend(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-amber-600 text-xs font-medium rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors">
+                            <button onClick={() => handleSuspend(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-warning-fg text-xs font-medium rounded-lg bg-warning-soft hover:bg-warning-muted border border-warning-line transition-colors">
                               Suspend
                             </button>
                           )}
                           {u.status === 'suspended' && (
-                            <button onClick={() => handleActivate(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-emerald-700 text-xs font-medium rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                            <button onClick={() => handleActivate(u.id)} className="inline-flex items-center gap-1 h-8 px-3 text-success-fg text-xs font-medium rounded-lg bg-success-soft hover:bg-success-muted border border-success-line transition-colors">
                               Activate
                             </button>
                           )}
                           <button
                             onClick={() => openEditModal(u)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle hover:text-ink transition-colors"
                             title="Edit User Assignment"
                           >
                             <Edit3 size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(u.id, u.full_name)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-rose-600 border border-slate-200 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-danger-fg border border-line hover:bg-danger-soft hover:text-danger-fg transition-colors"
                             title="Delete User"
                           >
                             <Trash2 size={14} />
@@ -674,31 +674,31 @@ export default function UserManagement() {
 
       {/* ── Inspect User Branch Access Modal ── */}
       {inspectUser && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-line rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
             {/* Modal Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-start justify-between pb-4 border-b border-line-soft">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base ${
-                  inspectUser.role === 'super_admin' ? 'bg-violet-600' : 'bg-indigo-600'
+                  inspectUser.role === 'super_admin' ? 'bg-violet' : 'bg-accent'
                 }`}>
                   {inspectUser.full_name ? inspectUser.full_name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <h3 className="font-bold text-ink text-base flex items-center gap-2">
                     <span>{inspectUser.full_name}</span>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      inspectUser.role === 'super_admin' ? 'bg-violet-50 text-violet-700' : 'bg-indigo-50 text-indigo-700'
+                      inspectUser.role === 'super_admin' ? 'bg-violet-soft text-violet-fg' : 'bg-accent-soft text-accent-fg'
                     }`}>
                       {inspectUser.role === 'super_admin' ? 'Super Admin' : 'Branch Admin'}
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">{inspectUser.email}</p>
+                  <p className="text-xs text-ink-muted font-mono mt-0.5">{inspectUser.email}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setInspectUser(null)} 
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-ink-muted hover:text-ink-secondary p-1 rounded-lg hover:bg-sunken transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -707,20 +707,20 @@ export default function UserManagement() {
             <div className="py-4 space-y-4">
               {/* Status and Login Info */}
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <span className="block text-[10px] font-semibold uppercase text-slate-400">Account Status</span>
+                <div className="p-3 bg-subtle border border-line-soft rounded-lg">
+                  <span className="block text-[10px] font-semibold uppercase text-ink-muted">Account Status</span>
                   <span className={`inline-flex items-center gap-1 font-bold mt-1 uppercase ${
-                    inspectUser.status === 'active' ? 'text-emerald-700' :
-                    inspectUser.status === 'suspended' ? 'text-amber-700' : 'text-slate-700'
+                    inspectUser.status === 'active' ? 'text-success-fg' :
+                    inspectUser.status === 'suspended' ? 'text-warning-fg' : 'text-ink-secondary'
                   }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${inspectUser.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${inspectUser.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
                     {inspectUser.status}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                  <span className="block text-[10px] font-semibold uppercase text-slate-400">Last Activity</span>
-                  <span className="block font-bold text-slate-900 mt-1">
+                <div className="p-3 bg-subtle border border-line-soft rounded-lg">
+                  <span className="block text-[10px] font-semibold uppercase text-ink-muted">Last Activity</span>
+                  <span className="block font-bold text-ink mt-1">
                     {relativeTime(inspectUser.last_login)}
                   </span>
                 </div>
@@ -728,16 +728,16 @@ export default function UserManagement() {
 
               {/* Branch Assignment Scope */}
               <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Building2 size={14} className="text-indigo-600" />
+                <h4 className="text-xs font-bold text-ink uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Building2 size={14} className="text-accent" />
                   Assigned Branch Scope &amp; Locations
                 </h4>
 
                 {inspectUser.role === 'super_admin' ? (
                   <div className="space-y-3">
-                    <div className="p-3.5 bg-violet-50 border border-violet-200 rounded-xl text-xs text-violet-900 leading-relaxed">
-                      <div className="font-bold flex items-center gap-1.5 text-violet-950 mb-1">
-                        <ShieldCheck size={15} className="text-violet-700" />
+                    <div className="p-3.5 bg-violet-soft border border-violet-line rounded-xl text-xs text-violet-fg leading-relaxed">
+                      <div className="font-bold flex items-center gap-1.5 text-violet-fg mb-1">
+                        <ShieldCheck size={15} className="text-violet-fg" />
                         Universal Cross-Branch Authority (HQ Scope)
                       </div>
                       This user has global super-administrator privileges with unrestricted administrative access to manage all businesses and branches:
@@ -745,15 +745,15 @@ export default function UserManagement() {
 
                     <div className="space-y-1.5">
                       {allBranches.map((br) => (
-                        <div key={br.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+                        <div key={br.id} className="p-2.5 bg-subtle border border-line rounded-lg flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
-                            <CheckCircle2 size={15} className="text-emerald-600 flex-shrink-0" />
+                            <CheckCircle2 size={15} className="text-success-fg flex-shrink-0" />
                             <div>
-                              <span className="font-bold text-slate-800">{br.name}</span>
-                              <span className="text-slate-400 text-[11px] ml-1.5">({br.business_name || 'Branch'})</span>
+                              <span className="font-bold text-ink">{br.name}</span>
+                              <span className="text-ink-muted text-[11px] ml-1.5">({br.business_name || 'Branch'})</span>
                             </div>
                           </div>
-                          <span className="text-[10px] font-semibold text-violet-700 bg-violet-100/70 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-semibold text-violet-fg bg-violet-muted/70 px-2 py-0.5 rounded-lg">
                             Full Admin Control
                           </span>
                         </div>
@@ -763,44 +763,44 @@ export default function UserManagement() {
                 ) : (
                   <div className="space-y-3">
                     {/* Primary Assigned Branch */}
-                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs">
+                    <div className="p-3.5 bg-success-soft border border-success-line rounded-xl text-xs">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
-                          <CheckCircle2 size={13} className="text-emerald-600" /> Primary Branch Assigned
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-success-fg flex items-center gap-1">
+                          <CheckCircle2 size={13} className="text-success-fg" /> Primary Branch Assigned
                         </span>
                         {inspectUser.branch_code && (
-                          <span className="font-mono font-bold text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                          <span className="font-mono font-bold text-[10px] bg-success-muted text-success-fg px-1.5 py-0.5 rounded-lg">
                             {inspectUser.branch_code}
                           </span>
                         )}
                       </div>
-                      <div className="text-sm font-bold text-emerald-950 mb-0.5">
+                      <div className="text-sm font-bold text-success-fg mb-0.5">
                         {inspectUser.branch_name || 'Unassigned Branch'}
                       </div>
-                      <div className="text-emerald-800 text-[11px]">
-                        Business: <strong className="text-emerald-950">{inspectUser.business_name || 'Unassigned'}</strong>
+                      <div className="text-success-fg text-[11px]">
+                        Business: <strong className="text-success-fg">{inspectUser.business_name || 'Unassigned'}</strong>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-emerald-200/60 text-[11px] text-emerald-900 leading-snug">
+                      <div className="mt-2 pt-2 border-t border-success-line/60 text-[11px] text-success-fg leading-snug">
                         ✓ Authorized to manage stock adjustments, stock out, QR code scans, and live sales stores for this branch.
                       </div>
                     </div>
 
                     {/* Other Branches (Restricted) */}
                     <div>
-                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                      <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">
                         Other Branches in System (Access Restricted)
                       </div>
                       <div className="space-y-1.5">
                         {allBranches
                           .filter(br => String(br.id) !== String(inspectUser.branch_id))
                           .map((br) => (
-                            <div key={br.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs opacity-75">
+                            <div key={br.id} className="p-2.5 bg-subtle border border-line rounded-lg flex items-center justify-between text-xs opacity-75">
                               <div className="flex items-center gap-2">
-                                <Lock size={13} className="text-slate-400 flex-shrink-0" />
-                                <span className="font-medium text-slate-700">{br.name}</span>
-                                <span className="text-slate-400 text-[11px]">({br.business_name})</span>
+                                <Lock size={13} className="text-ink-muted flex-shrink-0" />
+                                <span className="font-medium text-ink-secondary">{br.name}</span>
+                                <span className="text-ink-muted text-[11px]">({br.business_name})</span>
                               </div>
-                              <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                              <span className="text-[10px] font-medium text-ink-muted bg-sunken px-2 py-0.5 rounded-lg">
                                 No Access
                               </span>
                             </div>
@@ -813,7 +813,7 @@ export default function UserManagement() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-2">
+            <div className="flex justify-between items-center pt-4 border-t border-line-soft mt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -821,7 +821,7 @@ export default function UserManagement() {
                   setInspectUser(null);
                   openEditModal(targetUser);
                 }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-fg hover:underline cursor-pointer"
               >
                 <Edit3 size={13} />
                 <span>Edit User Branch Assignment</span>
@@ -830,7 +830,7 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={() => setInspectUser(null)}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                className="inline-flex items-center gap-2 h-9 px-4 bg-ink text-white text-xs font-medium rounded-lg hover:bg-ink-hover transition-colors"
               >
                 Close
               </button>

@@ -13,7 +13,7 @@ const TABS = [
   { value: 'low', label: 'Running low' },
 ];
 
-const selectClass = 'h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+const selectClass = 'h-9 rounded-lg border border-line bg-surface px-2.5 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent';
 
 // Builds the Point of Sale hand-off link: /qr/scan?receive=<productId>:<qty>,...
 const receiveLink = (rows) => `/qr/scan?receive=${rows.map(r => `${r.id}:${r.suggested_restock}`).join(',')}`;
@@ -88,8 +88,8 @@ export default function LowStock() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Low stock</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl font-bold text-ink">Low stock</h1>
+          <p className="text-sm text-ink-muted mt-0.5">
             Products at or below their “alert at” level{isSuperAdmin ? ' in each branch' : ''}. Restock them before customers find the shelf empty.
           </p>
         </div>
@@ -97,7 +97,7 @@ export default function LowStock() {
           <button
             type="button"
             onClick={() => navigate(receiveLink(shown))}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 self-start sm:self-auto"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-success text-white text-sm font-semibold rounded-lg hover:bg-success-hover self-start sm:self-auto"
           >
             <PackagePlus className="w-4 h-4" /> Restock {shown.length === 1 ? 'this item' : `all ${shown.length}`}
           </button>
@@ -106,44 +106,44 @@ export default function LowStock() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-        <button type="button" onClick={() => setTab('out')} className={`text-left bg-white border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'out' ? 'border-rose-300 ring-1 ring-rose-300' : 'border-slate-200 hover:border-slate-300'}`}>
-          <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0"><PackageX className="w-5 h-5" /></div>
+        <button type="button" onClick={() => setTab('out')} className={`text-left bg-surface border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'out' ? 'border-danger-line ring-1 ring-danger-line' : 'border-line hover:border-line-strong'}`}>
+          <div className="w-10 h-10 rounded-lg bg-danger-soft text-danger-fg flex items-center justify-center flex-shrink-0"><PackageX className="w-5 h-5" /></div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{counts.out}</div>
-            <div className="text-xs text-slate-500">Out of stock: can't be sold right now</div>
+            <div className="text-2xl font-bold text-ink">{counts.out}</div>
+            <div className="text-xs text-ink-muted">Out of stock: can't be sold right now</div>
           </div>
         </button>
-        <button type="button" onClick={() => setTab('low')} className={`text-left bg-white border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'low' ? 'border-amber-300 ring-1 ring-amber-300' : 'border-slate-200 hover:border-slate-300'}`}>
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5" /></div>
+        <button type="button" onClick={() => setTab('low')} className={`text-left bg-surface border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'low' ? 'border-warning-line ring-1 ring-warning-line' : 'border-line hover:border-line-strong'}`}>
+          <div className="w-10 h-10 rounded-lg bg-warning-soft text-warning-fg flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5" /></div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{counts.low}</div>
-            <div className="text-xs text-slate-500">Running low: at or below the alert level</div>
+            <div className="text-2xl font-bold text-ink">{counts.low}</div>
+            <div className="text-xs text-ink-muted">Running low: at or below the alert level</div>
           </div>
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-3 mb-4 flex flex-col md:flex-row md:items-center gap-2">
-        <div className="inline-flex p-0.5 bg-slate-100 rounded-lg self-start">
+      <div className="bg-surface border border-line rounded-xl p-3 mb-4 flex flex-col md:flex-row md:items-center gap-2">
+        <div className="inline-flex p-0.5 bg-sunken rounded-lg self-start">
           {TABS.map(t => (
             <button
               key={t.value}
               type="button"
               onClick={() => setTab(t.value)}
-              className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors ${tab === t.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${tab === t.value ? 'bg-surface text-ink shadow-sm' : 'text-ink-secondary hover:text-ink'}`}
             >
-              {t.label} <span className="ml-0.5 text-slate-400">{tabCount[t.value]}</span>
+              {t.label} <span className="ml-0.5 text-ink-muted">{tabCount[t.value]}</span>
             </button>
           ))}
         </div>
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, SKU, size or category…"
-            className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
         {isSuperAdmin && (
@@ -161,26 +161,26 @@ export default function LowStock() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 bg-danger-soft border border-danger-line rounded-lg text-danger-fg text-sm flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
         </div>
       )}
 
       {/* List */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
         {loading ? (
-          <div className="py-14 text-center text-sm text-slate-400"><RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" /> Checking stock…</div>
+          <div className="py-14 text-center text-sm text-ink-muted"><RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" /> Checking stock…</div>
         ) : shown.length === 0 ? (
           <div className="py-14 text-center">
-            <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
-            <p className="text-sm font-semibold text-slate-700">{items.length === 0 ? 'All stocked up' : 'Nothing matches'}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{items.length === 0 ? 'No product is at or below its alert level.' : 'Try another tab or clear the search.'}</p>
+            <CheckCircle className="w-10 h-10 mx-auto mb-2 text-success" />
+            <p className="text-sm font-semibold text-ink-secondary">{items.length === 0 ? 'All stocked up' : 'Nothing matches'}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{items.length === 0 ? 'No product is at or below its alert level.' : 'Try another tab or clear the search.'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-left text-[11px] uppercase tracking-wider text-slate-500">
+                <tr className="bg-subtle border-b border-line text-left text-[11px] uppercase tracking-wider text-ink-muted">
                   <th className="px-4 py-2.5 font-semibold">Product</th>
                   {isSuperAdmin && <th className="px-4 py-2.5 font-semibold">Branch</th>}
                   <th className="px-4 py-2.5 font-semibold">In stock</th>
@@ -189,28 +189,28 @@ export default function LowStock() {
                   <th className="px-4 py-2.5 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line-soft">
                 {shown.map(i => (
-                  <tr key={`${i.id}-${i.branch_id}`} className="hover:bg-slate-50/60">
+                  <tr key={`${i.id}-${i.branch_id}`} className="hover:bg-subtle/60">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900">{i.name}</p>
-                      <p className="text-xs text-slate-500">
-                        <span className="font-mono text-indigo-600">{i.sku}</span>
+                      <p className="font-semibold text-ink">{i.name}</p>
+                      <p className="text-xs text-ink-muted">
+                        <span className="font-mono text-accent">{i.sku}</span>
                         {i.size && <> · Size {i.size}</>}
                         {i.category && <> · {i.category}</>}
                       </p>
                     </td>
-                    {isSuperAdmin && <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{i.branch_name}</td>}
+                    {isSuperAdmin && <td className="px-4 py-3 text-ink-secondary whitespace-nowrap">{i.branch_name}</td>}
                     <td className="px-4 py-3 whitespace-nowrap"><StockBadge status={i.stock_status} quantity={i.quantity} /></td>
-                    <td className="px-4 py-3 font-mono text-slate-600">{i.min_quantity}</td>
-                    <td className="px-4 py-3 font-mono text-slate-900">+{i.suggested_restock}</td>
+                    <td className="px-4 py-3 font-mono text-ink-secondary">{i.min_quantity}</td>
+                    <td className="px-4 py-3 font-mono text-ink">+{i.suggested_restock}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       {isSuperAdmin ? (
-                        <Link to={`/products?search=${encodeURIComponent(i.sku)}`} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                        <Link to={`/products?search=${encodeURIComponent(i.sku)}`} className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg">
                           View product <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       ) : (
-                        <Link to={receiveLink([i])} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                        <Link to={receiveLink([i])} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-success-line bg-success-soft text-xs font-semibold text-success-fg hover:bg-success-muted">
                           <PackagePlus className="w-3.5 h-3.5" /> Restock
                         </Link>
                       )}
@@ -224,9 +224,9 @@ export default function LowStock() {
       </div>
 
       {!isSuperAdmin && shown.length > 0 && (
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-ink-muted mt-3">
           “Restock” opens the Point of Sale in <strong>Receive stock</strong> mode with the suggested quantity filled in. Change it to what actually arrived, then confirm.
-          The suggestion brings stock back to twice the alert level. Change the alert level in <Link to="/products" className="text-indigo-600 font-semibold">Products</Link>.
+          The suggestion brings stock back to twice the alert level. Change the alert level in <Link to="/products" className="text-accent font-semibold">Products</Link>.
         </p>
       )}
     </Layout>
@@ -235,7 +235,7 @@ export default function LowStock() {
 
 export function StockBadge({ status, quantity }) {
   if (status === 'out') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-xs font-semibold text-rose-700">Out of stock</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft border border-danger-line px-2 py-0.5 text-xs font-semibold text-danger-fg">Out of stock</span>;
   }
-  return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-700">{quantity} left</span>;
+  return <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft border border-warning-line px-2 py-0.5 text-xs font-semibold text-warning-fg">{quantity} left</span>;
 }

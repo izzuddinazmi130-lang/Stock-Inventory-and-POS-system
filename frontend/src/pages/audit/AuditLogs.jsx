@@ -74,7 +74,7 @@ function parseAuditRecord(log) {
   
   let category = 'system'; // 'auth' | 'inventory' | 'damage' | 'catalog' | 'users' | 'stores' | 'system'
   let badgeLabel = action;
-  let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+  let badgeClass = 'bg-sunken text-ink-secondary border-line';
   let ActionIcon = Shield;
   let summary = '';
   let targetLabel = '';
@@ -83,7 +83,7 @@ function parseAuditRecord(log) {
   if (action === 'LOGIN') {
     category = 'auth';
     badgeLabel = 'Sign In';
-    badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    badgeClass = 'bg-accent-soft text-accent-fg border-accent-line';
     ActionIcon = LogIn;
     const email = newData?.email || log.user_email || '';
     summary = `User authenticated into HQ Command Center`;
@@ -92,14 +92,14 @@ function parseAuditRecord(log) {
   } else if (action === 'LOGOUT') {
     category = 'auth';
     badgeLabel = 'Sign Out';
-    badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+    badgeClass = 'bg-sunken text-ink-secondary border-line';
     ActionIcon = LogOut;
     summary = `User session terminated safely`;
     targetLabel = log.user_name ? `${log.user_name}` : `User #${log.entity_id || log.user_id}`;
   } else if (action === 'CREATE_DAMAGE_REPORT') {
     category = 'damage';
     badgeLabel = 'Damage Logged';
-    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
     ActionIcon = AlertTriangle;
     const sku = newData?.sku || '';
     const qty = newData?.quantity || 1;
@@ -114,7 +114,7 @@ function parseAuditRecord(log) {
   } else if (action === 'CREATE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Created';
-    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    badgeClass = 'bg-success-soft text-success-fg border-success-line';
     ActionIcon = Package;
     const name = newData?.name || newData?.item_name || '';
     const sku = newData?.sku || newData?.item_code || '';
@@ -126,7 +126,7 @@ function parseAuditRecord(log) {
   } else if (action === 'UPDATE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Edited';
-    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+    badgeClass = 'bg-warning-soft text-warning-fg border-warning-line';
     ActionIcon = Package;
     const name = newData?.item_name || newData?.name || oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
@@ -138,7 +138,7 @@ function parseAuditRecord(log) {
   } else if (action === 'DELETE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Deleted';
-    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
     ActionIcon = Package;
     const name = oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
@@ -149,7 +149,7 @@ function parseAuditRecord(log) {
   } else if (action === 'STOCK_IN') {
     category = 'inventory';
     badgeLabel = 'Stock Inward';
-    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    badgeClass = 'bg-success-soft text-success-fg border-success-line';
     ActionIcon = Boxes;
     summary = `Restocked inventory balance`;
     targetLabel = `Item #${log.entity_id}`;
@@ -159,7 +159,7 @@ function parseAuditRecord(log) {
   } else if (action === 'STOCK_OUT' || action === 'QR_SCAN_DEDUCT') {
     category = 'inventory';
     badgeLabel = action === 'QR_SCAN_DEDUCT' ? 'QR Stock Out' : 'Stock Out';
-    badgeClass = 'bg-sky-50 text-sky-700 border-sky-200';
+    badgeClass = 'bg-info-soft text-info-fg border-info-line';
     ActionIcon = Boxes;
     summary = action === 'QR_SCAN_DEDUCT' 
       ? `Stocked out inventory via QR scanner scan`
@@ -171,7 +171,7 @@ function parseAuditRecord(log) {
   } else if (action.includes('STOCK_ADJUST') || action === 'STOCK_ADJUSTMENT') {
     category = 'inventory';
     badgeLabel = 'Stock Adjusted';
-    badgeClass = 'bg-violet-50 text-violet-700 border-violet-200';
+    badgeClass = 'bg-violet-soft text-violet-fg border-violet-line';
     ActionIcon = Boxes;
     summary = `Manual stock count adjustment recorded`;
     targetLabel = `Item #${log.entity_id}`;
@@ -181,21 +181,21 @@ function parseAuditRecord(log) {
   } else if (action === 'APPROVE_USER' || action === 'USER_APPROVAL') {
     category = 'users';
     badgeLabel = 'User Approved';
-    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    badgeClass = 'bg-success-soft text-success-fg border-success-line';
     ActionIcon = CheckCircle;
     summary = `Approved operator registration and granted system access`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'REJECT_USER' || action === 'USER_REJECTION') {
     category = 'users';
     badgeLabel = 'User Declined';
-    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
     ActionIcon = User;
     summary = `Declined pending user registration request`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'DELETE_USER') {
     category = 'users';
     badgeLabel = 'User Removed';
-    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
     ActionIcon = User;
     const name = oldData?.full_name || '';
     const email = oldData?.email || '';
@@ -206,21 +206,21 @@ function parseAuditRecord(log) {
   } else if (action === 'USER_SUSPENDED') {
     category = 'users';
     badgeLabel = 'User Suspended';
-    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+    badgeClass = 'bg-warning-soft text-warning-fg border-warning-line';
     ActionIcon = User;
     summary = `Suspended user account access`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'USER_ACTIVATED') {
     category = 'users';
     badgeLabel = 'User Activated';
-    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    badgeClass = 'bg-success-soft text-success-fg border-success-line';
     ActionIcon = CheckCircle;
     summary = `Reactivated suspended user account`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'CREATE_USER') {
     category = 'users';
     badgeLabel = 'User Created';
-    badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    badgeClass = 'bg-accent-soft text-accent-fg border-accent-line';
     ActionIcon = User;
     const name = newData?.full_name || '';
     const email = newData?.email || '';
@@ -231,14 +231,14 @@ function parseAuditRecord(log) {
   } else if (action.includes('STORE')) {
     category = 'stores';
     badgeLabel = action.replace(/_/g, ' ');
-    badgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
+    badgeClass = 'bg-violet-soft text-violet-fg border-violet-line';
     ActionIcon = Store;
     summary = `Updated pop-up store or event outlet details`;
     targetLabel = `Store #${log.entity_id}`;
   } else if (action.includes('BRANCH')) {
     category = 'branches';
     badgeLabel = action.replace(/_/g, ' ');
-    badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+    badgeClass = 'bg-info-soft text-info-fg border-info-line';
     ActionIcon = Building2;
     summary = `Updated branch warehouse configuration`;
     targetLabel = `Branch #${log.entity_id}`;
@@ -359,13 +359,13 @@ export default function AuditLogs() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-slate-400 text-[11px] font-semibold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-ink-muted text-[11px] font-semibold uppercase tracking-wider mb-1">
             <span>Security & Compliance</span>
             <span>/</span>
             <span>Audit Trail</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">System Audit Log</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-ink tracking-tight">System Audit Log</h1>
+          <p className="text-ink-muted text-sm mt-0.5">
             Real-time, immutable record of inventory operations, authentication events, and administrative changes.
           </p>
         </div>
@@ -373,9 +373,9 @@ export default function AuditLogs() {
           <button 
             onClick={fetchAuditLogs} 
             disabled={loading}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 shadow-xs"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors disabled:opacity-50 shadow-xs"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-accent' : ''}`} />
             <span>Refresh</span>
           </button>
         </div>
@@ -383,58 +383,58 @@ export default function AuditLogs() {
 
       {/* 3 KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Total Recorded Events
             </span>
-            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="p-2 rounded-lg bg-accent-soft text-accent">
               <History className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
+            <span className="text-2xl font-bold text-ink block tracking-tight">
               {stats.total.toLocaleString()}
             </span>
-            <span className="text-xs mt-1 block text-slate-500">
+            <span className="text-xs mt-1 block text-ink-muted">
               Security & operational events in buffer
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Inventory & Loss Events
             </span>
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+            <div className="p-2 rounded-lg bg-warning-soft text-warning-fg">
               <Boxes className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
+            <span className="text-2xl font-bold text-ink block tracking-tight">
               {(stats.inventory + stats.damage).toLocaleString()}
             </span>
-            <span className="text-xs mt-1 block text-amber-700 font-medium">
+            <span className="text-xs mt-1 block text-warning-fg font-medium">
               {stats.damage} damage reports · {stats.inventory} movements
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 block">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
               Authentication & Logins
             </span>
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="p-2 rounded-lg bg-success-soft text-success-fg">
               <Shield className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-900 block tracking-tight">
+            <span className="text-2xl font-bold text-ink block tracking-tight">
               {stats.auth.toLocaleString()}
             </span>
-            <span className="text-xs mt-1 block text-emerald-700 font-medium">
+            <span className="text-xs mt-1 block text-success-fg font-medium">
               Verified sessions logged
             </span>
           </div>
@@ -442,9 +442,9 @@ export default function AuditLogs() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 shadow-xs space-y-4">
+      <div className="bg-surface border border-line rounded-xl p-4 mb-6 shadow-xs space-y-4">
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-1.5 border-b border-slate-100 pb-3">
+        <div className="flex flex-wrap gap-1.5 border-b border-line-soft pb-3">
           {CATEGORY_TABS.map(tab => {
             const count = tab.id === 'all' ? stats.total : (stats[tab.id] || 0);
             const isActive = activeCategory === tab.id;
@@ -454,13 +454,13 @@ export default function AuditLogs() {
                 onClick={() => setActiveCategory(tab.id)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    ? 'bg-ink text-white shadow-xs'
+                    : 'bg-subtle text-ink-secondary hover:bg-sunken'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  isActive ? 'bg-surface/20 text-white' : 'bg-line text-ink-secondary'
                 }`}>
                   {count}
                 </span>
@@ -473,24 +473,24 @@ export default function AuditLogs() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Search Input */}
           <div className="relative flex-1 min-w-[240px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by operator, email, SKU, action, or note..."
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
           {/* Date Picker */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-400">Date:</span>
+            <span className="text-xs font-medium text-ink-muted">Date:</span>
             <input
               type="date"
               value={filterDate}
               onChange={e => setFilterDate(e.target.value)}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -502,7 +502,7 @@ export default function AuditLogs() {
                 setFilterDate('');
                 setActiveCategory('all');
               }}
-              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors"
+              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors"
             >
               <X size={14} />
               Reset Filters
@@ -512,12 +512,12 @@ export default function AuditLogs() {
       </div>
 
       {/* Main Audit Activity Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft bg-subtle/50">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-indigo-600" />
-            <h3 className="font-semibold text-slate-900 text-sm">Activity Feed</h3>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+            <History className="w-4 h-4 text-accent" />
+            <h3 className="font-semibold text-ink text-sm">Activity Feed</h3>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sunken text-ink-secondary">
               {filteredLogs.length} events
             </span>
           </div>
@@ -526,33 +526,33 @@ export default function AuditLogs() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-slate-50">
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 whitespace-nowrap">
+              <tr className="bg-subtle">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
                   Time
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 whitespace-nowrap">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
                   Operator / Actor
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 whitespace-nowrap">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
                   Event Category
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">
                   Activity & Relevant Details
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 whitespace-nowrap">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
                   Host & Device
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-center whitespace-nowrap">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-center whitespace-nowrap">
                   Inspect
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-soft">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan="6" className="px-4 py-12 text-center text-ink-muted text-sm">
                     <div className="flex items-center justify-center gap-2">
-                      <RefreshCw size={16} className="animate-spin text-indigo-600" />
+                      <RefreshCw size={16} className="animate-spin text-accent" />
                       <span>Loading audit activity log...</span>
                     </div>
                   </td>
@@ -560,9 +560,9 @@ export default function AuditLogs() {
               ) : filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-4 py-12 text-center">
-                    <History className="w-10 h-10 text-slate-300 mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-slate-700">No matching audit events</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Try clearing filters or search terms</p>
+                    <History className="w-10 h-10 text-ink-subtle mx-auto mb-2" strokeWidth={1.5} />
+                    <p className="text-sm font-medium text-ink-secondary">No matching audit events</p>
+                    <p className="text-xs text-ink-muted mt-0.5">Try clearing filters or search terms</p>
                   </td>
                 </tr>
               ) : (
@@ -593,26 +593,26 @@ export default function AuditLogs() {
                   });
 
                   return (
-                    <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={log.id} className="hover:bg-subtle/70 transition-colors">
                       {/* Column 1: Time */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-sm whitespace-nowrap">
-                        <div className="font-semibold text-slate-900 text-xs flex items-center gap-1">
-                          <Clock size={12} className="text-slate-400" />
+                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
+                        <div className="font-semibold text-ink text-xs flex items-center gap-1">
+                          <Clock size={12} className="text-ink-muted" />
                           <span>{formatRelativeTime(log.created_at)}</span>
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{dateFormatted}</div>
-                        <div className="text-[10px] text-slate-400">{timeFormatted}</div>
+                        <div className="text-[11px] text-ink-muted mt-0.5">{dateFormatted}</div>
+                        <div className="text-[10px] text-ink-muted">{timeFormatted}</div>
                       </td>
 
                       {/* Column 2: Actor / Operator */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-sm whitespace-nowrap">
+                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
+                          <div className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
                             {actorInitials}
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900 text-xs">{actorName}</div>
-                            <div className="text-[11px] text-slate-400 truncate max-w-[170px]" title={actorEmail}>
+                            <div className="font-semibold text-ink text-xs">{actorName}</div>
+                            <div className="text-[11px] text-ink-muted truncate max-w-[170px]" title={actorEmail}>
                               {actorEmail}
                             </div>
                           </div>
@@ -620,7 +620,7 @@ export default function AuditLogs() {
                       </td>
 
                       {/* Column 3: Category Badge */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-sm whitespace-nowrap">
+                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${badgeClass}`}>
                           <ActionIcon size={12} />
                           <span>{badgeLabel}</span>
@@ -628,22 +628,22 @@ export default function AuditLogs() {
                       </td>
 
                       {/* Column 4: Meaningful Activity Summary & Relevant Details */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-sm">
-                        <div className="font-medium text-slate-900 text-xs">
+                      <td className="px-4 py-3.5 border-b border-line-soft text-sm">
+                        <div className="font-medium text-ink text-xs">
                           {summary}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           {targetLabel && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium bg-sunken text-ink-secondary">
                               {targetLabel}
                             </span>
                           )}
                           {detailsBadges.map((badge, idx) => (
                             <span 
                               key={idx} 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 border border-slate-200 text-slate-600"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-subtle border border-line text-ink-secondary"
                             >
-                              <strong className="text-slate-800">{badge.label}:</strong>
+                              <strong className="text-ink">{badge.label}:</strong>
                               <span>{badge.value}</span>
                             </span>
                           ))}
@@ -651,21 +651,21 @@ export default function AuditLogs() {
                       </td>
 
                       {/* Column 5: Host & Device */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-sm whitespace-nowrap">
-                        <div className="text-xs font-mono text-slate-600 font-medium">
+                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
+                        <div className="text-xs font-mono text-ink-secondary font-medium">
                           {cleanIp}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1" title={log.user_agent}>
+                        <div className="text-[11px] text-ink-muted mt-0.5 flex items-center gap-1" title={log.user_agent}>
                           <Laptop size={11} />
                           <span className="truncate max-w-[130px]">{deviceInfo}</span>
                         </div>
                       </td>
 
                       {/* Column 6: Inspect Action */}
-                      <td className="px-4 py-3.5 border-b border-slate-100 text-center whitespace-nowrap">
+                      <td className="px-4 py-3.5 border-b border-line-soft text-center whitespace-nowrap">
                         <button
                           onClick={() => setInspectLog(log)}
-                          className="inline-flex items-center gap-1 h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 h-8 px-2.5 bg-sunken hover:bg-line text-ink-secondary text-xs font-medium rounded-lg transition-colors cursor-pointer"
                           title="Inspect raw details and field diff"
                         >
                           <Eye size={13} />
@@ -685,30 +685,30 @@ export default function AuditLogs() {
       {/* AUDIT RECORD INSPECTION MODAL                                             */}
       {/* ========================================================================= */}
       {inspectLog && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-xl w-full p-6 relative my-8">
+        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-xl w-full p-6 relative my-8">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-line-soft">
               <div>
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${inspectLog.parsed.badgeClass}`}>
                     <inspectLog.parsed.ActionIcon size={14} />
                     {inspectLog.parsed.badgeLabel}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-ink-muted">
                     Log #{inspectLog.id}
                   </span>
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 mt-1">
+                <h2 className="text-lg font-bold text-ink mt-1">
                   {inspectLog.parsed.summary}
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-ink-muted">
                   {new Date(inspectLog.created_at).toLocaleString('en-MY')} ({formatRelativeTime(inspectLog.created_at)})
                 </p>
               </div>
               <button
                 onClick={() => setInspectLog(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-sunken transition-colors"
               >
                 <X size={18} />
               </button>
@@ -716,26 +716,26 @@ export default function AuditLogs() {
 
             <div className="space-y-4 text-xs">
               {/* Operator & Machine Profile */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+              <div className="p-3.5 bg-subtle border border-line rounded-xl">
+                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1.5">
                   Actor & Network Metadata
                 </span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-slate-400 block text-[10px]">OPERATOR</span>
-                    <span className="font-semibold text-slate-900 block mt-0.5">
+                    <span className="text-ink-muted block text-[10px]">OPERATOR</span>
+                    <span className="font-semibold text-ink block mt-0.5">
                       {inspectLog.user_name || 'System / Unlinked'}
                     </span>
-                    <span className="text-slate-500 block text-[11px]">
+                    <span className="text-ink-muted block text-[11px]">
                       {inspectLog.user_email || inspectLog.user_role}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">ORIGIN HOST & IP</span>
-                    <span className="font-mono font-semibold text-slate-900 block mt-0.5">
+                    <span className="text-ink-muted block text-[10px]">ORIGIN HOST & IP</span>
+                    <span className="font-mono font-semibold text-ink block mt-0.5">
                       {inspectLog.parsed.cleanIp}
                     </span>
-                    <span className="text-slate-500 block text-[11px] truncate" title={inspectLog.user_agent}>
+                    <span className="text-ink-muted block text-[11px] truncate" title={inspectLog.user_agent}>
                       {inspectLog.parsed.deviceInfo}
                     </span>
                   </div>
@@ -744,14 +744,14 @@ export default function AuditLogs() {
 
               {/* Target Entity & Badges */}
               <div>
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">
                   Target Entity Reference
                 </span>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
-                  <div className="font-mono text-xs font-semibold text-slate-800">
+                <div className="p-3 bg-surface border border-line rounded-xl flex items-center justify-between">
+                  <div className="font-mono text-xs font-semibold text-ink">
                     {inspectLog.parsed.targetLabel}
                   </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
+                  <span className="text-[11px] text-ink-muted font-mono">
                     Table: {inspectLog.entity_type || 'N/A'} (ID: {inspectLog.entity_id || 'N/A'})
                   </span>
                 </div>
@@ -760,26 +760,26 @@ export default function AuditLogs() {
               {/* Specific Field Changes Diff */}
               {fieldDiffs.length > 0 && (
                 <div>
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1.5">
                     Field Modifications ({fieldDiffs.length})
                   </span>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="border border-line rounded-xl overflow-hidden">
                     <table className="w-full text-left">
-                      <thead className="bg-slate-50 border-b border-slate-200">
+                      <thead className="bg-subtle border-b border-line">
                         <tr>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-slate-500">Field</th>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-slate-500">Previous Value</th>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-slate-500">Updated Value</th>
+                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Field</th>
+                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Previous Value</th>
+                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Updated Value</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-line-soft">
                         {fieldDiffs.map((diff, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-2 font-mono font-medium text-slate-700">{diff.key}</td>
-                            <td className="p-2 font-mono text-rose-600 line-through">
+                          <tr key={i} className="hover:bg-subtle">
+                            <td className="p-2 font-mono font-medium text-ink-secondary">{diff.key}</td>
+                            <td className="p-2 font-mono text-danger-fg line-through">
                               {diff.oldVal === null || diff.oldVal === undefined ? 'null' : String(diff.oldVal)}
                             </td>
-                            <td className="p-2 font-mono font-bold text-emerald-700">
+                            <td className="p-2 font-mono font-bold text-success-fg">
                               {diff.newVal === null || diff.newVal === undefined ? 'null' : String(diff.newVal)}
                             </td>
                           </tr>
@@ -791,24 +791,24 @@ export default function AuditLogs() {
               )}
 
               {/* Technical JSON Payload (Collapsible) */}
-              <details className="border border-slate-200 rounded-xl p-3 bg-slate-50 group">
-                <summary className="font-semibold text-slate-700 cursor-pointer select-none text-[11px] flex items-center justify-between">
+              <details className="border border-line rounded-xl p-3 bg-subtle group">
+                <summary className="font-semibold text-ink-secondary cursor-pointer select-none text-[11px] flex items-center justify-between">
                   <span>View Technical JSON Payload</span>
-                  <span className="text-slate-400 text-[10px]">Click to toggle</span>
+                  <span className="text-ink-muted text-[10px]">Click to toggle</span>
                 </summary>
-                <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2">
+                <div className="mt-3 pt-3 border-t border-line/80 space-y-2">
                   {inspectLog.new_values && (
                     <div>
-                      <span className="text-[10px] font-semibold text-slate-400 block mb-0.5">NEW VALUES:</span>
-                      <pre className="p-2 bg-slate-900 text-emerald-400 rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
+                      <span className="text-[10px] font-semibold text-ink-muted block mb-0.5">NEW VALUES:</span>
+                      <pre className="p-2 bg-ink text-success rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
                         {JSON.stringify(inspectLog.parsed.newData, null, 2)}
                       </pre>
                     </div>
                   )}
                   {inspectLog.old_values && (
                     <div>
-                      <span className="text-[10px] font-semibold text-slate-400 block mb-0.5">OLD VALUES:</span>
-                      <pre className="p-2 bg-slate-900 text-rose-300 rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
+                      <span className="text-[10px] font-semibold text-ink-muted block mb-0.5">OLD VALUES:</span>
+                      <pre className="p-2 bg-ink text-danger-line rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
                         {JSON.stringify(inspectLog.parsed.oldData, null, 2)}
                       </pre>
                     </div>
@@ -818,10 +818,10 @@ export default function AuditLogs() {
             </div>
 
             {/* Modal Footer */}
-            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-line-soft flex justify-end">
               <button
                 onClick={() => setInspectLog(null)}
-                className="h-9 px-4 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors"
+                className="h-9 px-4 bg-ink text-white text-xs font-medium rounded-lg hover:bg-ink-hover transition-colors"
               >
                 Close
               </button>

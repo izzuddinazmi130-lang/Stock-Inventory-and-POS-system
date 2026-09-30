@@ -33,10 +33,10 @@ function paymentLabel(method) {
 }
 
 function paymentClass(method) {
-  if (method === 'cash') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (method === 'qr') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (method === 'online_banking') return 'bg-blue-50 text-blue-700 border-blue-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
+  if (method === 'cash') return 'bg-warning-soft text-warning-fg border-warning-line';
+  if (method === 'qr') return 'bg-success-soft text-success-fg border-success-line';
+  if (method === 'online_banking') return 'bg-info-soft text-info-fg border-info-line';
+  return 'bg-sunken text-ink-secondary border-line';
 }
 
 export default function FloorReport() {
@@ -99,80 +99,80 @@ export default function FloorReport() {
   }, [id, filters.start_date, filters.end_date, filters.payment_method, filters.sort]);
 
   const cards = [
-    { label: 'Total Sales', value: money(summary.total_sales), icon: FileBarChart, color: 'text-indigo-600 bg-indigo-50' },
-    { label: 'Cash', value: money(summary.total_cash), icon: Banknote, color: 'text-amber-600 bg-amber-50' },
-    { label: 'QR Pay', value: money(summary.total_qr), icon: Wallet, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Online', value: money(summary.total_online), icon: CreditCard, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Items Sold', value: Number(summary.total_items_sold || 0), icon: ShoppingBag, color: 'text-rose-600 bg-rose-50' },
-    { label: 'Transactions', value: Number(summary.total_transactions || 0), icon: Hash, color: 'text-slate-600 bg-slate-100' }
+    { label: 'Total Sales', value: money(summary.total_sales), icon: FileBarChart, color: 'text-accent bg-accent-soft' },
+    { label: 'Cash', value: money(summary.total_cash), icon: Banknote, color: 'text-warning-fg bg-warning-soft' },
+    { label: 'QR Pay', value: money(summary.total_qr), icon: Wallet, color: 'text-success-fg bg-success-soft' },
+    { label: 'Online', value: money(summary.total_online), icon: CreditCard, color: 'text-info-fg bg-info-soft' },
+    { label: 'Items Sold', value: Number(summary.total_items_sold || 0), icon: ShoppingBag, color: 'text-danger-fg bg-danger-soft' },
+    { label: 'Transactions', value: Number(summary.total_transactions || 0), icon: Hash, color: 'text-ink-secondary bg-sunken' }
   ];
 
   return (
     <Layout>
-      <nav className="text-sm text-slate-400 mb-4 flex items-center gap-1.5">
-        <Link to="/dashboard" className="hover:text-slate-900 transition-colors">{branch?.business_name || 'Dashboard'}</Link>
+      <nav className="text-sm text-ink-muted mb-4 flex items-center gap-1.5">
+        <Link to="/dashboard" className="hover:text-ink transition-colors">{branch?.business_name || 'Dashboard'}</Link>
         <span>/</span>
-        <Link to={`/branches/${id}/stores`} className="hover:text-slate-900 transition-colors">{branch?.name || 'Branch'}</Link>
+        <Link to={`/branches/${id}/stores`} className="hover:text-ink transition-colors">{branch?.name || 'Branch'}</Link>
         <span>/</span>
-        <span className="text-slate-900 font-semibold">Branch Floor Sales</span>
+        <span className="text-ink font-semibold">Branch Floor Sales</span>
       </nav>
 
       {message && (
-        <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+        <div className="mb-6 p-3.5 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-danger-fg flex-shrink-0" />
           <span>{message.text}</span>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Branch Floor (Main) Sales</h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">Branch Floor (Main) Sales</h1>
+          <p className="text-xs text-ink-muted mt-1">
             Walk-in POS sales for {branch?.name || 'this branch'} where no store event was selected.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to={`/branches/${id}/stores`}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-white text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors"
           >
             <ArrowLeft size={16} /> Back to Stores
           </Link>
           <button
             onClick={fetchReport}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+      <div className="bg-surface border border-line rounded-xl p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Start Date</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Start Date</label>
             <input
               type="date"
               value={filters.start_date}
               onChange={e => setFilters(f => ({ ...f, start_date: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">End Date</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">End Date</label>
             <input
               type="date"
               value={filters.end_date}
               onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Payment</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Payment</label>
             <select
               value={filters.payment_method}
               onChange={e => setFilters(f => ({ ...f, payment_method: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">All</option>
               <option value="cash">Cash</option>
@@ -181,11 +181,11 @@ export default function FloorReport() {
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sort</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Sort</label>
             <select
               value={filters.sort}
               onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="date_desc">Newest First</option>
               <option value="date_asc">Oldest First</option>
@@ -200,49 +200,49 @@ export default function FloorReport() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
         {cards.map(card => (
-          <div key={card.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div key={card.label} className="bg-surface border border-line rounded-xl p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{card.label}</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">{card.label}</span>
               <span className={`p-2 rounded-lg ${card.color}`}>
                 <card.icon className="w-4 h-4" />
               </span>
             </div>
-            <div className="mt-2 text-xl font-extrabold text-slate-900">{card.value}</div>
+            <div className="mt-2 text-xl font-extrabold text-ink">{card.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
           <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-indigo-600" />
-            <h3 className="font-semibold text-slate-900 text-sm">Branch Floor Transactions</h3>
+            <Calendar size={18} className="text-accent" />
+            <h3 className="font-semibold text-ink text-sm">Branch Floor Transactions</h3>
           </div>
-          <span className="text-xs font-mono text-slate-500">Showing {movements.length} entries</span>
+          <span className="text-xs font-mono text-ink-muted">Showing {movements.length} entries</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50">
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200">Timestamp</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200">Item</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200">Payment</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-right">Qty</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200 text-right">Amount</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-slate-400 border-b border-slate-200">Operator</th>
+              <tr className="bg-subtle">
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">Timestamp</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">Item</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">Payment</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-right">Qty</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-right">Amount</th>
+                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">Operator</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-soft">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center text-slate-400 text-xs">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
+                  <td colSpan="6" className="p-12 text-center text-ink-muted text-xs">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-accent" />
                     Loading branch floor sales...
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center text-slate-400 text-xs">
+                  <td colSpan="6" className="p-12 text-center text-ink-muted text-xs">
                     No branch floor sales found for the selected filters.
                   </td>
                 </tr>
@@ -250,22 +250,22 @@ export default function FloorReport() {
                 movements.map(m => {
                   const amount = Number(m.selling_price || 0) * Number(m.quantity || 0);
                   return (
-                    <tr key={m.id} className="hover:bg-slate-50 transition-colors bg-white">
-                      <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap border-b border-slate-100">{formatDateTime(m.created_at)}</td>
-                      <td className="px-4 py-3 text-sm border-b border-slate-100">
-                        <div className="text-slate-900 font-bold">{m.item_name || 'Unknown item'}</div>
-                        <div className="font-mono text-indigo-600 text-xs">{m.item_code || '-'}</div>
+                    <tr key={m.id} className="hover:bg-subtle transition-colors bg-surface">
+                      <td className="px-4 py-3 text-sm text-ink-muted font-mono whitespace-nowrap border-b border-line-soft">{formatDateTime(m.created_at)}</td>
+                      <td className="px-4 py-3 text-sm border-b border-line-soft">
+                        <div className="text-ink font-bold">{m.item_name || 'Unknown item'}</div>
+                        <div className="font-mono text-accent text-xs">{m.item_code || '-'}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm border-b border-line-soft">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${paymentClass(m.payment_method)}`}>
                           {paymentLabel(m.payment_method)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-slate-900 font-bold font-mono border-b border-slate-100">{m.quantity}</td>
-                      <td className="px-4 py-3 text-sm text-right text-slate-900 font-bold font-mono border-b border-slate-100">{money(amount)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm text-right text-ink font-bold font-mono border-b border-line-soft">{m.quantity}</td>
+                      <td className="px-4 py-3 text-sm text-right text-ink font-bold font-mono border-b border-line-soft">{money(amount)}</td>
+                      <td className="px-4 py-3 text-sm text-ink-secondary border-b border-line-soft">
                         <span className="inline-flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <User className="w-3.5 h-3.5 text-ink-muted" />
                           {m.performed_by_name || 'System'}
                         </span>
                       </td>

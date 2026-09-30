@@ -4,220 +4,134 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens (light theme). Values are RGB channels so Tailwind can apply alpha: bg-accent/10.
+ * Every colour used in the app maps to one of these; see tailwind.config.js and DESIGN.md.
+ * A dark theme can be added later by redefining these variables under [data-theme="dark"].
+ */
 :root {
-  /* Legacy vars for compat */
-  --bg-dark: #f8fafc;
-  --bg-elevated: #f1f5f9;
-  --border-strong: #e2e8f0;
-  --accent-indigo: #4f46e5;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Surfaces */
+  --page: 246 247 249;          /* app background */
+  --surface: 255 255 255;       /* cards, tables, modals */
+  --subtle: 248 250 252;        /* table headers, hover rows, inset panels */
+  --sunken: 241 245 249;        /* tracks, segmented controls, chips */
 
-  /* New foundation vars */
-  --bg-page: #F1F3F9;
-  --bg-surface: #FFFFFF;
-  --bg-subtle: #F5F6FA;
-  --border: #E5E7EF;
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
-  --accent: #4F46E5;
-  --kaftanasia: #B4502E;
-  --astech: #2563EB;
-  --status-healthy-bg: #ECFDF5;
-  --status-healthy-text: #059669;
-  --status-low-bg: #FFFBEB;
-  --status-low-text: #D97706;
-  --status-critical-bg: #FEF2F2;
-  --status-critical-text: #DC2626;
+  /* Borders */
+  --line: 228 231 236;
+  --line-soft: 241 243 246;
+  --line-strong: 203 213 225;
+
+  /* Text / neutrals (all text tokens meet WCAG AA on white except ink-subtle: icons, placeholders, disabled only) */
+  --ink: 15 23 42;
+  --ink-hover: 30 41 59;
+  --ink-secondary: 71 85 105;
+  --ink-muted: 100 116 139;
+  --ink-subtle: 148 163 184;
+
+  /* Brand accent (indigo) */
+  --accent: 79 70 229;
+  --accent-hover: 67 56 202;
+  --accent-fg: 67 56 202;
+  --accent-soft: 238 242 255;
+  --accent-muted: 224 231 255;
+  --accent-line: 199 210 254;
+
+  /* Status: healthy / stock in */
+  --success: 5 150 105;
+  --success-hover: 4 120 87;
+  --success-fg: 4 120 87;
+  --success-soft: 236 253 245;
+  --success-muted: 209 250 229;
+  --success-line: 167 243 208;
+
+  /* Status: low / pending */
+  --warning: 217 119 6;
+  --warning-hover: 180 83 9;
+  --warning-fg: 180 83 9;
+  --warning-soft: 255 251 235;
+  --warning-muted: 254 243 199;
+  --warning-line: 253 230 138;
+
+  /* Status: critical / damage / destructive */
+  --danger: 225 29 72;
+  --danger-hover: 190 18 60;
+  --danger-fg: 190 18 60;
+  --danger-soft: 255 241 242;
+  --danger-muted: 255 228 230;
+  --danger-line: 254 205 211;
+
+  /* Informational */
+  --info: 2 132 199;
+  --info-hover: 3 105 161;
+  --info-fg: 3 105 161;
+  --info-soft: 240 249 255;
+  --info-muted: 224 242 254;
+  --info-line: 186 230 253;
+
+  /* Stock adjustment */
+  --violet: 124 58 237;
+  --violet-hover: 109 40 217;
+  --violet-fg: 109 40 217;
+  --violet-soft: 245 243 255;
+  --violet-muted: 237 233 254;
+  --violet-line: 221 214 254;
+
+  /* Business identity (small accents only) */
+  --brand-kaftanasia: 180 80 46;
+  --brand-astech: 37 99 235;
 }
 
-body {
-  margin: 0;
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-page text-ink font-sans antialiased;
+    margin: 0;
+  }
+  /* Quantities, prices and SKUs line up in columns */
+  .tabular,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.15);
+  }
 }
 
+/* Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-page);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+  background: rgb(var(--line-strong));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  background-color: rgb(var(--ink-subtle));
 }
 
-.data-panel {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, rgb(var(--sunken)) 0px, rgb(var(--line-soft)) 120px, rgb(var(--sunken)) 240px);
+  background-size: 800px 100%;
+  @apply animate-shimmer rounded-lg;
 }
 
-.data-panel-header {
-  padding: 14px 20px;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.data-panel-header h6 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-control-modern, .form-select-modern {
-  background-color: #fff !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text-primary) !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  padding: 9px 12px !important;
-  height: 40px;
-  transition: all 0.15s ease !important;
-}
-
-.form-control-modern:focus, .form-select-modern:focus {
-  background-color: #fff !important;
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
-  outline: none !important;
-}
-
-.form-label-modern {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  display: block;
-}
-
-.btn-modern {
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  text-decoration: none;
-}
-
-.btn-primary-dark {
-  background: var(--accent);
-  color: #fff !important;
-  border-color: var(--accent);
-}
-.btn-primary-dark:hover { background: #4338ca; }
-
-.btn-danger-dark {
-  background: #fff;
-  color: #dc2626 !important;
-  border: 1px solid #fecaca !important;
-  background-color: #fef2f2;
-}
-.btn-danger-dark:hover { background-color: #fee2e2; }
-
-.btn-success-dark {
-  background: #059669;
-  color: #fff !important;
-}
-.btn-success-dark:hover { background: #047857; }
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary) !important;
-  border-color: var(--border);
-}
-.btn-ghost:hover {
-  background: var(--bg-subtle);
-  color: var(--text-primary) !important;
-}
-
-.btn-ghost-warning {
-  background: rgba(245, 158, 11, 0.08);
-  color: #b45309 !important;
-  border-color: rgba(245, 158, 11, 0.2);
-}
-
-.table-modern {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.table-modern th {
-  background: #F5F6FA;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.table-modern td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--text-primary);
-  vertical-align: middle;
-  background: #fff;
-}
-
-.table-modern tbody tr {
-  transition: background 0.15s ease;
-}
-
-.table-modern tbody tr:hover td { 
-  background: var(--bg-subtle); 
-}
-
-.badge-modern {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.02em;
-  border: none;
-}
-
-.badge-gold    { background: #FFFBEB; color: #D97706; }
-.badge-red     { background: #FEF2F2; color: #DC2626; }
-.badge-purple  { background: #F5F3FF; color: #7C3AED; }
-.badge-green   { background: #ECFDF5; color: #059669; }
-.badge-neutral { background: #F1F5F9; color: #475569; }
-.badge-blue    { background: #EFF6FF; color: #2563EB; }
-.badge-amber   { background: #FFFBEB; color: #D97706; }
-.badge-indigo  { background: #EEF2FF; color: #4F46E5; }
-.badge-pink    { background: #FDF2F8; color: #BE185D; }
-
-.nav-active {
-  background: #DCE8FB;
-  color: #0F172A;
-  font-weight: 600;
+/* Respect reduced motion everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

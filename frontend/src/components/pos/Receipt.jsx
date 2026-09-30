@@ -35,7 +35,7 @@ export function SaleReceipt({ sale }) {
   if (!sale) return null;
   const isCash = sale.payment_method === 'cash' && sale.cash_received != null;
   return (
-    <div className="pos-receipt font-mono text-xs text-slate-800 p-4 border border-dashed border-slate-300 rounded-lg bg-white">
+    <div className="pos-receipt font-mono text-xs text-ink p-4 border border-dashed border-line-strong rounded-lg bg-surface">
       <div className="text-center mb-3">
         <div className="text-sm font-bold">{sale.business_name || 'Receipt'}</div>
         <div>{sale.branch_name}{sale.store_name ? ` · ${sale.store_name}` : ''}</div>
@@ -48,19 +48,19 @@ export function SaleReceipt({ sale }) {
         {sale.price_tier && sale.price_tier !== 'customer' && <Row label="Price list" value={TIER_LABELS[sale.price_tier]} />}
       </div>
 
-      <div className="border-t border-dashed border-slate-300 pt-2 space-y-1.5">
+      <div className="border-t border-dashed border-line-strong pt-2 space-y-1.5">
         {(sale.items || []).map(it => (
           <div key={it.id || `${it.sku}-${it.quantity}`}>
             <div className="flex justify-between gap-2">
               <span className="min-w-0">{it.name}{it.variant_text ? ` (${it.variant_text})` : ''}</span>
               <span className="flex-shrink-0">{rm(it.line_total)}</span>
             </div>
-            <div className="text-slate-500">{it.quantity} × {rm(it.unit_price)}</div>
+            <div className="text-ink-muted">{it.quantity} × {rm(it.unit_price)}</div>
           </div>
         ))}
       </div>
 
-      <div className="border-t border-dashed border-slate-300 mt-2 pt-2 space-y-0.5">
+      <div className="border-t border-dashed border-line-strong mt-2 pt-2 space-y-0.5">
         <Row label="Items" value={sale.total_quantity} />
         <div className="flex justify-between text-sm font-bold pt-0.5"><span>TOTAL</span><span>{rm(sale.total_amount)}</span></div>
         <Row label="Paid by" value={PAYMENT_LABELS[sale.payment_method] || sale.payment_method} />
@@ -70,7 +70,7 @@ export function SaleReceipt({ sale }) {
             <div className="flex justify-between font-bold"><span>Change</span><span>{rm(sale.change_due)}</span></div>
           </>
         )}
-        {sale.note && <div className="text-slate-500 pt-1">Note: {sale.note}</div>}
+        {sale.note && <div className="text-ink-muted pt-1">Note: {sale.note}</div>}
       </div>
       <div className="text-center mt-3">Thank you!</div>
     </div>
@@ -80,25 +80,25 @@ export function SaleReceipt({ sale }) {
 function Row({ label, value, bold }) {
   return (
     <div className="flex justify-between gap-2">
-      <span className="text-slate-500">{label}</span>
+      <span className="text-ink-muted">{label}</span>
       <span className={bold ? 'font-bold' : ''}>{value}</span>
     </div>
   );
 }
 
 /** Modal frame around a receipt: header (not printed), the receipt, and actions (not printed). */
-export function ReceiptModal({ header, children, onClose, closeLabel = 'Close', closeClassName = 'bg-indigo-600 hover:bg-indigo-700', autoFocusClose = true }) {
+export function ReceiptModal({ header, children, onClose, closeLabel = 'Close', closeClassName = 'bg-accent hover:bg-accent-hover', autoFocusClose = true }) {
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4"
       onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
       <style>{RECEIPT_PRINT_CSS}</style>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
         {header && <div className="pos-no-print pt-6 px-6">{header}</div>}
         <div className="overflow-y-auto px-5 pt-4">{children}</div>
         <div className="pos-no-print grid grid-cols-2 gap-2 p-5">
-          <button type="button" onClick={() => window.print()} className="h-11 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 flex items-center justify-center gap-1.5">
+          <button type="button" onClick={() => window.print()} className="h-11 rounded-xl bg-surface border border-line text-ink-secondary text-sm font-semibold hover:bg-subtle flex items-center justify-center gap-1.5">
             <Printer className="w-4 h-4" /> Print
           </button>
           <button

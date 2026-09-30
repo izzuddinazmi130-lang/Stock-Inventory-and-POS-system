@@ -99,36 +99,36 @@ export default function Login() {
     }
   };
 
-  const inputClass = "bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full pl-10";
-  const selectClass = "bg-white border border-slate-200 rounded-lg px-3 h-10 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full";
-  const labelClass = "block text-sm font-medium text-slate-700 mb-1";
+  const inputClass = "bg-surface border border-line rounded-lg px-3 h-10 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-full pl-10";
+  const selectClass = "bg-surface border border-line rounded-lg px-3 h-10 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-full";
+  const labelClass = "block text-sm font-medium text-ink-secondary mb-1";
 
   const getBusinessColor = (name) => {
     if (name.toLowerCase().includes('kaftan')) return 'bg-[#B4502E]';
     if (name.toLowerCase().includes('astech')) return 'bg-[#2563EB]';
-    return 'bg-slate-400';
+    return 'bg-ink-subtle';
   };
 
   return (
     <div className="min-h-screen bg-[#F1F3F9] flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 w-full max-w-md">
+      <div className="bg-surface border border-line rounded-xl shadow-sm p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white mx-auto mb-4">
+          <div className="w-14 h-14 rounded-xl bg-ink flex items-center justify-center text-white mx-auto mb-4">
             <Boxes className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">HQ Inventory</h1>
-          <p className="text-xs text-slate-500 mt-1">Multi-Role Warehouse & Inventory Portal</p>
+          <h1 className="text-2xl font-bold text-ink tracking-tight">HQ Inventory</h1>
+          <p className="text-xs text-ink-muted mt-1">Multi-Role Warehouse & Inventory Portal</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center gap-2">
+          <div className="mb-6 p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center gap-2">
+          <div className="mb-6 p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm flex items-center gap-2">
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
             <span>{success}</span>
           </div>
@@ -140,7 +140,7 @@ export default function Login() {
               <label className={labelClass}>Full Name *</label>
               <div className="relative">
                 <input type="text" name="full_name" required placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} className={inputClass} />
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <User className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
               </div>
             </div>
           )}
@@ -149,7 +149,7 @@ export default function Login() {
             <label className={labelClass}>{isRegisterMode ? 'Email Address *' : 'Email or Username *'}</label>
             <div className="relative">
               <input type={isRegisterMode ? 'email' : 'text'} name="email" required placeholder={isRegisterMode ? 'user@domain.com' : 'superadmin@hq.com'} value={formData.email} onChange={handleChange} className={inputClass} />
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
             </div>
           </div>
 
@@ -157,7 +157,7 @@ export default function Login() {
             <label className={labelClass}>Password *</label>
             <div className="relative">
               <input type="password" name="password" required minLength={6} placeholder="••••••••" value={formData.password} onChange={handleChange} className={inputClass} />
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
             </div>
           </div>
 
@@ -186,19 +186,19 @@ export default function Login() {
                 <label className={labelClass}>Confirm Password *</label>
                 <div className="relative">
                   <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter your password" className={inputClass} />
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-3" />
                 </div>
               </div>
             </>
           )}
 
-          <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-2">
+          <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors mt-2">
             {submitting ? 'Processing...' : isRegisterMode ? 'Submit Registration Request' : 'Sign In to Portal'}
           </button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-          <button type="button" onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccess(''); }} className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold">
+        <div className="mt-6 pt-5 border-t border-line-soft text-center">
+          <button type="button" onClick={() => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccess(''); }} className="text-xs text-accent hover:text-accent-fg font-semibold">
             {isRegisterMode ? 'Already have an account? Sign In' : 'Need an account? Submit Registration Request'}
           </button>
         </div>

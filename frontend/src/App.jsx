@@ -28,8 +28,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-slate-400 text-xs font-mono">
-        Authenticating session...
+      <div className="min-h-screen bg-page flex items-center justify-center" role="status" aria-live="polite">
+        <span className="w-5 h-5 rounded-full border-2 border-line border-t-accent animate-spin" aria-hidden="true" />
+        <span className="sr-only">Checking your session…</span>
       </div>
     );
   }

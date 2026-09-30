@@ -2,11 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const VARIANTS = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-600',
-  outline: 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
-  danger:  'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200',
-  ghost:   'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600',
+  primary: 'bg-accent text-white hover:bg-accent-hover border border-accent',
+  outline: 'bg-surface text-ink-secondary hover:bg-subtle border border-line',
+  danger:  'bg-danger-soft text-danger-fg hover:bg-danger-muted border border-danger-line',
+  ghost:   'bg-transparent text-ink-muted hover:text-ink hover:bg-sunken border border-transparent',
+  success: 'bg-success text-white hover:bg-success-hover border border-success',
 };
 
 export default function Button({ variant = 'primary', children, to, href, className = '', size = 'md', disabled = false, onClick, type = 'button', ...props }) {

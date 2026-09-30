@@ -138,8 +138,8 @@ export default function BusinessList() {
       {message && (
         <div className={`mb-6 flex items-center justify-between transition-all ${
           message.type === 'success' 
-            ? 'p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm'
-            : 'p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm'
+            ? 'p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm'
+            : 'p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
         }`}>
           <div className="flex items-center gap-2 font-semibold">
             {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
@@ -151,35 +151,35 @@ export default function BusinessList() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">View Business</h1>
-          <p className="text-sm text-slate-500 mt-1">Corporate entity registry, business profiles, and operational branch hierarchy.</p>
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">View Business</h1>
+          <p className="text-sm text-ink-muted mt-1">Corporate entity registry, business profiles, and operational branch hierarchy.</p>
         </div>
-        <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4 sm:mt-0">
+        <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors mt-4 sm:mt-0">
           <Plus size={18} />
           Add Business
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading corporate directory...</div>
+        <div className="text-center py-12 text-ink-muted text-sm">Loading corporate directory...</div>
       ) : businesses.length === 0 ? (
-        <div className="text-center py-12 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center justify-center">
-          <Building2 className="w-12 h-12 text-slate-300 mb-3" />
-          <p className="text-slate-600 font-medium">No businesses yet</p>
-          <p className="text-sm text-slate-500 mb-4">Add your first business entity to get started.</p>
-          <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+        <div className="text-center py-12 bg-subtle border border-line rounded-xl flex flex-col items-center justify-center">
+          <Building2 className="w-12 h-12 text-ink-subtle mb-3" />
+          <p className="text-ink-secondary font-medium">No businesses yet</p>
+          <p className="text-sm text-ink-muted mb-4">Add your first business entity to get started.</p>
+          <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors">
             <Plus size={16} /> Add Business
           </button>
         </div>
       ) : (
         <>
-          <h3 className="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-4">Corporate Entities</h3>
+          <h3 className="text-xs font-semibold tracking-wide uppercase text-ink-muted mb-4">Corporate Entities</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {businesses.map((b) => {
               const activeBranches = Number(b.active_branch_count || 0);
               const bColor = getBusinessColor(b.name, b.industry);
               return (
-                <div key={b.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow" style={{ borderBottom: `2px solid ${bColor}` }}>
+                <div key={b.id} className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow" style={{ borderBottom: `2px solid ${bColor}` }}>
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3">
@@ -187,23 +187,23 @@ export default function BusinessList() {
                           <Building2 size={20} />
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{b.name}</h3>
+                          <h3 className="text-lg font-bold text-ink line-clamp-1">{b.name}</h3>
                           {b.registration_number && (
-                            <span className="text-xs text-slate-500 block">Reg: {b.registration_number}</span>
+                            <span className="text-xs text-ink-muted block">Reg: {b.registration_number}</span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => openEditModal(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle transition-colors"
                           title="Edit Corporate Details"
                         >
                           <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDelete(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-danger-soft text-danger-fg border border-danger-line hover:bg-danger-muted transition-colors"
                           title="Delete Business"
                         >
                           <Trash2 size={14} />
@@ -212,39 +212,39 @@ export default function BusinessList() {
                     </div>
 
                     {b.legal_name && (
-                      <p className="text-sm text-slate-700 mb-3 font-medium">Legal Name: {b.legal_name}</p>
+                      <p className="text-sm text-ink-secondary mb-3 font-medium">Legal Name: {b.legal_name}</p>
                     )}
 
-                    <div className="space-y-2 mb-4 text-sm text-slate-600">
+                    <div className="space-y-2 mb-4 text-sm text-ink-secondary">
                       {b.industry && (
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-medium">Industry:</span>
-                          <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-blue-50 text-blue-700">{b.industry}</span>
+                          <span className="text-ink-muted font-medium">Industry:</span>
+                          <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{b.industry}</span>
                         </div>
                       )}
-                      {b.contact_person && <p><span className="text-slate-400 font-medium">Contact:</span> {b.contact_person}</p>}
+                      {b.contact_person && <p><span className="text-ink-muted font-medium">Contact:</span> {b.contact_person}</p>}
                       {b.contact_email && (
-                        <p className="flex items-center gap-1.5 text-slate-700">
-                          <Mail size={14} className="text-slate-400" /> {b.contact_email}
+                        <p className="flex items-center gap-1.5 text-ink-secondary">
+                          <Mail size={14} className="text-ink-muted" /> {b.contact_email}
                         </p>
                       )}
                       {b.contact_phone && (
-                        <p className="flex items-center gap-1.5 text-slate-700">
-                          <Phone size={14} className="text-slate-400" /> {b.contact_phone}
+                        <p className="flex items-center gap-1.5 text-ink-secondary">
+                          <Phone size={14} className="text-ink-muted" /> {b.contact_phone}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <span className="text-sm text-slate-500">
-                      <strong className="text-slate-900 font-bold">{activeBranches}</strong> active branches
+                  <div className="px-5 py-3.5 border-t border-line-soft bg-subtle flex items-center justify-between">
+                    <span className="text-sm text-ink-muted">
+                      <strong className="text-ink font-bold">{activeBranches}</strong> active branches
                     </span>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => navigate(`/businesses/${b.id}/forms`)} className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors" title="Manage Product Form">
+                      <button onClick={() => navigate(`/businesses/${b.id}/forms`)} className="inline-flex items-center gap-1.5 text-accent text-sm font-semibold hover:text-accent-fg transition-colors" title="Manage Product Form">
                         <SlidersHorizontal size={14} /> Manage Form
                       </button>
-                      <button onClick={() => navigate(`/businesses/${b.id}/branches`)} className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors">
+                      <button onClick={() => navigate(`/businesses/${b.id}/branches`)} className="inline-flex items-center gap-1.5 text-accent text-sm font-semibold hover:text-accent-fg transition-colors">
                         Branches <ArrowRight size={16} />
                       </button>
                     </div>

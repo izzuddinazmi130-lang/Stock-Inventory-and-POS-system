@@ -62,12 +62,12 @@ function Label({ item, qrSvg, showPrice, print = false }) {
     );
   }
   return (
-    <div className="w-full max-w-md aspect-[70/36] bg-white rounded-xl border-2 border-dashed border-slate-300 p-4 flex items-center gap-4 text-slate-900">
+    <div className="w-full max-w-md aspect-[70/36] bg-surface rounded-xl border-2 border-dashed border-line-strong p-4 flex items-center gap-4 text-ink">
       <div className="h-full aspect-square flex-shrink-0 [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: qrSvg }} />
       <div className="min-w-0 flex-1 h-full flex flex-col py-1">
         <p className="font-bold text-base leading-snug line-clamp-2">{item.item_name}</p>
-        {variants && <p className="text-sm text-slate-600 mt-0.5 truncate">{variants}</p>}
-        <p className="font-mono text-xs text-slate-500 mt-1">{item.item_code}</p>
+        {variants && <p className="text-sm text-ink-secondary mt-0.5 truncate">{variants}</p>}
+        <p className="font-mono text-xs text-ink-muted mt-1">{item.item_code}</p>
         {showPrice && <p className="mt-auto text-xl font-extrabold">{money(item.selling_price)}</p>}
       </div>
     </div>
@@ -161,38 +161,38 @@ export default function QrGenerator({ embedded = false }) {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Print QR labels</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Pick a product, check the label, then print. Stick the label on the item or shelf so it can be scanned at the Point of Sale.</p>
+        <h1 className="text-xl font-bold text-ink">Print QR labels</h1>
+        <p className="text-sm text-ink-muted mt-0.5">Pick a product, check the label, then print. Stick the label on the item or shelf so it can be scanned at the Point of Sale.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ── Left: product picker ── */}
-        <section className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">1</span>
+        <section className="lg:col-span-5 bg-surface border border-line rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-line-soft flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-bold flex items-center justify-center">1</span>
               Choose a product
             </h2>
-            <span className="text-xs text-slate-400">{filtered.length} of {items.length}</span>
+            <span className="text-xs text-ink-muted">{filtered.length} of {items.length}</span>
           </div>
-          <div className="p-3 border-b border-slate-100">
+          <div className="p-3 border-b border-line-soft">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name, SKU, size or category…"
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
           </div>
 
-          <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-[520px] overflow-y-auto divide-y divide-line-soft">
             {itemsLoading ? (
-              <div className="py-12 text-center text-xs text-slate-400">Loading products…</div>
+              <div className="py-12 text-center text-xs text-ink-muted">Loading products…</div>
             ) : filtered.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
+              <div className="py-12 text-center text-xs text-ink-muted">
                 <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 {items.length === 0 ? 'No products yet.' : 'No products match your search.'}
               </div>
@@ -204,17 +204,17 @@ export default function QrGenerator({ embedded = false }) {
                   key={rowKey(item)}
                   type="button"
                   onClick={() => setSelectedKey(rowKey(item))}
-                  className={`w-full text-left px-4 py-3 flex items-center gap-3 border-l-4 transition-colors ${isSelected ? 'bg-indigo-50 border-indigo-500' : 'border-transparent hover:bg-slate-50'}`}
+                  className={`w-full text-left px-4 py-3 flex items-center gap-3 border-l-4 transition-colors ${isSelected ? 'bg-accent-soft border-accent' : 'border-transparent hover:bg-subtle'}`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-indigo-900' : 'text-slate-900'}`}>{item.item_name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">
-                      <span className="font-mono text-indigo-600">{item.item_code}</span>
+                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-accent-fg' : 'text-ink'}`}>{item.item_name}</p>
+                    <p className="text-xs text-ink-muted mt-0.5 truncate">
+                      <span className="font-mono text-accent">{item.item_code}</span>
                       {variants && <> · {variants}</>}
                       {isSuperAdmin && item.branch_name && <> · {item.branch_name}</>}
                     </p>
                   </div>
-                  <span className={`flex-shrink-0 text-xs font-medium ${parseInt(item.quantity, 10) > 0 ? 'text-slate-500' : 'text-amber-600'}`}>
+                  <span className={`flex-shrink-0 text-xs font-medium ${parseInt(item.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg'}`}>
                     {parseInt(item.quantity, 10) || 0} in stock
                   </span>
                 </button>
@@ -224,30 +224,30 @@ export default function QrGenerator({ embedded = false }) {
         </section>
 
         {/* ── Right: preview + print options ── */}
-        <section className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden lg:sticky lg:top-4">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">2</span>
+        <section className="lg:col-span-7 bg-surface border border-line rounded-xl overflow-hidden lg:sticky lg:top-4">
+          <div className="px-4 py-3 border-b border-line-soft">
+            <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-bold flex items-center justify-center">2</span>
               Check the label and print
             </h2>
           </div>
 
           {error && (
-            <div className="mx-4 mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-sm flex items-start gap-2">
+            <div className="mx-4 mt-4 p-3 bg-danger-soft border border-danger-line rounded-lg text-danger-fg text-sm flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {error}
             </div>
           )}
 
-          <div className="bg-slate-50 m-4 rounded-xl border border-slate-100 min-h-[240px] flex items-center justify-center p-6">
+          <div className="bg-subtle m-4 rounded-xl border border-line-soft min-h-[240px] flex items-center justify-center p-6">
             {loading ? (
               <div className="text-center">
-                <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin mx-auto mb-2" />
-                <p className="text-xs text-slate-500">Preparing label…</p>
+                <RefreshCw className="w-6 h-6 text-accent animate-spin mx-auto mb-2" />
+                <p className="text-xs text-ink-muted">Preparing label…</p>
               </div>
             ) : labelItem ? (
               <Label item={labelItem} qrSvg={qrData.qr_svg} showPrice={showPrice} />
             ) : (
-              <div className="text-center text-slate-400">
+              <div className="text-center text-ink-muted">
                 <QrCode className="w-10 h-10 mx-auto mb-2 opacity-40" />
                 <p className="text-xs">Choose a product to see its label.</p>
               </div>
@@ -255,7 +255,7 @@ export default function QrGenerator({ embedded = false }) {
           </div>
 
           {labelItem && (
-            <div className="px-4 pb-1 -mt-1 text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+            <div className="px-4 pb-1 -mt-1 text-xs text-ink-muted flex flex-wrap gap-x-4 gap-y-1">
               <span>{labelItem.category}</span>
               {labelItem.branch_name && <span className="inline-flex items-center gap-1"><Building className="w-3 h-3" />{labelItem.branch_name}</span>}
               <span>Label size 70 × 36 mm</span>
@@ -263,17 +263,17 @@ export default function QrGenerator({ embedded = false }) {
           )}
 
           {noPrice && showPrice && (
-            <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-600" />
+            <div className="mx-4 mt-3 p-3 bg-warning-soft border border-warning-line rounded-lg text-warning-fg text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning-fg" />
               This product has no customer price yet, so the label will show RM 0.00. Set a price in Products, or untick “Show price”.
             </div>
           )}
 
-          <div className="p-4 mt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="p-4 mt-3 border-t border-line-soft flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-700">Copies</span>
-              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
-                <button type="button" onClick={() => setCopiesSafe(copies - 1)} className="h-9 w-9 flex items-center justify-center text-slate-600 hover:bg-slate-50" aria-label="Fewer copies">
+              <span className="text-sm font-medium text-ink-secondary">Copies</span>
+              <div className="flex items-center rounded-lg border border-line overflow-hidden">
+                <button type="button" onClick={() => setCopiesSafe(copies - 1)} className="h-9 w-9 flex items-center justify-center text-ink-secondary hover:bg-subtle" aria-label="Fewer copies">
                   <Minus className="w-4 h-4" />
                 </button>
                 <input
@@ -282,17 +282,17 @@ export default function QrGenerator({ embedded = false }) {
                   max="100"
                   value={copies}
                   onChange={e => setCopiesSafe(e.target.value)}
-                  className="h-9 w-14 border-x border-slate-200 text-center text-sm font-mono focus:outline-none"
+                  className="h-9 w-14 border-x border-line text-center text-sm font-mono focus:outline-none"
                   aria-label="Number of copies"
                 />
-                <button type="button" onClick={() => setCopiesSafe(copies + 1)} className="h-9 w-9 flex items-center justify-center text-slate-600 hover:bg-slate-50" aria-label="More copies">
+                <button type="button" onClick={() => setCopiesSafe(copies + 1)} className="h-9 w-9 flex items-center justify-center text-ink-secondary hover:bg-subtle" aria-label="More copies">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
-              <input type="checkbox" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer select-none">
+              <input type="checkbox" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} className="w-4 h-4 rounded-lg border-line-strong text-accent focus:ring-accent" />
               Show price
             </label>
 
@@ -300,7 +300,7 @@ export default function QrGenerator({ embedded = false }) {
               type="button"
               onClick={() => window.print()}
               disabled={!canPrint}
-              className="sm:ml-auto inline-flex items-center justify-center gap-2 h-10 px-5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="sm:ml-auto inline-flex items-center justify-center gap-2 h-10 px-5 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Printer className="w-4 h-4" />
               Print {copies} label{copies === 1 ? '' : 's'}
