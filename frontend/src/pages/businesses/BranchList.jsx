@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Building, Plus, Store, Edit3, Trash2, X, CheckCircle, AlertCircle, FileBarChart, ExternalLink, Search, CheckSquare, Square, Layers, RefreshCw } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Building2, Plus, Store, Pencil, Trash2, BarChart3, MapPin, ChevronRight } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Modal, FormSection, PrimaryButton, SecondaryButton, toDateInput } from '../../components/ui/Form';
+import {
+  Modal, FormSection, Button, Card, CardHeader, Badge, BusinessDot, Menu, PageHeader, EmptyState,
+  Table, THead, TBody, TH, TR, TD, TableState, toDateInput, useConfirm, useToast,
+} from '../../components/ui';
 import BranchFields from '../../components/forms/BranchFields';
 import CatalogPicker from '../../components/forms/CatalogPicker';
 
@@ -20,7 +23,12 @@ export default function BranchList() {
   const [business, setBusiness] = useState(null);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // `message` only carries errors shown inside the add/edit form; page messages are toasts
   const [message, setMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -44,6 +52,7 @@ export default function BranchList() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const [busRes, brRes] = await Promise.all([
         api.get(`/businesses/${id}`),
         api.get(`/businesses/${id}/branches`)
@@ -51,7 +60,7 @@ export default function BranchList() {
       if (busRes.data.success) setBusiness(busRes.data.business || busRes.data.data);
       if (brRes.data.success) setBranches(brRes.data.branches || brRes.data.data || []);
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to fetch branch network' });
+      setLoadError(err.response?.data?.message || 'Could not load the branches.');
     } finally {
       setLoading(false);
     }
@@ -120,7 +129,8 @@ export default function BranchList() {
             : ` ${succeeded} existing product(s) stocked into this branch.`;
         }
 
-        setMessage({ type: 'success', text: `${res.data.message}${stockMsg}` });
+        toast.success(`${res.data.message}${stockMsg}`);
+        setMessage(null);
         setShowAddModal(false);
         setAddForm({
           name: '', branch_code: '', address: '', city: '', state: '', postcode: '',
@@ -141,9 +151,11 @@ export default function BranchList() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSaving(true);
       const res = await api.put(`/branches/${editForm.id}`, editForm);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
+        setMessage(null);
         setShowEditModal(false);
         fetchData();
       } else {
@@ -151,21 +163,29 @@ export default function BranchList() {
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update branch' });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (b) => {
-    if (!window.confirm(`Are you sure you want to delete branch '${b.name}'?`)) return;
+    const ok = await confirm({
+      title: `Delete ${b.name}?`,
+      message: 'This removes the branch. Branches with sales history or active store events cannot be deleted.',
+      confirmLabel: 'Delete branch',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await api.delete(`/branches/${b.id}`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message });
+        toast.error(res.data.message);
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to delete branch' });
+      toast.error(err.response?.data?.message || 'Failed to delete branch');
     }
   };
 
@@ -191,147 +211,91 @@ export default function BranchList() {
 
   return (
     <Layout>
-      <nav className="text-sm text-ink-muted flex items-center gap-1.5 mb-4">
-        <Link to="/businesses" className="hover:text-ink transition-colors">Businesses</Link>
-        <span>/</span>
-        <span className="text-ink font-semibold">{business ? business.name : 'Loading...'}</span>
-      </nav>
+      <PageHeader
+        breadcrumbs={[{ label: 'Businesses', to: '/businesses' }, { label: business?.name || 'Business' }]}
+        title={business ? `${business.name} branches` : 'Branches'}
+        description="Open a branch to see its stock, products and people."
+        meta={business ? <Badge><BusinessDot business={business} size="sm" />{business.industry ? <span className="capitalize">{business.industry}</span> : business.name}</Badge> : null}
+        actions={<Button icon={Plus} onClick={openAddModal}>Add branch</Button>}
+      />
 
-      {message && (
-        <div className={`mb-6 flex items-center justify-between transition-all ${
-          message.type === 'success' 
-            ? 'p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm' 
-            : 'p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
-        }`}>
-          <div className="flex items-center gap-2 font-semibold">
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)}><X className="w-4 h-4" /></button>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink tracking-tight">{business ? business.name : 'Branches'}</h1>
-          <p className="text-sm text-ink-muted mt-1">Operational branch locations under {business ? business.name : 'this business'}. Click any branch to enter its dashboard.</p>
-        </div>
-        <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors mt-4 sm:mt-0">
-          <Plus size={18} />
-          Add Branch
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-ink-muted text-sm">Loading branch network...</div>
-      ) : branches.length === 0 ? (
-        <div className="text-center py-12 bg-subtle border border-line rounded-xl flex flex-col items-center justify-center">
-          <Building className="w-12 h-12 text-ink-subtle mb-3" />
-          <p className="text-ink-secondary font-medium">No branches yet</p>
-          <p className="text-sm text-ink-muted mb-4">No branches registered under {business ? business.name : 'this business'} yet.</p>
-          <button onClick={openAddModal} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors">
-            <Plus size={16} /> Add Branch
-          </button>
-        </div>
+      {!loading && !loadError && branches.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Building2}
+            title="No branches yet"
+            description={`Add the first branch for ${business ? business.name : 'this business'}.`}
+            action={<Button icon={Plus} onClick={openAddModal}>Add branch</Button>}
+          />
+        </Card>
       ) : (
-        <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-            <h3 className="font-semibold text-ink text-sm">Branch Network ({branches.length})</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Branch Name & Code</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Location / Address</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Contact Person</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Status</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line-soft">
-                {branches.map((b) => (
-                  <tr
-                    key={b.id}
-                    className="hover:bg-subtle transition-colors group cursor-pointer bg-surface"
-                    onClick={(e) => {
-                      if (e.target.closest('button') || e.target.closest('a')) return;
-                      navigate(`/branches/${b.id}`);
-                    }}
-                  >
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-accent-soft text-accent rounded-lg">
-                          <Building size={16} />
+        <Card className="overflow-hidden">
+          <CardHeader title="Branches" description={loading && branches.length === 0 ? 'Loading…' : `${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}`} />
+          <Table minWidth="48rem">
+            <THead>
+              <TR>
+                <TH>Branch</TH>
+                <TH>Location</TH>
+                <TH>Contact</TH>
+                <TH>Status</TH>
+                <TH className="w-px"><span className="sr-only">Actions</span></TH>
+              </TR>
+            </THead>
+            <TBody>
+              <TableState colSpan={5} loading={loading && branches.length === 0} error={!loading && loadError && branches.length === 0 ? loadError : null} onRetry={fetchData} />
+              {branches.map((b, i) => (
+                <TR key={b.id} index={i} onClick={() => navigate(`/branches/${b.id}`)}>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <span className="w-9 h-9 rounded-lg bg-sunken text-ink-secondary flex items-center justify-center flex-shrink-0"><Building2 className="w-4 h-4" aria-hidden="true" /></span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink group-hover/row:text-accent transition-colors flex items-center gap-1">
+                          {b.name}
+                          <ChevronRight className="w-3.5 h-3.5 text-ink-subtle opacity-0 -translate-x-1 group-hover/row:opacity-100 group-hover/row:translate-x-0 transition-all" aria-hidden="true" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-ink group-hover:text-accent transition-colors">{b.name}</span>
-                            <ExternalLink size={12} className="text-ink-muted group-hover:text-accent opacity-0 group-hover:opacity-100 transition-all" />
-                          </div>
-                          <span className="text-xs text-ink-muted">Code: {b.branch_code || `BR-${b.id}`}</span>
-                        </div>
+                        <div className="text-caption text-ink-muted font-mono">{b.branch_code || `BR-${b.id}`}</div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <div className="font-medium">{b.city ? `${b.city}${b.state ? `, ${b.state}` : ''}` : 'Location Set'}</div>
-                      <div className="text-ink-muted text-xs truncate max-w-xs">{b.address || 'Standard Address'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <div>{b.contact_person || 'HQ Manager'}</div>
-                      <div className="text-ink-muted text-xs">{b.contact_phone || b.contact_email || '—'}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft">
-                      <span className={b.is_active === 1 
-                        ? 'rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg' 
-                        : 'rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-sunken text-ink-secondary'}>
-                        {b.is_active === 1 ? 'ACTIVE' : 'INACTIVE'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink border-b border-line-soft text-right">
-                      <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => openEditModal(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle transition-colors"
-                          title="Edit Branch"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/reports?business_id=${b.business_id}&branch_id=${b.id}`)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-accent border border-line hover:bg-accent-soft transition-colors"
-                          title="View Reports"
-                        >
-                          <FileBarChart size={14} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/branches/${b.id}/stores`)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-warning-fg border border-line hover:bg-warning-soft transition-colors"
-                          title="View Stores"
-                        >
-                          <Store size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-danger-soft text-danger-fg border border-danger-line hover:bg-danger-muted transition-colors"
-                          title="Delete Branch"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    </div>
+                  </TD>
+                  <TD>
+                    <div className="text-sm text-ink flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
+                      {b.city ? `${b.city}${b.state ? `, ${b.state}` : ''}` : <span className="text-ink-muted">Not set</span>}
+                    </div>
+                    {b.address && <div className="text-caption text-ink-muted truncate max-w-xs">{b.address}</div>}
+                  </TD>
+                  <TD>
+                    <div className="text-sm text-ink">{b.contact_person || <span className="text-ink-muted">Not set</span>}</div>
+                    <div className="text-caption text-ink-muted">{b.contact_phone || b.contact_email || '—'}</div>
+                  </TD>
+                  <TD>
+                    <Badge tone={b.is_active === 1 ? 'success' : 'neutral'} dot size="sm">{b.is_active === 1 ? 'Active' : 'Inactive'}</Badge>
+                  </TD>
+                  <TD onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-end">
+                      <Menu
+                        label={`Actions for ${b.name}`}
+                        items={[
+                          { label: 'Edit branch', icon: Pencil, onClick: () => openEditModal(b) },
+                          { label: 'Reports', icon: BarChart3, to: `/reports?business_id=${b.business_id}&branch_id=${b.id}` },
+                          { label: 'Store events', icon: Store, to: `/branches/${b.id}/stores` },
+                          { divider: true },
+                          { label: 'Delete branch', icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
+                        ]}
+                      />
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </Card>
       )}
 
       {showAddModal && (
         <Modal
           size="lg"
-          icon={Building}
+          icon={Building2}
           title={`Add a branch to ${business?.name || 'this business'}`}
           description="Only the branch name is required."
           onClose={() => setShowAddModal(false)}
@@ -339,16 +303,14 @@ export default function BranchList() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton disabled={creatingBranch}>
-              {creatingBranch ? <><RefreshCw size={14} className="animate-spin" /> Saving…</> : 'Create branch'}
-            </PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button type="submit" loading={creatingBranch}>Create branch</Button>
           </>}
         >
           <BranchFields form={addForm} setForm={setAddForm} />
           <FormSection
-            title="Starting products (optional)"
-            description={`Tick products from ${business ? business.name : 'this business'}'s catalog to stock them in the new branch straight away.`}
+            title="Starting products"
+            description={`Optional. Tick products from ${business ? business.name : 'this business'}'s catalog to stock them in the new branch straight away.`}
           >
             <CatalogPicker
               products={catalogProducts}
@@ -367,15 +329,15 @@ export default function BranchList() {
       {showEditModal && (
         <Modal
           size="lg"
-          icon={Edit3}
+          icon={Pencil}
           title={`Edit ${editForm.name || 'branch'}`}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton>Save changes</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save changes</Button>
           </>}
         >
           <BranchFields form={editForm} setForm={setEditForm} showStatus />

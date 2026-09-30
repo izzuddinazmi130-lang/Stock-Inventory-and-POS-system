@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Plus, ArrowRight, Edit3, Trash2, X, CheckCircle, AlertCircle, Phone, Mail, FileText, SlidersHorizontal } from 'lucide-react';
+import { Building2, Plus, ArrowRight, Pencil, Trash2, Phone, Mail, SlidersHorizontal, User } from 'lucide-react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Modal, FormSection, Field, Input, Select, Textarea, PrimaryButton, SecondaryButton } from '../../components/ui/Form';
+import {
+  Modal, FormSection, Field, Input, Select, Textarea, Button, Card, Badge, BusinessDot, EmptyState, ErrorState, Menu, PageHeader,
+  Skeleton, useConfirm, useToast,
+} from '../../components/ui';
 
 export default function BusinessList() {
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
+  // `message` only carries errors shown inside the add/edit form; page messages are toasts
   const [message, setMessage] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -27,12 +34,13 @@ export default function BusinessList() {
   const fetchBusinesses = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const res = await api.get('/businesses');
       if (res.data.success) {
         setBusinesses(res.data.businesses || res.data.data || []);
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to fetch business directory' });
+      setLoadError(err.response?.data?.message || 'Could not load the businesses.');
     } finally {
       setLoading(false);
     }
@@ -48,7 +56,8 @@ export default function BusinessList() {
     try {
       const res = await api.post('/businesses', addForm);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
+        setMessage(null);
         setShowAddModal(false);
         setAddForm({
           name: '', legal_name: '', registration_number: '', industry: '',
@@ -71,7 +80,8 @@ export default function BusinessList() {
     try {
       const res = await api.put(`/businesses/${editForm.id}`, editForm);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
+        setMessage(null);
         setShowEditModal(false);
         fetchBusinesses();
       } else {
@@ -87,25 +97,28 @@ export default function BusinessList() {
   const handleDelete = async (b) => {
     const branchCount = Number(b.active_branch_count || b.total_branch_count || 0);
     if (branchCount > 0) {
-      setMessage({
-        type: 'danger',
-        text: `Cannot delete business '${b.name}': It currently has ${branchCount} branch(es) assigned. Superadmin must delete or reassign all branches first.`
-      });
+      toast.warning(`${b.name} still has ${branchCount} branch(es). Delete or move its branches first.`);
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to permanently delete business '${b.name}'?`)) return;
+    const ok = await confirm({
+      title: `Delete ${b.name}?`,
+      message: 'This permanently removes the business. It cannot be undone.',
+      confirmLabel: 'Delete business',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     try {
       const res = await api.delete(`/businesses/${b.id}`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message });
+        toast.success(res.data.message);
         fetchBusinesses();
       } else {
-        setMessage({ type: 'danger', text: res.data.message });
+        toast.error(res.data.message);
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to delete business' });
+      toast.error(err.response?.data?.message || 'Failed to delete business');
     }
   };
 
@@ -126,134 +139,77 @@ export default function BusinessList() {
     setShowEditModal(true);
   };
 
-  const getBusinessColor = (name, industry) => {
-    const text = `${name} ${industry}`.toLowerCase();
-    if (text.includes('kaftanasia') || text.includes('fashion')) return '#B4502E';
-    if (text.includes('as tech') || text.includes('technology')) return '#2563EB';
-    return '#6366f1'; // default indigo
-  };
+  const openAdd = () => { setMessage(null); setShowAddModal(true); };
 
   return (
     <Layout>
-      {message && (
-        <div className={`mb-6 flex items-center justify-between transition-all ${
-          message.type === 'success' 
-            ? 'p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm'
-            : 'p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
-        }`}>
-          <div className="flex items-center gap-2 font-semibold">
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)}><X className="w-4 h-4" /></button>
-        </div>
-      )}
+      <PageHeader
+        title="Businesses"
+        description="Each business has its own branches, products and product form."
+        actions={<Button icon={Plus} onClick={openAdd}>Add business</Button>}
+      />
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink tracking-tight">View Business</h1>
-          <p className="text-sm text-ink-muted mt-1">Corporate entity registry, business profiles, and operational branch hierarchy.</p>
+      {loading && businesses.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[0, 1, 2].map(i => <Skeleton key={i} className="h-52 rounded-xl" />)}
         </div>
-        <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors mt-4 sm:mt-0">
-          <Plus size={18} />
-          Add Business
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-ink-muted text-sm">Loading corporate directory...</div>
+      ) : loadError && businesses.length === 0 ? (
+        <Card><ErrorState description={loadError} onRetry={fetchBusinesses} /></Card>
       ) : businesses.length === 0 ? (
-        <div className="text-center py-12 bg-subtle border border-line rounded-xl flex flex-col items-center justify-center">
-          <Building2 className="w-12 h-12 text-ink-subtle mb-3" />
-          <p className="text-ink-secondary font-medium">No businesses yet</p>
-          <p className="text-sm text-ink-muted mb-4">Add your first business entity to get started.</p>
-          <button onClick={() => { setMessage(null); setShowAddModal(true); }} className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors">
-            <Plus size={16} /> Add Business
-          </button>
-        </div>
+        <Card>
+          <EmptyState icon={Building2} title="No businesses yet" description="Add your first business to start creating branches and products." action={<Button icon={Plus} onClick={openAdd}>Add business</Button>} />
+        </Card>
       ) : (
-        <>
-          <h3 className="text-xs font-semibold tracking-wide uppercase text-ink-muted mb-4">Corporate Entities</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {businesses.map((b) => {
-              const activeBranches = Number(b.active_branch_count || 0);
-              const bColor = getBusinessColor(b.name, b.industry);
-              return (
-                <div key={b.id} className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow" style={{ borderBottom: `2px solid ${bColor}` }}>
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-lg text-white flex-shrink-0" style={{ backgroundColor: bColor }}>
-                          <Building2 size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-ink line-clamp-1">{b.name}</h3>
-                          {b.registration_number && (
-                            <span className="text-xs text-ink-muted block">Reg: {b.registration_number}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <button
-                          onClick={() => openEditModal(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-ink-secondary border border-line hover:bg-subtle transition-colors"
-                          title="Edit Corporate Details"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(b)}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-danger-soft text-danger-fg border border-danger-line hover:bg-danger-muted transition-colors"
-                          title="Delete Business"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {businesses.map((b, i) => {
+            const activeBranches = Number(b.active_branch_count || 0);
+            return (
+              <Card key={b.id} className="flex flex-col animate-slide-up" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
+                <div className="p-5 flex-1">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-10 h-10 rounded-lg bg-sunken flex items-center justify-center flex-shrink-0 relative">
+                        <Building2 className="w-5 h-5 text-ink-secondary" aria-hidden="true" />
+                        <BusinessDot business={b} className="absolute -top-0.5 -right-0.5 ring-2 ring-surface" />
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-base font-semibold text-ink truncate">{b.name}</h2>
+                        <p className="text-caption text-ink-muted truncate">{b.legal_name || (b.registration_number ? `Reg. ${b.registration_number}` : 'No registered name')}</p>
                       </div>
                     </div>
-
-                    {b.legal_name && (
-                      <p className="text-sm text-ink-secondary mb-3 font-medium">Legal Name: {b.legal_name}</p>
-                    )}
-
-                    <div className="space-y-2 mb-4 text-sm text-ink-secondary">
-                      {b.industry && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-ink-muted font-medium">Industry:</span>
-                          <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{b.industry}</span>
-                        </div>
-                      )}
-                      {b.contact_person && <p><span className="text-ink-muted font-medium">Contact:</span> {b.contact_person}</p>}
-                      {b.contact_email && (
-                        <p className="flex items-center gap-1.5 text-ink-secondary">
-                          <Mail size={14} className="text-ink-muted" /> {b.contact_email}
-                        </p>
-                      )}
-                      {b.contact_phone && (
-                        <p className="flex items-center gap-1.5 text-ink-secondary">
-                          <Phone size={14} className="text-ink-muted" /> {b.contact_phone}
-                        </p>
-                      )}
-                    </div>
+                    <Menu
+                      label={`Actions for ${b.name}`}
+                      items={[
+                        { label: 'Edit details', icon: Pencil, onClick: () => openEditModal(b) },
+                        { label: 'Product form', icon: SlidersHorizontal, onClick: () => navigate(`/businesses/${b.id}/forms`) },
+                        { divider: true },
+                        { label: 'Delete business', icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
+                      ]}
+                    />
                   </div>
 
-                  <div className="px-5 py-3.5 border-t border-line-soft bg-subtle flex items-center justify-between">
-                    <span className="text-sm text-ink-muted">
-                      <strong className="text-ink font-bold">{activeBranches}</strong> active branches
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => navigate(`/businesses/${b.id}/forms`)} className="inline-flex items-center gap-1.5 text-accent text-sm font-semibold hover:text-accent-fg transition-colors" title="Manage Product Form">
-                        <SlidersHorizontal size={14} /> Manage Form
-                      </button>
-                      <button onClick={() => navigate(`/businesses/${b.id}/branches`)} className="inline-flex items-center gap-1.5 text-accent text-sm font-semibold hover:text-accent-fg transition-colors">
-                        Branches <ArrowRight size={16} />
-                      </button>
-                    </div>
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {b.industry && <Badge className="capitalize">{b.industry}</Badge>}
+                    {b.registration_number && b.legal_name && <Badge className="font-mono">{b.registration_number}</Badge>}
                   </div>
+
+                  <dl className="space-y-1.5 text-sm text-ink-secondary">
+                    <div className="flex items-center gap-2"><dt className="sr-only">Contact</dt><User className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_person || <span className="text-ink-muted">No contact person</span>}</dd></div>
+                    {b.contact_email && <div className="flex items-center gap-2"><dt className="sr-only">Email</dt><Mail className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_email}</dd></div>}
+                    {b.contact_phone && <div className="flex items-center gap-2"><dt className="sr-only">Phone</dt><Phone className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="tabular-nums">{b.contact_phone}</dd></div>}
+                  </dl>
                 </div>
-              );
-            })}
-          </div>
-        </>
+
+                <div className="px-5 py-3 border-t border-line-soft flex items-center justify-between gap-2 bg-subtle/60 rounded-b-xl">
+                  <span className="text-sm text-ink-muted">
+                    <span className="font-semibold text-ink tabular-nums">{activeBranches}</span> active {activeBranches === 1 ? 'branch' : 'branches'}
+                  </span>
+                  <Button variant="ghost" size="sm" iconRight={ArrowRight} onClick={() => navigate(`/businesses/${b.id}/branches`)}>Branches</Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       {showAddModal && (
@@ -267,8 +223,8 @@ export default function BusinessList() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowAddModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton disabled={saving}>{saving ? 'Saving…' : 'Create business'}</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Create business</Button>
           </>}
         >
           <BusinessFields form={addForm} setForm={setAddForm} />
@@ -278,7 +234,7 @@ export default function BusinessList() {
       {showEditModal && (
         <Modal
           size="lg"
-          icon={Edit3}
+          icon={Pencil}
           title={`Edit ${editForm.name || 'business'}`}
           description="Changes apply to this business and all of its branches."
           onClose={() => setShowEditModal(false)}
@@ -286,8 +242,8 @@ export default function BusinessList() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save changes</Button>
           </>}
         >
           <BusinessFields form={editForm} setForm={setEditForm} />
