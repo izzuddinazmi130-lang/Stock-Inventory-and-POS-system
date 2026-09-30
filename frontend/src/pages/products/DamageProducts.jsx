@@ -1,31 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  AlertTriangle, Plus, RefreshCw, Search, Eye, Camera, X, 
-  DollarSign, PackageX, Calendar, Filter, Building2, 
-  Upload, AlertCircle, CheckCircle, ExternalLink, Image as ImageIcon,
-  Layers, User, Trash2
-} from 'lucide-react';
+import { AlertTriangle, Plus, RefreshCw, Eye, Camera, Coins, PackageX, Trash2, Lock } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import { Modal, FormSection, Field, Input, Select, Textarea, MoneyInput, SecondaryButton } from '../../components/ui/Form';
-
-const REASON_CATEGORIES = [
-  { value: 'transit_damage', label: 'Transit Damage', color: 'bg-warning-soft text-warning-fg border-warning-line' },
-  { value: 'breakage', label: 'Breakage / Physical Impact', color: 'bg-danger-soft text-danger-fg border-danger-line' },
-  { value: 'water_damage', label: 'Water / Weather Damage', color: 'bg-info-soft text-info-fg border-info-line' },
-  { value: 'expired', label: 'Expired / Past Shelf Life', color: 'bg-warning-soft text-warning-fg border-warning-line' },
-  { value: 'manufacturing_defect', label: 'Manufacturing Defect', color: 'bg-violet-soft text-violet-fg border-violet-line' },
-  { value: 'other', label: 'Other / Written-off', color: 'bg-sunken text-ink-secondary border-line' }
-];
-
-function getCategoryMeta(catValue) {
-  return REASON_CATEGORIES.find(c => c.value === catValue) || {
-    value: catValue,
-    label: catValue || 'Other',
-    color: 'bg-sunken text-ink-secondary border-line'
-  };
-}
+import {
+  Button, Card, CardHeader, FilterBar, IconButton, Input, KpiCard, Menu, PageHeader, SearchInput, Select, Badge,
+  Table, THead, TBody, TH, TR, TD, TableState, Tooltip, useConfirm, useToast,
+} from '../../components/ui';
+import { ReasonBadge, ReportDamageModal, DamageDetailModal, PhotoViewer } from './components/DamageModals';
 
 export default function DamageProducts() {
   const { user } = useAuth();
@@ -34,7 +16,11 @@ export default function DamageProducts() {
   const [reports, setReports] = useState([]);
   const [stats, setStats] = useState({ totalReports: 0, totalQuantity: 0, totalValue: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // `message` now only carries errors shown inside the report form; page messages are toasts
   const [message, setMessage] = useState(null);
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   // Filter states
   const [businesses, setBusinesses] = useState([]);
@@ -67,9 +53,6 @@ export default function DamageProducts() {
   const [viewReport, setViewReport] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
-  // Delete Confirmation Modal states
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
 
@@ -118,6 +101,7 @@ export default function DamageProducts() {
   const fetchDamageReports = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const params = {};
       if (filterBusiness) params.business_id = filterBusiness;
       if (filterBranch) params.branch_id = filterBranch;
@@ -130,11 +114,11 @@ export default function DamageProducts() {
         setReports(res.data.reports || []);
         setStats(res.data.stats || { totalReports: 0, totalQuantity: 0, totalValue: 0 });
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to load damage reports.' });
+        setLoadError(res.data.message || 'Failed to load damage reports.');
       }
     } catch (err) {
       console.error('Error fetching damage reports:', err);
-      setMessage({ type: 'danger', text: 'Error connecting to damage records API.' });
+      setLoadError(err.response?.data?.message || 'Could not reach the damage records service.');
     } finally {
       setLoading(false);
     }
@@ -148,23 +132,25 @@ export default function DamageProducts() {
   }, [filterBusiness, filterBranch, startDate, endDate, searchQuery]);
 
   // Delete a damage report
-  const handleDeleteReport = async () => {
-    if (!deleteTarget) return;
+  const handleDeleteReport = async (target) => {
+    const ok = await confirm({
+      title: `Delete damage report #DR-${target.id}?`,
+      message: `This permanently deletes the record for ${target.item_name} and its photos.\n${target.quantity} unit(s) will be put back into ${target.branch_name}'s stock. This cannot be undone.`,
+      confirmLabel: 'Delete report',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      setDeleting(true);
-      const res = await api.delete(`/damage-reports/${deleteTarget.id}`);
+      const res = await api.delete(`/damage-reports/${target.id}`);
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message || `Damage report #${deleteTarget.id} deleted.` });
-        setDeleteTarget(null);
+        toast.success(res.data.message || `Damage report #${target.id} deleted.`);
         fetchDamageReports();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to delete damage report.' });
+        toast.error(res.data.message || 'Failed to delete damage report.');
       }
     } catch (err) {
       console.error('Error deleting damage report:', err);
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Error connecting to damage records API.' });
-    } finally {
-      setDeleting(false);
+      toast.error(err.response?.data?.message || 'Could not reach the damage records service.');
     }
   };
 
@@ -307,7 +293,8 @@ export default function DamageProducts() {
       });
 
       if (res.data.success) {
-        setMessage({ type: 'success', text: res.data.message || 'Damage report logged successfully!' });
+        toast.success(res.data.message || 'Damage report logged.');
+        setMessage(null);
         setShowAddModal(false);
         fetchDamageReports();
       } else {
@@ -336,817 +323,183 @@ export default function DamageProducts() {
 
   return (
     <Layout>
-      {/* Top Notification Banner */}
-      {message && (
-        <div className={`p-4 mb-6 rounded-xl flex items-center justify-between border ${
-          message.type === 'success' 
-            ? 'bg-success-soft text-success-fg border-success-line' 
-            : 'bg-danger-soft text-danger-fg border-danger-line'
-        }`}>
-          <div className="flex items-center gap-2">
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-            <span className="text-sm font-medium">{message.text}</span>
-          </div>
-          <button 
-            onClick={() => setMessage(null)}
-            className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-ink/5"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+      <PageHeader
+        title="Damage records"
+        description="Log damaged items, record the loss and keep photo evidence."
+        actions={<>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchDamageReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+          <Button variant="danger" icon={Plus} onClick={openAddModal}>Report damage</Button>
+        </>}
+      />
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 text-ink-muted text-[11px] font-semibold uppercase tracking-wider mb-1">
-            <span>Inventory</span>
-            <span>/</span>
-            <span>Damage & Loss Records</span>
-          </div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Damage Products</h1>
-          <p className="text-ink-muted text-sm mt-0.5">
-            Log damaged items, snapshot financial loss, and inspect photographic proof.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={fetchDamageReports} 
-            disabled={loading}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin text-ink-muted' : ''} />
-            <span>Refresh</span>
-          </button>
-          <button 
-            onClick={openAddModal} 
-            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors shadow-sm"
-          >
-            <Plus size={18} />
-            <span>Log Damage Report</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3 Live KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        {/* Card 1: Total Reports */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Total Reports Logged
-            </span>
-            <div className="p-2 rounded-lg bg-warning-soft text-warning-fg">
-              <AlertTriangle className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              {stats.totalReports}
-            </span>
-            <span className="text-xs mt-1 block text-ink-muted">
-              {hasActiveFilters ? 'Matching active filters' : 'Lifetime incident records'}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Total Items Damaged */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Total Items Damaged
-            </span>
-            <div className="p-2 rounded-lg bg-danger-soft text-danger-fg">
-              <PackageX className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              {stats.totalQuantity.toLocaleString()} <span className="text-sm font-normal text-ink-muted">units</span>
-            </span>
-            <span className="text-xs mt-1 block text-danger-fg font-medium">
-              Written off from inventory
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Total Financial Loss */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Total Financial Loss
-            </span>
-            <div className="p-2 rounded-lg bg-success-soft text-success-fg">
-              <DollarSign className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              RM {stats.totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="text-xs mt-1 block text-ink-muted">
-              Snapshotted replacement cost
-            </span>
-          </div>
-        </div>
+        <KpiCard loading={loading && reports.length === 0} label="Reports" value={stats.totalReports} icon={AlertTriangle} tone="warning" meta={hasActiveFilters ? 'Matching the filters' : 'All time'} />
+        <KpiCard loading={loading && reports.length === 0} label="Units written off" value={stats.totalQuantity} icon={PackageX} tone="danger" meta="Removed from stock" />
+        <KpiCard
+          loading={loading && reports.length === 0}
+          label="Value lost"
+          value={stats.totalValue}
+          format={v => `RM ${v.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon={Coins}
+          tone="neutral"
+          meta="At recorded cost"
+        />
       </div>
 
-      {/* Filter Control Bar */}
-      <div className="bg-surface border border-line rounded-xl p-4 mb-6 shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Business Selector (super_admin only) */}
-          {isSuperAdmin && (
-            <div className="min-w-[160px]">
-              <select
-                value={filterBusiness}
-                onChange={e => {
-                  setFilterBusiness(e.target.value);
-                  setFilterBranch('');
-                }}
-                className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-              >
-                <option value="">All Businesses</option>
-                {businesses.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+      <FilterBar onReset={resetFilters} resetVisible={hasActiveFilters}>
+        <SearchInput
+          wrapperClassName="md:flex-1 md:min-w-[14rem]"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search product, SKU, notes, reporter…"
+          aria-label="Search damage records"
+        />
+        {isSuperAdmin && (
+          <Select wrapperClassName="md:w-44" aria-label="Business" value={filterBusiness} onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); }}>
+            <option value="">All businesses</option>
+            {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </Select>
+        )}
+        <Select wrapperClassName="md:w-48" aria-label="Branch" value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
+          <option value="">All branches</option>
+          {filteredBranchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </Select>
+        <Input type="date" wrapperClassName="md:w-40" className="md:w-40" aria-label="From date" value={startDate} max={endDate || undefined} onChange={e => setStartDate(e.target.value)} />
+        <Input type="date" className="md:w-40" aria-label="To date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} />
+      </FilterBar>
 
-          {/* Branch Selector (admin: branches of their own business only) */}
-          <div className="min-w-[160px]">
-            <select
-              value={filterBranch}
-              onChange={e => setFilterBranch(e.target.value)}
-              className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="">{isSuperAdmin ? 'All Branches' : 'All branches in my business'}</option>
-              {filteredBranchOptions.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Date Range: Start Date */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-muted font-medium">From:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
+      <Card className="overflow-hidden">
+        <CardHeader
+          title="Damage incidents"
+          description={loading && reports.length === 0 ? 'Loading…' : `${reports.length} ${reports.length === 1 ? 'record' : 'records'}`}
+        />
+        <Table minWidth="58rem">
+          <THead>
+            <TR>
+              <TH>Report</TH>
+              <TH>Product</TH>
+              <TH>Location</TH>
+              <TH numeric>Qty</TH>
+              <TH numeric>Value lost</TH>
+              <TH>Reason</TH>
+              <TH>Reported by</TH>
+              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={8}
+              loading={loading && reports.length === 0}
+              error={!loading && loadError && reports.length === 0 ? loadError : null}
+              onRetry={fetchDamageReports}
+              empty={!loading && !loadError && reports.length === 0}
+              emptyIcon={PackageX}
+              emptyTitle={hasActiveFilters ? 'No records match these filters' : 'No damage reported yet'}
+              emptyDescription={hasActiveFilters ? 'Try another date range or search.' : 'When something arrives broken or gets written off, report it here.'}
+              emptyAction={hasActiveFilters
+                ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button>
+                : <Button variant="danger" size="sm" icon={Plus} onClick={openAddModal}>Report damage</Button>}
             />
-          </div>
-
-          {/* Date Range: End Date */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-muted font-medium">To:</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          {/* Search Query */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search product, SKU, notes, reporter..."
-              className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          {/* Clear Filters */}
-          {hasActiveFilters && (
-            <button
-              onClick={resetFilters}
-              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors"
-            >
-              <X size={14} />
-              Reset Filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Records Table */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft bg-subtle/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-danger" />
-            <h3 className="font-semibold text-ink text-sm">Damage Incidents</h3>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sunken text-ink-secondary">
-              {reports.length} {reports.length === 1 ? 'record' : 'records'}
-            </span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-subtle">
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
-                  Report ID & Date
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
-                  Product / SKU
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
-                  Location
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">
-                  Qty Damaged
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-right">
-                  Value Lost
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
-                  Reason & Note
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line">
-                  Reported By
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-center">
-                  Evidence
-                </th>
-                <th className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted px-4 py-3 border-b border-line text-center">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {loading ? (
-                <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center text-ink-muted text-sm">
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw size={16} className="animate-spin text-accent" />
-                      <span>Loading damage reports...</span>
+            {reports.map((r, i) => {
+              const photoCount = r.photos?.length || 0;
+              const when = new Date(r.created_at);
+              const canDelete = canDeleteReport(r);
+              return (
+                <TR key={r.id} index={i} onClick={() => setViewReport(r)}>
+                  <TD>
+                    <div className="font-mono text-caption font-semibold text-accent">#DR-{r.id}</div>
+                    <div className="text-caption text-ink-muted mt-0.5 whitespace-nowrap">
+                      {when.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                  </td>
-                </tr>
-              ) : reports.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="px-4 py-14 text-center">
-                    <PackageX className="w-12 h-12 text-ink-subtle mx-auto mb-3" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-ink-secondary">No damage records found</p>
-                    <p className="text-xs text-ink-muted mt-1 max-w-sm mx-auto">
-                      {hasActiveFilters 
-                        ? 'Try adjusting your search query or filter date range.' 
-                        : 'No damaged or written-off items have been reported yet.'}
-                    </p>
-                    {hasActiveFilters && (
-                      <button
-                        onClick={resetFilters}
-                        className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg"
-                      >
-                        Reset active filters
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                reports.map(r => {
-                  const cat = getCategoryMeta(r.reason_category);
-                  const photoCount = r.photos?.length || 0;
-                  const dateFormatted = new Date(r.created_at).toLocaleDateString('en-MY', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  });
-                  const timeFormatted = new Date(r.created_at).toLocaleTimeString('en-MY', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
-
-                  return (
-                    <tr key={r.id} className="hover:bg-subtle/80 transition-colors">
-                      {/* ID & Date */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm">
-                        <div className="font-mono font-semibold text-accent text-xs">
-                          #DR-{r.id}
-                        </div>
-                        <div className="text-xs text-ink-muted mt-0.5">{dateFormatted}</div>
-                        <div className="text-[10px] text-ink-muted">{timeFormatted}</div>
-                      </td>
-
-                      {/* Product / SKU */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm">
-                        <div className="font-medium text-ink">{r.item_name}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[11px] px-1.5 py-0.2 bg-sunken text-ink-secondary rounded-lg">
-                            {r.item_code}
+                    {photoCount > 0 && <Badge tone="neutral" size="sm" icon={Camera} className="mt-1">{photoCount} {photoCount === 1 ? 'photo' : 'photos'}</Badge>}
+                  </TD>
+                  <TD className="max-w-[16rem]">
+                    <div className="font-medium text-ink truncate">{r.item_name}</div>
+                    <div className="text-caption text-ink-muted mt-0.5">
+                      <span className="font-mono">{r.item_code}</span>{r.category && <> · {r.category}</>}
+                    </div>
+                  </TD>
+                  <TD>
+                    <div className="text-sm text-ink whitespace-nowrap">{r.branch_name}</div>
+                    <div className="text-caption text-ink-muted whitespace-nowrap">{r.business_name}</div>
+                  </TD>
+                  <TD numeric className="font-semibold text-danger-fg">−{r.quantity}</TD>
+                  <TD numeric>
+                    <div className="font-semibold text-ink">RM {parseFloat(r.total_value || 0).toFixed(2)}</div>
+                    <div className="text-caption text-ink-muted">@ RM {parseFloat(r.cost_per_unit || 0).toFixed(2)}</div>
+                  </TD>
+                  <TD className="max-w-[14rem]">
+                    <ReasonBadge value={r.reason_category} />
+                    {r.reason_details && <div className="text-caption text-ink-muted mt-1 truncate" title={r.reason_details}>{r.reason_details}</div>}
+                  </TD>
+                  <TD>
+                    <div className="text-sm text-ink">{r.reported_by_name || 'System admin'}</div>
+                    {r.reported_by_email && <div className="text-caption text-ink-muted">{r.reported_by_email}</div>}
+                  </TD>
+                  <TD onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <IconButton icon={Eye} label="View report" onClick={() => setViewReport(r)} />
+                      {canDelete ? (
+                        <Menu
+                          label={`More actions for report ${r.id}`}
+                          items={[{ label: 'Delete report', icon: Trash2, tone: 'danger', onClick: () => handleDeleteReport(r) }]}
+                        />
+                      ) : (
+                        <Tooltip content="Records from other branches are read-only">
+                          <span className="w-8 h-8 inline-flex items-center justify-center text-ink-subtle" tabIndex={0} aria-label="Read-only">
+                            <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                           </span>
-                          {r.category && (
-                            <span className="text-[11px] text-ink-muted">· {r.category}</span>
-                          )}
-                        </div>
-                      </td>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </Card>
 
-                      {/* Location */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm">
-                        <div className="text-ink font-medium text-xs">{r.branch_name}</div>
-                        <div className="text-[11px] text-ink-muted">{r.business_name}</div>
-                      </td>
-
-                      {/* Qty Damaged */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-right">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-danger-soft text-danger-fg">
-                          -{r.quantity}
-                        </span>
-                      </td>
-
-                      {/* Value Lost */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm text-right">
-                        <div className="font-semibold text-ink">
-                          RM {parseFloat(r.total_value || 0).toFixed(2)}
-                        </div>
-                        <div className="text-[11px] text-ink-muted">
-                          @ RM {parseFloat(r.cost_per_unit || 0).toFixed(2)}
-                        </div>
-                      </td>
-
-                      {/* Reason */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm max-w-xs">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${cat.color}`}>
-                          {cat.label}
-                        </span>
-                        {r.reason_details && (
-                          <div className="text-xs text-ink-muted mt-1 truncate" title={r.reason_details}>
-                            {r.reason_details}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Reported By */}
-                      <td className="px-4 py-3 border-b border-line-soft text-sm">
-                        <div className="text-xs font-medium text-ink">
-                          {r.reported_by_name || 'System Admin'}
-                        </div>
-                        {r.reported_by_email && (
-                          <div className="text-[11px] text-ink-muted">{r.reported_by_email}</div>
-                        )}
-                      </td>
-
-                      {/* Evidence Photo Count / Icon */}
-                      <td className="px-4 py-3 border-b border-line-soft text-center">
-                        {photoCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent-soft text-accent-fg">
-                            <Camera size={12} />
-                            {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-ink-muted italic">None</span>
-                        )}
-                      </td>
-
-                      {/* Action */}
-                      <td className="px-4 py-3 border-b border-line-soft text-center">
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            onClick={() => setViewReport(r)}
-                            className="inline-flex items-center gap-1 h-8 px-2.5 bg-sunken hover:bg-line text-ink-secondary text-xs font-medium rounded-lg transition-colors"
-                            title="View Full Report & Photos"
-                          >
-                            <Eye size={13} />
-                            <span>View</span>
-                          </button>
-                          {canDeleteReport(r) ? (
-                            <button
-                              onClick={() => setDeleteTarget(r)}
-                              className="inline-flex items-center gap-1 h-8 px-2.5 bg-danger-soft hover:bg-danger-muted text-danger-fg text-xs font-medium rounded-lg transition-colors"
-                              title="Delete Damage Report"
-                            >
-                              <Trash2 size={13} />
-                              <span>Delete</span>
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-ink-muted italic px-1" title="Records from other branches are read-only">
-                              Read-only
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ADD DAMAGE REPORT MODAL                                                   */}
-      {/* ========================================================================= */}
       {showAddModal && (
-        <Modal
-          size="lg"
-          icon={AlertTriangle}
-          title="Report damaged stock"
-          description="The damaged quantity is removed from branch stock and the loss is recorded."
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleAddSubmit}
+        <ReportDamageModal
+          isSuperAdmin={isSuperAdmin}
+          user={user}
+          branches={branches}
+          branchId={modalBranchId}
+          onBranchChange={(v) => { setModalBranchId(v); setSelectedProduct(null); setProductSearch(''); }}
+          productSearch={productSearch}
+          setProductSearch={setProductSearch}
+          products={branchProducts}
+          productResults={productSearchResults}
+          loadingProducts={loadingProducts}
+          selectedProduct={selectedProduct}
+          onSelectProduct={(p) => {
+            const stockQty = parseInt(p.quantity || 0, 10);
+            setSelectedProduct(p);
+            setFormData(prev => ({ ...prev, quantity: Math.min(parseInt(prev.quantity, 10) || 1, stockQty), cost_per_unit: p.cost_price || '' }));
+          }}
+          onClearProduct={() => { setSelectedProduct(null); setProductSearch(''); }}
+          form={formData}
+          setForm={setFormData}
+          totalLoss={computedTotalLoss}
+          photos={selectedPhotos}
+          previews={photoPreviews}
+          onAddPhotos={handlePhotoSelect}
+          onRemovePhoto={removePhoto}
+          fileInputRef={fileInputRef}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
-          footer={<>
-            <SecondaryButton onClick={() => setShowAddModal(false)} disabled={submitting}>Cancel</SecondaryButton>
-            <button
-              type="submit"
-              disabled={submitting || !selectedProduct}
-              className="inline-flex items-center gap-2 h-10 px-4 bg-danger text-white text-sm font-medium rounded-lg hover:bg-danger-hover transition-colors disabled:opacity-50"
-            >
-              {submitting
-                ? <><RefreshCw size={16} className="animate-spin" /> Submitting…</>
-                : <><PackageX size={16} /> Report &amp; remove {parseInt(formData.quantity, 10) || 0} from stock</>}
-            </button>
-          </>}
-        >
-          {/* 1. What */}
-          <FormSection title="1. What was damaged?">
-            {isSuperAdmin ? (
-              <Field label="Branch" required>
-                <Select
-                  required
-                  value={modalBranchId}
-                  onChange={e => { setModalBranchId(e.target.value); setSelectedProduct(null); setProductSearch(''); }}
-                >
-                  <option value="">Choose a branch…</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>)}
-                </Select>
-              </Field>
-            ) : (
-              <div className="p-2.5 bg-subtle border border-line-soft rounded-lg text-xs text-ink-secondary flex items-center gap-2">
-                <Building2 size={14} className="text-ink-muted" />
-                Branch: <strong>{user?.branch_name || 'My Branch'}</strong>
-              </div>
-            )}
-
-            <Field label="Product" required>
-              {selectedProduct ? (
-                <div className="p-3 bg-subtle border border-line rounded-lg flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-ink text-sm truncate">{selectedProduct.name || selectedProduct.item_name}</div>
-                    <div className="text-xs text-ink-muted mt-0.5">
-                      <span className="font-mono text-accent">{selectedProduct.sku || selectedProduct.item_code}</span>
-                      {' · '}{selectedProduct.quantity || 0} in stock
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => { setSelectedProduct(null); setProductSearch(''); }} className="text-xs font-semibold text-accent hover:text-accent-fg flex-shrink-0">
-                    Change
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <Input
-                      className="pl-9"
-                      placeholder={loadingProducts ? 'Loading products…' : 'Search by product name or SKU…'}
-                      value={productSearch}
-                      onChange={e => setProductSearch(e.target.value)}
-                      disabled={loadingProducts || (isSuperAdmin && !modalBranchId)}
-                    />
-                  </div>
-                  <div className="mt-1 border border-line rounded-lg max-h-52 overflow-y-auto bg-surface divide-y divide-line-soft">
-                    {isSuperAdmin && !modalBranchId ? (
-                      <div className="p-3 text-center text-xs text-ink-muted">Choose a branch first.</div>
-                    ) : loadingProducts ? (
-                      <div className="p-3 text-center text-xs text-ink-muted">Loading products…</div>
-                    ) : branchProducts.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-ink-muted">This branch has no products.</div>
-                    ) : productSearchResults.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-ink-muted">No products match “{productSearch}”.</div>
-                    ) : productSearchResults.map(p => {
-                      const stockQty = parseInt(p.quantity || 0, 10);
-                      return (
-                        <button
-                          key={`${p.id}-${p.branch_id}`}
-                          type="button"
-                          disabled={stockQty <= 0}
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setFormData(prev => ({ ...prev, quantity: Math.min(parseInt(prev.quantity, 10) || 1, stockQty), cost_per_unit: p.cost_price || '' }));
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-accent-soft/50 flex items-center justify-between gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium text-ink">{p.name || p.item_name}</span>
-                            <span className="block text-[11px] text-ink-muted"><span className="font-mono">{p.sku || p.item_code}</span>{p.category && <> · {p.category}</>}</span>
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0 ${stockQty > 0 ? 'bg-success-soft text-success-fg' : 'bg-danger-soft text-danger-fg'}`}>
-                            {stockQty > 0 ? `${stockQty} in stock` : 'No stock'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </Field>
-          </FormSection>
-
-          {/* 2. How many */}
-          <FormSection title="2. How many, and what is the loss?">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field
-                label="Damaged quantity"
-                required
-                hint={selectedProduct ? `Up to ${selectedProduct.quantity || 0} (current stock).` : undefined}
-                error={selectedProduct && parseInt(formData.quantity, 10) > parseInt(selectedProduct.quantity || 0, 10) ? `Only ${selectedProduct.quantity || 0} in stock.` : undefined}
-              >
-                <Input
-                  type="number" min="1" step="1" required
-                  max={selectedProduct ? (selectedProduct.quantity || 1) : undefined}
-                  value={formData.quantity}
-                  onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-                />
-              </Field>
-              <Field label="Cost per unit" hint="Filled in from the product's cost price. Change it if needed.">
-                <MoneyInput value={formData.cost_per_unit} onChange={e => setFormData({ ...formData, cost_per_unit: e.target.value })} />
-              </Field>
-            </div>
-            <div className="p-3 bg-danger-soft border border-danger-line rounded-lg flex items-center justify-between">
-              <span className="text-xs text-danger-fg">
-                Total loss: {parseInt(formData.quantity, 10) || 0} × RM {parseFloat(formData.cost_per_unit || selectedProduct?.cost_price || 0).toFixed(2)}
-              </span>
-              <span className="text-base font-bold text-danger-fg">RM {computedTotalLoss}</span>
-            </div>
-          </FormSection>
-
-          {/* 3. Why */}
-          <FormSection title="3. What happened?">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {REASON_CATEGORIES.map(c => {
-                const active = formData.reason_category === c.value;
-                return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, reason_category: c.value })}
-                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition-colors ${active ? 'border-accent bg-accent-soft text-accent-fg ring-1 ring-accent' : 'border-line text-ink-secondary hover:border-line-strong'}`}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
-            </div>
-            <Field label="Details" optional>
-              <Textarea
-                rows={2}
-                value={formData.reason_details}
-                onChange={e => setFormData({ ...formData, reason_details: e.target.value })}
-                placeholder="What happened? Batch number, courier, where it was found…"
-              />
-            </Field>
-          </FormSection>
-
-          {/* 4. Photos */}
-          <FormSection title="4. Photos (optional)" description={`Up to 5 photos as evidence (JPG, PNG or WebP). ${selectedPhotos.length}/5 added.`}>
-            {photoPreviews.length > 0 && (
-              <div className="grid grid-cols-5 gap-2">
-                {photoPreviews.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg border border-line overflow-hidden bg-sunken">
-                    <img src={url} alt="Evidence preview" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-ink/60 text-white rounded-full p-1 hover:bg-ink/80" aria-label="Remove photo">
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {selectedPhotos.length < 5 && (
-              <div>
-                <input type="file" ref={fileInputRef} multiple accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} className="hidden" id="damage-photo-upload" />
-                <label htmlFor="damage-photo-upload" className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-line rounded-lg cursor-pointer hover:border-accent hover:bg-subtle transition-colors text-xs text-ink-secondary">
-                  <Upload size={16} className="text-ink-muted" /> Add photos
-                </label>
-              </div>
-            )}
-          </FormSection>
-        </Modal>
+          submitting={submitting}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddSubmit}
+        />
       )}
 
-      {/* ========================================================================= */}
-      {/* VIEW DAMAGE REPORT DETAILS MODAL                                          */}
-      {/* ========================================================================= */}
       {viewReport && (
-        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-xl w-full p-6 relative my-8">
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-line-soft">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-bold text-accent">
-                    #DR-{viewReport.id}
-                  </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                    getCategoryMeta(viewReport.reason_category).color
-                  }`}>
-                    {getCategoryMeta(viewReport.reason_category).label}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-muted mt-1">
-                  Recorded on {new Date(viewReport.created_at).toLocaleString('en-MY')}
-                </p>
-              </div>
-              <button
-                onClick={() => setViewReport(null)}
-                className="p-1 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-sunken transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Product Info Card */}
-              <div className="p-4 bg-subtle border border-line rounded-xl">
-                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">
-                  Affected Inventory Item
-                </span>
-                <div className="text-base font-bold text-ink">{viewReport.item_name}</div>
-                <div className="flex items-center gap-2 text-xs text-ink-secondary mt-1">
-                  <span className="font-mono bg-surface px-2 py-0.5 border border-line rounded-lg">
-                    SKU: {viewReport.item_code}
-                  </span>
-                  {viewReport.category && <span>· Category: {viewReport.category}</span>}
-                </div>
-              </div>
-
-              {/* Loss Metrics Grid */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-surface border border-line rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-ink-muted block">Quantity</span>
-                  <span className="text-lg font-bold text-danger-fg mt-0.5 block">
-                    -{viewReport.quantity} units
-                  </span>
-                </div>
-                <div className="p-3 bg-surface border border-line rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-ink-muted block">Unit Cost</span>
-                  <span className="text-lg font-bold text-ink mt-0.5 block">
-                    RM {parseFloat(viewReport.cost_per_unit || 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="p-3 bg-danger-soft border border-danger-line rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-danger-fg block">Total Loss</span>
-                  <span className="text-lg font-bold text-danger-fg mt-0.5 block">
-                    RM {parseFloat(viewReport.total_value || 0).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Location & Reporter Info */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-subtle border border-line-soft rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-ink-muted block mb-0.5">Location</span>
-                  <div className="font-medium text-ink">{viewReport.branch_name}</div>
-                  <div className="text-ink-muted">{viewReport.business_name}</div>
-                </div>
-                <div className="p-3 bg-subtle border border-line-soft rounded-xl">
-                  <span className="text-[10px] uppercase font-semibold text-ink-muted block mb-0.5">Reported By</span>
-                  <div className="font-medium text-ink">{viewReport.reported_by_name || 'System Admin'}</div>
-                  <div className="text-ink-muted">{viewReport.reported_by_email || '—'}</div>
-                </div>
-              </div>
-
-              {/* Reason Details Note */}
-              <div>
-                <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wider block mb-1">
-                  Incident Explanation / Notes
-                </span>
-                <div className="p-3 bg-subtle border border-line rounded-xl text-xs text-ink-secondary leading-relaxed min-h-[50px]">
-                  {viewReport.reason_details || 'No additional explanation was recorded.'}
-                </div>
-              </div>
-
-              {/* Evidence Photos Gallery */}
-              <div>
-                <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wider block mb-2">
-                  Photographic Evidence ({viewReport.photos?.length || 0})
-                </span>
-                {viewReport.photos && viewReport.photos.length > 0 ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {viewReport.photos.map((p, i) => (
-                      <div
-                        key={p.id || i}
-                        onClick={() => setLightboxPhoto(p.photo_path)}
-                        className="group relative aspect-square rounded-xl border border-line overflow-hidden bg-sunken cursor-pointer shadow-xs"
-                      >
-                        <img
-                          src={p.photo_path}
-                          alt={`Evidence #${i + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                        <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <ExternalLink size={16} className="text-white drop-shadow" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-subtle border border-line-soft rounded-xl text-center text-xs text-ink-muted">
-                    No photographic evidence was uploaded with this damage report.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-line-soft flex justify-end">
-              <button
-                onClick={() => setViewReport(null)}
-                className="h-10 px-5 bg-ink text-white text-sm font-medium rounded-lg hover:bg-ink-hover transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <DamageDetailModal report={viewReport} onClose={() => setViewReport(null)} onOpenPhoto={setLightboxPhoto} />
       )}
 
-      {/* ========================================================================= */}
-      {/* DELETE CONFIRMATION MODAL                                                 */}
-      {/* ========================================================================= */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 rounded-full bg-danger-soft text-danger-fg">
-                <AlertTriangle size={20} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-ink text-sm">Delete Damage Report?</h3>
-                <p className="text-xs text-ink-muted">#DR-{deleteTarget.id}</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-ink-secondary mb-2">
-              This will permanently delete this damage record for{' '}
-              <span className="font-medium text-ink">{deleteTarget.item_name}</span> and any
-              attached evidence photos.
-            </p>
-            <p className="text-xs text-ink-muted bg-subtle border border-line rounded-lg p-3 mb-5">
-              {deleteTarget.quantity} unit(s) will be restored back to {deleteTarget.branch_name}'s stock.
-              This action cannot be undone.
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-                className="h-10 px-4 bg-sunken hover:bg-line text-ink-secondary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteReport}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 h-10 px-4 bg-danger hover:bg-danger-hover text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-              >
-                {deleting ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={14} />
-                    <span>Delete Report</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* PHOTO LIGHTBOX MODAL                                                      */}
-      {/* ========================================================================= */}
-      {lightboxPhoto && (
-        <div 
-          className="fixed inset-0 bg-ink/85 z-[60] flex items-center justify-center p-4 backdrop-blur-xs"
-          onClick={() => setLightboxPhoto(null)}
-        >
-          <div className="relative max-w-3xl max-h-[90vh] flex flex-col items-center">
-            <button
-              onClick={() => setLightboxPhoto(null)}
-              className="absolute -top-10 right-0 text-white/80 hover:text-white p-1 rounded-full bg-surface/10 hover:bg-surface/20 transition-colors"
-            >
-              <X size={20} />
-            </button>
-            <img
-              src={lightboxPhoto}
-              alt="Evidence Full Size"
-              className="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl border border-white/20"
-              onClick={e => e.stopPropagation()}
-            />
-          </div>
-        </div>
-      )}
+      {lightboxPhoto && <PhotoViewer src={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />}
     </Layout>
   );
 }
