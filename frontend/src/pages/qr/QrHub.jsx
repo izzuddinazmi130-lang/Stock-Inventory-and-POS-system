@@ -14,6 +14,7 @@ export default function QrHub() {
     <Layout>
       <SegmentedControl
         label="Point of sale or QR labels"
+        size="lg"
         value={tab}
         onChange={setTab}
         className="mb-6"

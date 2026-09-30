@@ -105,7 +105,7 @@ export default function OrderPanel({
           <>
             <div className="flex items-center justify-between gap-3">
               <span className="text-caption font-medium text-ink-muted">Price list</span>
-              <SegmentedControl size="sm" label="Price list" value={priceTier} onChange={setPriceTier} tabs={PRICE_TIERS} />
+              <SegmentedControl size="lg" label="Price list" value={priceTier} onChange={setPriceTier} tabs={PRICE_TIERS} />
             </div>
 
             {stores.length > 0 && (
@@ -214,7 +214,7 @@ export default function OrderPanel({
             <IconButton icon={X} label="Remove note" onClick={() => { setShowNote(false); setSaleNote(''); }} />
           </div>
         ) : (
-          <Button variant="link" size="sm" icon={StickyNote} onClick={() => setShowNote(true)}>Add a note</Button>
+          <Button variant="link" size="sm" className="min-h-11" icon={StickyNote} onClick={() => setShowNote(true)}>Add a note</Button>
         )}
 
         <div className="flex items-end justify-between pt-1">

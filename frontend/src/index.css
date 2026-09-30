@@ -89,6 +89,10 @@
     @apply bg-page text-ink font-sans antialiased;
     margin: 0;
   }
+  /* One icon weight everywhere (lucide defaults to 2) */
+  .lucide {
+    stroke-width: 1.75;
+  }
   /* Quantities, prices and SKUs line up in columns */
   .tabular,
   .font-mono {
