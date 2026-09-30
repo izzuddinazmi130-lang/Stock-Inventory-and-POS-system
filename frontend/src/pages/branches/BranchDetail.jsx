@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Package, Boxes, AlertTriangle, ArrowDownLeft, RefreshCw,
-  QrCode, Building, Users, Store, Edit3, X, Plus, Phone, Mail, Clock, MapPin, CheckCircle, AlertCircle,
-  Search, CheckSquare, Square, Layers
+  Package, Boxes, PackageMinus, ArrowUpDown, RefreshCw, QrCode, Users, Store, Pencil, Plus, Phone, Clock, MapPin,
+  Layers, BarChart3, Building2,
 } from 'lucide-react';
 import Layout from '../../components/Layout';
-import KpiCard from '../../components/KpiCard';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Modal, PrimaryButton, SecondaryButton, toDateInput } from '../../components/ui/Form';
+import {
+  Modal, Button, IconButton, Card, CardHeader, KpiCard, Menu, PageHeader, Badge, BusinessDot, StatusPill, EmptyState, ErrorState,
+  Skeleton, SkeletonKpi, Table, THead, TBody, TH, TR, TD, TableState, toDateInput, useToast, cn,
+} from '../../components/ui';
 import BranchFields from '../../components/forms/BranchFields';
 import CatalogPicker from '../../components/forms/CatalogPicker';
 
@@ -27,7 +28,11 @@ export default function BranchDetail() {
   const [branch, setBranch] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  // `message` only carries errors shown inside a modal; page messages are toasts
   const [message, setMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -46,6 +51,7 @@ export default function BranchDetail() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const [branchRes, productsRes] = await Promise.all([
         api.get(`/branches/${id}`),
         api.get('/products', { params: { branch_id: id } })
@@ -66,7 +72,7 @@ export default function BranchDetail() {
         setItems(productsRes.data.items || []);
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to load branch details & inventory' });
+      setLoadError(err.response?.data?.message || 'Could not load this branch.');
     } finally {
       setLoading(false);
     }
@@ -79,9 +85,11 @@ export default function BranchDetail() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSaving(true);
       const res = await api.put(`/branches/${id}`, editForm);
       if (res.data.success) {
-        setMessage({ type: 'success', text: 'Branch information updated successfully!' });
+        toast.success('Branch details saved.');
+        setMessage(null);
         setShowEditModal(false);
         fetchData();
       } else {
@@ -89,6 +97,8 @@ export default function BranchDetail() {
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update branch' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -151,12 +161,9 @@ export default function BranchDetail() {
       const failed = results.length - succeeded;
 
       if (succeeded > 0) {
-        setMessage({
-          type: failed > 0 ? 'danger' : 'success',
-          text: failed > 0
-            ? `${succeeded} product(s) added to ${branch.name}, but ${failed} failed (${collectSkipReasons(results)}).`
-            : `${succeeded} product(s) successfully added to ${branch.name}'s stock.`
-        });
+        if (failed > 0) toast.warning(`${succeeded} product(s) added to ${branch.name}, but ${failed} failed (${collectSkipReasons(results)}).`);
+        else toast.success(`${succeeded} product(s) added to ${branch.name}.`);
+        setMessage(null);
         setShowAddExistingModal(false);
         fetchData();
       } else {
@@ -172,12 +179,13 @@ export default function BranchDetail() {
   // Search filtering happens inside CatalogPicker
   const availableCatalogProducts = catalogProducts.filter(p => !stockedProductIds.has(p.id));
 
-  if (loading) {
+  if (loading && !branch) {
     return (
       <Layout>
-        <div className="text-center py-12 text-ink-muted text-sm">
-          Loading branch details & inventory...
-        </div>
+        <Skeleton className="h-4 w-48 mb-3" />
+        <Skeleton className="h-8 w-72 mb-8" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
+        <Skeleton className="h-64 rounded-xl" />
       </Layout>
     );
   }
@@ -185,266 +193,157 @@ export default function BranchDetail() {
   if (!branch) {
     return (
       <Layout>
-        <div className="text-center py-12 bg-subtle border border-line rounded-xl text-ink-secondary">
-          Branch profile not found.
-        </div>
+        <Card>
+          {loadError
+            ? <ErrorState description={loadError} onRetry={fetchData} />
+            : <EmptyState icon={Building2} title="Branch not found" description="It may have been deleted." action={<Button variant="secondary" to="/businesses">Back to businesses</Button>} />}
+        </Card>
       </Layout>
     );
   }
 
   const stats = branch.stats || { totalItems: items.length, totalStock: 0, lowStockCount: 0 };
   const admins = branch.admins || [];
-  
-  const getBusinessColor = (name) => {
-    const text = (name || '').toLowerCase();
-    if (text.includes('kaftanasia') || text.includes('fashion')) return '#B4502E';
-    if (text.includes('as tech') || text.includes('technology')) return '#2563EB';
-    return '#6366f1'; 
-  };
-  const bColor = getBusinessColor(branch.business_name);
+  const inactive = Number(branch.is_active) === 0;
 
   return (
     <Layout>
-      <nav className="text-sm text-ink-muted mb-4 flex items-center gap-1.5">
-        <Link to="/businesses" className="hover:text-ink transition-colors">Businesses</Link>
-        <span>/</span>
-        <Link to={`/businesses/${branch.business_id}/branches`} className="hover:text-ink transition-colors">{branch.business_name || 'Business'}</Link>
-        <span>/</span>
-        <span className="text-ink font-semibold">{branch.name}</span>
-      </nav>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Businesses', to: '/businesses' },
+          { label: branch.business_name || 'Business', to: `/businesses/${branch.business_id}/branches` },
+          { label: branch.name },
+        ]}
+        title={branch.name}
+        description={`Stock, alerts and people for ${branch.name}.`}
+        meta={<>
+          <Badge tone="neutral" className="font-mono">{branch.branch_code || `BR-${branch.id}`}</Badge>
+          <Badge tone="neutral"><BusinessDot business={{ name: branch.business_name, id: branch.business_id }} size="sm" />{branch.business_name}</Badge>
+          {inactive && <Badge tone="warning">Inactive</Badge>}
+        </>}
+        actions={<>
+          <Button variant="secondary" icon={Layers} onClick={openAddExistingModal}>Add existing product</Button>
+          <Button icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>Add product</Button>
+          <Menu
+            label="More branch actions"
+            triggerVariant="secondary"
+            triggerSize="md"
+            items={[
+              { label: 'Edit branch', icon: Pencil, onClick: () => { setMessage(null); setShowEditModal(true); }, hidden: !isSuperAdmin },
+              { label: 'Reports', icon: BarChart3, to: `/reports?business_id=${branch.business_id}&branch_id=${id}` },
+              { label: 'Store events', icon: Store, to: `/branches/${id}/stores` },
+              { divider: true },
+              { label: 'Refresh', icon: RefreshCw, onClick: fetchData },
+            ]}
+          />
+        </>}
+      />
 
-      {message && (
-        <div className={`mb-6 flex items-center justify-between transition-all ${
-          message.type === 'success' 
-            ? 'p-3 bg-success-soft border border-success-line rounded-xl text-success-fg text-sm' 
-            : 'p-3 bg-danger-soft border border-danger-line rounded-xl text-danger-fg text-sm'
-        }`}>
-          <div className="flex items-center gap-2 font-semibold">
-            {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)}><X className="w-4 h-4" /></button>
-        </div>
-      )}
+      <Card className="p-4 mb-6">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          {[
+            [MapPin, 'Location', branch.city ? `${branch.city}${branch.state ? `, ${branch.state}` : ''}` : branch.address || 'Not set'],
+            [Users, 'Contact person', branch.contact_person || 'Not set'],
+            [Phone, 'Phone / email', branch.contact_phone || branch.contact_email || 'Not set'],
+            [Clock, 'Opening hours', branch.operating_hours || 'Not set'],
+          ].map(([Icon, label, value]) => (
+            <div key={label} className="flex items-start gap-3 min-w-0">
+              <span className="w-8 h-8 rounded-lg bg-sunken text-ink-secondary flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4" aria-hidden="true" /></span>
+              <div className="min-w-0">
+                <dt className="text-caption text-ink-muted">{label}</dt>
+                <dd className={cn('font-medium truncate', value === 'Not set' ? 'text-ink-muted' : 'text-ink')}>{value}</dd>
+              </div>
+            </div>
+          ))}
+        </dl>
+      </Card>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-ink tracking-tight">{branch.name}</h1>
-            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-accent-soft text-accent-fg font-mono">
-              Code: {branch.branch_code || `BR-${branch.id}`}
-            </span>
-          </div>
-          <p className="text-sm text-ink-muted mt-1">
-            Dedicated inventory catalog, stock threshold metrics, and management actions for {branch.name}.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={openAddExistingModal} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors shadow-sm">
-            <Layers size={14} className="text-accent" /> Add Existing Product
-          </button>
-          <Link to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors">
-            <Plus size={16} /> Add Product
-          </Link>
-          {isSuperAdmin && (
-            <button onClick={() => { setMessage(null); setShowEditModal(true); }} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors">
-              <Edit3 size={14} /> Edit Branch
-            </button>
-          )}
-          <Link to={`/reports?business_id=${branch.business_id}&branch_id=${id}`} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-accent text-sm font-medium rounded-lg border border-accent-line hover:bg-accent-soft transition-colors">
-            <Boxes className="w-4 h-4" /> Reports
-          </Link>
-          <Link to={`/branches/${id}/stores`} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-warning-fg text-sm font-medium rounded-lg border border-warning-line hover:bg-warning-soft transition-colors">
-            <Store className="w-4 h-4" /> Pop-Up Stores
-          </Link>
-          <button onClick={fetchData} className="inline-flex items-center gap-2 h-9 px-3 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors" title="Refresh Data">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <KpiCard label="Products" value={Number(stats.totalItems) || 0} icon={Package} tone="accent" meta="Stocked in this branch" />
+        <KpiCard label="Units on hand" value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta="All products" />
+        <KpiCard label="Low stock" value={Number(stats.lowStockCount) || 0} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} />
       </div>
 
-      <div className="bg-surface border border-line rounded-xl p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm" style={{ borderLeft: `3px solid ${bColor}` }}>
-        <div className="flex items-center gap-3 text-ink-secondary">
-          <MapPin className="w-5 h-5 text-accent flex-shrink-0" />
-          <div className="truncate">
-            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Location</span>
-            <span className="font-medium text-ink">{branch.city ? `${branch.city}, ${branch.state || ''}` : branch.address || 'Standard Location'}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 text-ink-secondary">
-          <Users className="w-5 h-5 text-success-fg flex-shrink-0" />
-          <div className="truncate">
-            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Branch Contact</span>
-            <span className="font-medium text-ink">{branch.contact_person || 'HQ Manager'}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 text-ink-secondary">
-          <Phone className="w-5 h-5 text-warning-fg flex-shrink-0" />
-          <div className="truncate">
-            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Contact Phone</span>
-            <span className="font-mono font-medium text-ink">{branch.contact_phone || branch.contact_email || '—'}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 text-ink-secondary">
-          <Clock className="w-5 h-5 text-violet-fg flex-shrink-0" />
-          <div className="truncate">
-            <span className="text-ink-muted block text-[11px] font-semibold uppercase">Operating Hours</span>
-            <span className="font-medium text-ink">{branch.operating_hours || 'Mon - Sun 10:00 - 22:00'}</span>
-          </div>
-        </div>
-      </div>
+      <Card className="overflow-hidden mb-6">
+        <CardHeader
+          icon={Package}
+          title="Products in this branch"
+          description={`${items.length} ${items.length === 1 ? 'product' : 'products'}`}
+          actions={<Button variant="ghost" size="sm" to={`/products?business_id=${branch.business_id}&branch_id=${id}`}>Open in Products</Button>}
+        />
+        <Table minWidth="44rem">
+          <THead>
+            <TR>
+              <TH>Product</TH>
+              <TH>Category</TH>
+              <TH>Stock</TH>
+              <TH numeric>Price</TH>
+              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={5}
+              empty={items.length === 0}
+              emptyIcon={Package}
+              emptyTitle={`No products in ${branch.name} yet`}
+              emptyAction={<Button size="sm" icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>Add product</Button>}
+            />
+            {items.map((item, i) => {
+              const minQty = parseInt(item.minimum_quantity ?? item.min_quantity ?? 0, 10) || 0;
+              const qty = parseInt(item.quantity || 0, 10);
+              const level = item.stock_status || (qty <= 0 ? 'out' : qty <= minQty ? 'low' : 'ok');
+              return (
+                <TR key={`${item.id}-${item.branch_id}`} index={i}>
+                  <TD>
+                    <div className="font-medium text-ink">{item.item_name}</div>
+                    <div className="font-mono text-caption text-ink-muted">{item.item_code}</div>
+                  </TD>
+                  <TD className="text-ink-secondary">{item.category || 'General'}</TD>
+                  <TD>
+                    <div className="flex items-center gap-2">
+                      <span className={cn('font-semibold tabular-nums', level === 'out' ? 'text-danger-fg' : level === 'low' ? 'text-warning-fg' : 'text-ink')}>{item.quantity}</span>
+                      <StatusPill kind="stock" value={level} size="sm" showIcon={false} />
+                    </div>
+                    <div className="text-caption text-ink-muted tabular-nums mt-0.5">Alert at {minQty}</div>
+                  </TD>
+                  <TD numeric className="font-semibold">RM {parseFloat(item.selling_price || 0).toFixed(2)}</TD>
+                  <TD>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="secondary" size="sm" icon={ArrowUpDown} to={`/products?business_id=${branch.business_id}&branch_id=${id}&product_id=${item.id}`}>Adjust</Button>
+                      <IconButton icon={QrCode} label="Print QR label" to={`/qr/generate?product_id=${item.id}`} />
+                    </div>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-accent-soft text-accent rounded-lg">
-            <Package size={24} />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">TOTAL PRODUCTS LISTED</p>
-            <p className="text-2xl font-bold text-ink">{stats.totalItems}</p>
+      <Card className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" aria-hidden="true" /></span>
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-ink">Branch admins <span className="text-ink-muted font-normal tabular-nums">({admins.length})</span></h2>
+            <p className="text-sm text-ink-muted truncate">{admins.length > 0 ? admins.map(a => a.full_name).join(', ') : 'No branch admin assigned yet'}</p>
           </div>
         </div>
-        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
-          <div className="p-3 bg-success-soft text-success-fg rounded-lg">
-            <Boxes size={24} />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">TOTAL PHYSICAL UNITS</p>
-            <p className="text-2xl font-bold text-ink">{stats.totalStock}</p>
-          </div>
-        </div>
-        <div className="bg-surface border border-line rounded-xl p-4 flex items-center gap-4">
-          <div className={`p-3 rounded-lg ${stats.lowStockCount > 0 ? 'bg-danger-soft text-danger-fg' : 'bg-warning-soft text-warning-fg'}`}>
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted">LOW STOCK ALERTS</p>
-            <p className="text-2xl font-bold text-ink">{stats.lowStockCount}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-surface border border-line rounded-xl overflow-hidden mb-8">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-          <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-accent" />
-            <h3 className="font-semibold text-ink text-sm">Branch Products Catalog ({items.length})</h3>
-          </div>
-          <Link to={`/products?business_id=${branch.business_id}&branch_id=${id}`} className="text-sm text-accent hover:text-accent-fg font-semibold transition-colors">
-            Open Full Products Manager &rarr;
-          </Link>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">SKU & Item Name</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Category</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Available Stock</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-left">Selling Price</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted bg-subtle border-b border-line text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="p-8 text-center text-ink-muted text-sm bg-surface">
-                    No products listed under <strong className="text-ink">{branch.name}</strong> yet.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => {
-                  const minQty = parseInt(item.minimum_quantity || item.min_quantity || 5);
-                  const qty = parseInt(item.quantity || 0);
-                  const isOutOfStock = qty <= 0;
-                  const isLow = !isOutOfStock && qty <= minQty;
-                  const stockBadgeClass = isOutOfStock
-                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-danger-soft text-danger-fg border border-danger-line"
-                    : isLow
-                    ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-warning-soft text-warning-fg border border-warning-line"
-                    : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-success-soft text-success-fg border border-success-line";
-
-                  return (
-                    <tr key={item.id} className="hover:bg-subtle transition-colors bg-surface">
-                      <td className="px-4 py-3 text-sm border-b border-line-soft">
-                        <span className="font-bold text-ink block">{item.item_name}</span>
-                        <span className="font-mono text-xs text-accent block">{item.item_code}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm border-b border-line-soft">
-                        <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-info-soft text-info-fg">{item.category || 'General'}</span>
-                      </td>
-                      <td className="px-4 py-3 border-b border-line-soft text-sm">
-                        <div className="flex items-center gap-2 font-mono font-bold">
-                          <span className={stockBadgeClass}>
-                            {item.quantity} units
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-ink-muted mt-1 font-mono">Min: {minQty}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono text-ink font-semibold border-b border-line-soft">
-                        RM {parseFloat(item.selling_price || 0).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-sm border-b border-line-soft text-right">
-                        <div className="flex justify-end items-center gap-1.5">
-                          <Link
-                            to={`/products?business_id=${branch.business_id}&branch_id=${id}&product_id=${item.id}`}
-                            className="inline-flex items-center gap-1.5 h-8 px-2.5 bg-success-soft text-success-fg text-xs font-medium rounded-lg border border-success-line hover:bg-success-muted transition-colors"
-                            title="Manage Stock Balance for this Product"
-                          >
-                            <ArrowDownLeft className="w-3.5 h-3.5" /> Manage
-                          </Link>
-                          <Link
-                            to={`/qr/generate?product_id=${item.id}`}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface text-accent border border-line hover:bg-accent-soft transition-colors"
-                            title="Generate QR Code"
-                          >
-                            <QrCode className="w-4 h-4" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bg-surface border border-line rounded-xl p-5 flex items-center justify-between mb-8 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-accent-soft text-accent rounded-lg">
-            <Users size={22} />
-          </div>
-          <div>
-            <h4 className="font-bold text-ink text-sm">Assigned Personnel ({admins.length})</h4>
-            <p className="text-sm text-ink-muted mt-0.5">
-              {admins.length > 0 ? admins.map(a => a.full_name).join(', ') : 'No dedicated branch admin assigned yet'}
-            </p>
-          </div>
-        </div>
-        <Link 
-          to={`/users?business_id=${branch.business_id}&branch_id=${branch.id}`} 
-          className="inline-flex items-center gap-2 h-9 px-3 text-ink-secondary text-sm font-medium rounded-lg hover:bg-sunken hover:text-ink transition-colors"
-        >
-          Manage Personnel
-        </Link>
-      </div>
+        <Button variant="secondary" size="sm" to={`/users?business_id=${branch.business_id}&branch_id=${branch.id}`}>Manage people</Button>
+      </Card>
 
       {showEditModal && (
         <Modal
           size="lg"
-          icon={Edit3}
+          icon={Pencil}
           title={`Edit ${branch.name}`}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowEditModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton>Save changes</PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button type="submit" loading={saving}>Save changes</Button>
           </>}
         >
           <BranchFields form={editForm} setForm={setEditForm} showStatus />
@@ -461,12 +360,10 @@ export default function BranchDetail() {
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <SecondaryButton onClick={() => setShowAddExistingModal(false)}>Cancel</SecondaryButton>
-            <PrimaryButton disabled={Object.keys(stockSelections).length === 0 || addingExisting}>
-              {addingExisting
-                ? <><RefreshCw size={14} className="animate-spin" /> Adding…</>
-                : <><Layers size={14} /> Add {Object.keys(stockSelections).length || ''} to branch</>}
-            </PrimaryButton>
+            <Button variant="secondary" onClick={() => setShowAddExistingModal(false)}>Cancel</Button>
+            <Button type="submit" icon={Layers} loading={addingExisting} disabled={Object.keys(stockSelections).length === 0}>
+              {addingExisting ? 'Adding…' : `Add ${Object.keys(stockSelections).length || ''} to branch`}
+            </Button>
           </>}
         >
           <CatalogPicker

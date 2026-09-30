@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { RefreshCw, CreditCard, Banknote, MapPin, Calendar, ArrowLeft, Clock, CheckCircle2, Phone, User, Radio, TrendingUp, Receipt } from 'lucide-react';
 import {
-  FileBarChart, RefreshCw, CreditCard, Banknote, MapPin, Calendar,
-  ArrowLeft, Clock, CheckCircle2, AlertCircle, Phone, User, Info
-} from 'lucide-react';
+  Alert, Button, Card, CardHeader, ErrorState, KpiCard, PageHeader, Skeleton, SkeletonKpi, StatusPill,
+  Table, THead, TBody, TH, TR, TD, TableState, cn,
+} from '../../components/ui';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -167,13 +168,16 @@ export default function StoreReport() {
   const phase = getStorePhase(store);
   const timingText = getTimingStatusText(store, phase);
 
-  if (loading) {
+  const PHASE_TO_STATUS = { during: 'active', before: 'upcoming', after: 'ended' };
+  const backTo = store ? `/branches/${store.branch_id}/stores` : (isSuperAdmin ? '/businesses' : `/branches/${user?.branch_id}/stores`);
+
+  if (loading && !store) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center py-24">
-          <RefreshCw className="w-8 h-8 text-accent animate-spin mb-3" />
-          <p className="text-ink-muted text-sm font-medium">Loading store event report...</p>
-        </div>
+        <Skeleton className="h-4 w-64 mb-3" />
+        <Skeleton className="h-8 w-80 mb-8" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
+        <Skeleton className="h-64 rounded-xl" />
       </Layout>
     );
   }
@@ -181,342 +185,127 @@ export default function StoreReport() {
   if (!store) {
     return (
       <Layout>
-        <div className="max-w-md mx-auto py-16 text-center">
-          <div className="p-3 bg-danger-soft text-danger-fg rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
-            <AlertCircle size={24} />
+        <Card>
+          <ErrorState
+            title="Store event not found"
+            description={message?.text || `Store event #${id} may have been removed, or you don't have access to it.`}
+            onRetry={fetchReport}
+          />
+          <div className="flex justify-center pb-8 -mt-6">
+            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Businesses' : 'My store events'}</Button>
           </div>
-          <h2 className="text-lg font-bold text-ink mb-2">Store Event Not Found</h2>
-          <p className="text-sm text-ink-muted mb-6">
-            {message?.text || `Unable to locate store event #${id}. It may have been removed or you may lack permission.`}
-          </p>
-          <div className="flex justify-center gap-3">
-            <Link
-              to={isSuperAdmin ? '/businesses' : `/branches/${user?.branch_id}/stores`}
-              className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors"
-            >
-              <ArrowLeft size={16} /> {isSuperAdmin ? 'Businesses' : 'My Stores'}
-            </Link>
-            <button
-              onClick={fetchReport}
-              className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
-            >
-              <RefreshCw size={16} /> Try Again
-            </button>
-          </div>
-        </div>
+        </Card>
       </Layout>
     );
   }
 
+  const phaseAlert = {
+    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. Sales will appear here once it starts.</> },
+    during: { tone: 'success', icon: Radio, title: `Live now · ${timingText}`, body: <>Sales at this event are being recorded until <strong>{formatDateTime(store.end_date)}</strong>. The numbers below update as you sell.</> },
+    after: { tone: 'info', icon: CheckCircle2, title: 'Final report', body: <>This event ended <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The numbers below are final.</> },
+  }[phase];
+
   return (
     <Layout>
-      {/* Breadcrumb Navigation */}
-      <nav className="text-sm text-ink-muted mb-4 flex items-center gap-1.5">
-        {isSuperAdmin ? (
-          <>
-            <Link to="/businesses" className="hover:text-ink transition-colors">Businesses</Link>
-            <span>/</span>
-            <Link to={`/businesses/${store.business_id}/branches`} className="hover:text-ink transition-colors">{store.business_name || 'Business'}</Link>
-          </>
-        ) : (
-          <span>{store.business_name || 'Business'}</span>
-        )}
-        <span>/</span>
-        <Link to={`/branches/${store.branch_id}`} className="hover:text-ink transition-colors">{store.branch_name || 'Branch'}</Link>
-        <span>/</span>
-        <Link to={`/branches/${store.branch_id}/stores`} className="hover:text-ink transition-colors">Stores</Link>
-        <span>/</span>
-        <span className="text-ink font-semibold">{store.name} Report</span>
-      </nav>
+      <PageHeader
+        breadcrumbs={[
+          ...(isSuperAdmin ? [{ label: 'Businesses', to: '/businesses' }, { label: store.business_name || 'Business', to: `/businesses/${store.business_id}/branches` }] : [{ label: store.business_name || 'Business' }]),
+          { label: store.branch_name || 'Branch', to: isSuperAdmin ? `/branches/${store.branch_id}` : undefined },
+          { label: 'Store events', to: `/branches/${store.branch_id}/stores` },
+          { label: store.name },
+        ]}
+        title={store.name}
+        meta={<>
+          <StatusPill kind="store" value={PHASE_TO_STATUS[phase]} />
+          {store.venue && <span className="inline-flex items-center gap-1.5 text-caption text-ink-secondary"><MapPin className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />{store.venue}</span>}
+          <span className="inline-flex items-center gap-1.5 text-caption text-ink-muted tabular-nums"><Calendar className="w-3.5 h-3.5" aria-hidden="true" />{formatDateTime(store.start_date)} → {formatDateTime(store.end_date)}</span>
+        </>}
+        actions={<>
+          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${store.branch_id}/stores`}>Store events</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+        </>}
+      />
 
-      {message && (
-        <div className={`p-3.5 mb-6 rounded-xl text-sm font-medium flex items-center justify-between ${
-          message.type === 'danger'
-            ? 'bg-danger-soft border border-danger-line text-danger-fg'
-            : message.type === 'warning'
-            ? 'bg-warning-soft border border-warning-line text-warning-fg'
-            : 'bg-success-soft border border-success-line text-success-fg'
-        }`}>
-          <div className="flex items-center gap-2">
-            {message.type === 'danger' ? <AlertCircle size={16} className="text-danger-fg flex-shrink-0" /> : <Info size={16} className="text-warning-fg flex-shrink-0" />}
-            <span>{message.text}</span>
-          </div>
-          <button onClick={() => setMessage(null)} className="text-ink-muted hover:text-ink-secondary text-xs">✕</button>
-        </div>
-      )}
+      {message && <Alert tone={message.type === 'danger' ? 'danger' : 'warning'} className="mb-4" onClose={() => setMessage(null)}>{message.text}</Alert>}
 
-      {/* Header with Title and Dynamic Real-Time Status Badge */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-extrabold text-ink tracking-tight">{store.name}</h1>
-            
-            {phase === 'during' && (
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold bg-success-soft text-success-fg border border-success-line shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                LIVE EVENT
-              </span>
-            )}
-            {phase === 'before' && (
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-warning-soft text-warning-fg border border-warning-line">
-                <Clock className="w-3.5 h-3.5 text-warning-fg" />
-                UPCOMING EVENT
-              </span>
-            )}
-            {phase === 'after' && (
-              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-sunken text-ink-secondary border border-line">
-                <CheckCircle2 className="w-3.5 h-3.5 text-ink-muted" />
-                CONCLUDED EVENT
-              </span>
-            )}
+      {phaseAlert && <Alert tone={phaseAlert.tone} icon={phaseAlert.icon} title={phaseAlert.title} className="mb-6">{phaseAlert.body}</Alert>}
 
-            {timingText && (
-              <span className="text-xs font-medium px-2.5 py-0.5 rounded-lg bg-sunken text-ink-secondary border border-line">
-                {timingText}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted mt-2">
-            {store.venue && (
-              <span className="flex items-center gap-1.5 text-ink-secondary">
-                <MapPin size={14} className="text-accent" /> {store.venue}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5">
-              <Calendar size={14} className="text-ink-muted" />
-              <span className="font-mono">{formatDateTime(store.start_date)} &rarr; {formatDateTime(store.end_date)}</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/branches/${store.branch_id}/stores`}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors"
-          >
-            <ArrowLeft size={16} /> Back to Stores
-          </Link>
-          <button
-            onClick={fetchReport}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <KpiCard label="Revenue" value={Number(summary.total_sales) || 0} format={v => `RM ${v.toFixed(2)}`} icon={TrendingUp} tone="accent" meta={`${summary.total_items_sold || movements.length} items sold`} />
+        <KpiCard label="Cash" value={Number(summary.total_cash) || 0} format={v => `RM ${v.toFixed(2)}`} icon={Banknote} tone="neutral" meta="Collected at the booth" />
+        <KpiCard label="QR / online" value={Number(summary.total_online) || 0} format={v => `RM ${v.toFixed(2)}`} icon={CreditCard} tone="neutral" meta="e-Wallet and card" />
       </div>
 
-      {/* Differentiated Informative Banner based on Date & Time Phase */}
-      {phase === 'before' && (
-        <div className="mb-6 p-4 rounded-xl bg-warning-soft border border-warning-line text-warning-fg text-xs flex items-start gap-3 shadow-xs">
-          <Clock className="w-5 h-5 text-warning-fg flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-bold block text-sm text-warning-fg mb-1">
-              Event Scheduled — Not Yet Live ({timingText})
-            </span>
-            <p className="text-warning-fg leading-relaxed">
-              This event is set to open on <strong>{formatDateTime(store.start_date)}</strong> and will run until <strong>{formatDateTime(store.end_date)}</strong>. Sales transactions, QR scan checkouts, and payment breakdowns will dynamically log here once the event goes live.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {phase === 'during' && (
-        <div className="mb-6 p-4 rounded-xl bg-success-soft border border-success-line text-success-fg text-xs flex items-start gap-3 shadow-xs">
-          <span className="w-3 h-3 rounded-full bg-success animate-ping flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <span className="font-bold block text-sm text-success-fg mb-1">
-              Active Live Sales Window in Progress ({timingText})
-            </span>
-            <p className="text-success-fg leading-relaxed">
-              Live customer transactions via QR and Cash are currently recording for this event until <strong>{formatDateTime(store.end_date)}</strong>. Real-time metrics below reflect active inventory movements.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {phase === 'after' && (
-        <div className="mb-6 p-4 rounded-xl bg-sunken border border-line text-ink text-xs flex items-start gap-3 shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-ink-muted flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-bold block text-sm text-ink mb-1">
-              Event Concluded — Final Sales &amp; Reconciliation Report
-            </span>
-            <p className="text-ink-secondary leading-relaxed">
-              This event concluded on <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The metrics below represent the completed financial breakdown and finalized stock out records.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Date & Operational Timing Details Card */}
-      <div className="bg-surface border border-line rounded-xl p-5 mb-8">
-        <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-4 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-accent" /> Operational Schedule &amp; Contact Info
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-            <span className="block text-[11px] font-semibold uppercase text-ink-muted">Start Schedule</span>
-            <span className="block text-sm font-bold text-ink mt-1">{formatDateOnly(store.start_date)}</span>
-            <span className="block text-xs font-mono text-accent mt-0.5">{formatTimeOnly(store.start_date)}</span>
-          </div>
-
-          <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-            <span className="block text-[11px] font-semibold uppercase text-ink-muted">End Schedule</span>
-            <span className="block text-sm font-bold text-ink mt-1">{formatDateOnly(store.end_date)}</span>
-            <span className="block text-xs font-mono text-accent mt-0.5">{formatTimeOnly(store.end_date)}</span>
-          </div>
-
-          <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-            <span className="block text-[11px] font-semibold uppercase text-ink-muted">Person In Charge</span>
-            <span className="flex text-sm font-bold text-ink mt-1 items-center gap-1">
-              <User size={13} className="text-ink-muted" /> {store.person_in_charge || 'HQ Staff'}
-            </span>
-            {store.contact_phone ? (
-              <span className="flex text-xs font-mono text-ink-muted mt-0.5 items-center gap-1">
-                <Phone size={11} className="text-ink-muted" /> {store.contact_phone}
-              </span>
-            ) : (
-              <span className="block text-xs text-ink-muted mt-0.5">—</span>
-            )}
-          </div>
-
-          <div className="p-3 bg-subtle border border-line-soft rounded-lg">
-            <span className="block text-[11px] font-semibold uppercase text-ink-muted">Operational Phase</span>
-            <span className="block text-sm font-bold mt-1 capitalize text-ink">
-              {phase === 'before' ? 'Upcoming' : phase === 'during' ? 'Live Operational' : 'Concluded'}
-            </span>
-            <span className="block text-xs text-ink-muted mt-0.5">{timingText}</span>
-          </div>
-        </div>
-
-        {store.notes && (
-          <div className="mt-4 pt-3 border-t border-line-soft text-xs text-ink-secondary">
-            <span className="font-semibold text-ink-secondary">Notes: </span>
-            <span>{store.notes}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Revenue & Payment Method KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div className="bg-surface border border-line rounded-xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="p-3 bg-success-soft text-success-fg rounded-lg">
-            <CreditCard size={24} />
+      <Card className="p-5 mb-6">
+        <h2 className="text-sm font-semibold text-ink mb-4">Schedule and contact</h2>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div>
+            <dt className="text-caption text-ink-muted">Starts</dt>
+            <dd className="font-medium text-ink mt-0.5">{formatDateOnly(store.start_date)}</dd>
+            <dd className="text-caption text-ink-secondary tabular-nums">{formatTimeOnly(store.start_date)}</dd>
           </div>
           <div>
-            <p className="text-xs font-medium text-ink-muted uppercase tracking-wide">QR / Online Banking</p>
-            <p className="text-2xl font-bold text-ink">RM {summary.total_online.toFixed(2)}</p>
-            <span className="text-[11px] text-success-fg font-medium">Digital e-Wallet Breakdown</span>
-          </div>
-        </div>
-
-        <div className="bg-surface border border-line rounded-xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="p-3 bg-warning-soft text-warning-fg rounded-lg">
-            <Banknote size={24} />
+            <dt className="text-caption text-ink-muted">Ends</dt>
+            <dd className="font-medium text-ink mt-0.5">{formatDateOnly(store.end_date)}</dd>
+            <dd className="text-caption text-ink-secondary tabular-nums">{formatTimeOnly(store.end_date)}</dd>
           </div>
           <div>
-            <p className="text-xs font-medium text-ink-muted uppercase tracking-wide">Cash Sales</p>
-            <p className="text-2xl font-bold text-ink">RM {summary.total_cash.toFixed(2)}</p>
-            <span className="text-[11px] text-warning-fg font-medium">Physical Cash Collected</span>
-          </div>
-        </div>
-
-        <div className="bg-surface border border-line rounded-xl p-5 flex items-center gap-4 shadow-sm">
-          <div className="p-3 bg-accent-soft text-accent rounded-lg">
-            <FileBarChart size={24} />
+            <dt className="text-caption text-ink-muted">Person in charge</dt>
+            <dd className="font-medium text-ink mt-0.5 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />{store.person_in_charge || 'HQ staff'}</dd>
+            <dd className="text-caption text-ink-secondary flex items-center gap-1.5 tabular-nums"><Phone className="w-3 h-3 text-ink-muted" aria-hidden="true" />{store.contact_phone || '—'}</dd>
           </div>
           <div>
-            <p className="text-xs font-medium text-ink-muted uppercase tracking-wide">Total Store Revenue</p>
-            <p className="text-2xl font-bold text-accent">RM {summary.total_sales.toFixed(2)}</p>
-            <span className="text-[11px] text-ink-muted font-medium">{summary.total_items_sold || movements.length} total items sold</span>
+            <dt className="text-caption text-ink-muted">Status</dt>
+            <dd className="mt-1"><StatusPill kind="store" value={PHASE_TO_STATUS[phase]} size="sm" /></dd>
+            <dd className="text-caption text-ink-secondary mt-1">{timingText}</dd>
           </div>
-        </div>
-      </div>
+        </dl>
+        {store.notes && <p className="mt-4 pt-3 border-t border-line-soft text-sm text-ink-secondary"><span className="font-medium text-ink">Notes: </span>{store.notes}</p>}
+      </Card>
 
-      {/* Transactions Table */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft">
-          <div className="flex items-center gap-2">
-            <FileBarChart size={18} className="text-accent" />
-            <h3 className="font-semibold text-ink text-sm">Store Stock Movements &amp; Sales Transactions</h3>
-          </div>
-          <span className="text-xs font-mono text-ink-muted">Total Entries: {movements.length}</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-subtle">
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">SKU / Item</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Category</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Movement</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Quantity</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Payment Method</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Note / Reference</th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-left">Date &amp; Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {(!movements || movements.length === 0) ? (
-                <tr>
-                  <td colSpan="7" className="p-12 text-center text-ink-muted bg-surface text-xs">
-                    {phase === 'before' ? (
-                      <div className="flex flex-col items-center justify-center">
-                        <Clock className="w-8 h-8 text-warning mb-2" />
-                        <p className="font-semibold text-ink-secondary mb-0.5">Event Scheduled — No Transactions Yet</p>
-                        <p className="text-ink-muted font-mono">Event opens on {formatDateTime(store.start_date)}. Stock out and sales will populate automatically.</p>
-                      </div>
-                    ) : phase === 'during' ? (
-                      <div className="flex flex-col items-center justify-center">
-                        <span className="w-3 h-3 rounded-full bg-success animate-ping mb-2" />
-                        <p className="font-semibold text-ink-secondary mb-0.5">Live Event Open — Awaiting First Transaction</p>
-                        <p className="text-ink-muted">Scan QR codes or log transactions to see live sales stream here.</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center">
-                        <CheckCircle2 className="w-8 h-8 text-ink-subtle mb-2" />
-                        <p className="font-semibold text-ink-secondary mb-0.5">Event Concluded</p>
-                        <p className="text-ink-muted">No sales or stock transactions were recorded for this store event.</p>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                movements.map((m) => (
-                  <tr key={m.id} className="hover:bg-subtle transition-colors bg-surface">
-                    <td className="px-4 py-3 text-sm border-b border-line-soft">
-                      <div className="text-ink font-bold">{m.item_name}</div>
-                      <div className="font-mono text-accent text-xs">{m.item_code}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink-secondary border-b border-line-soft">{m.category || 'General'}</td>
-                    <td className="px-4 py-3 text-sm border-b border-line-soft">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        m.movement_type === 'in' ? 'bg-success-soft text-success-fg' : m.movement_type === 'out' ? 'bg-danger-soft text-danger-fg' : 'bg-info-soft text-info-fg'
-                      }`}>
-                        {m.movement_type === 'in' ? 'STOCK IN' : m.movement_type === 'out' ? 'STOCK OUT' : 'ADJUST'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink font-bold font-mono border-b border-line-soft">{m.quantity}</td>
-                    <td className="px-4 py-3 text-sm border-b border-line-soft">
-                      {m.payment_method ? (
-                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                          m.payment_method === 'cash' ? 'bg-warning-soft text-warning-fg' : 'bg-success-soft text-success-fg'
-                        }`}>
-                          {m.payment_method === 'cash' ? 'Cash' : 'QR / Online'}
-                        </span>
-                      ) : (
-                        <span className="text-ink-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink-secondary max-w-xs truncate border-b border-line-soft">{m.note || 'Store sale'}</td>
-                    <td className="px-4 py-3 text-sm text-ink-muted font-mono whitespace-nowrap border-b border-line-soft">{formatDateTime(m.created_at)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Card className="overflow-hidden">
+        <CardHeader icon={Receipt} title="Sales and stock movements" description={`${movements.length} ${movements.length === 1 ? 'entry' : 'entries'}`} />
+        <Table minWidth="54rem">
+          <THead>
+            <TR>
+              <TH>Item</TH>
+              <TH>Category</TH>
+              <TH>Type</TH>
+              <TH numeric>Qty</TH>
+              <TH>Payment</TH>
+              <TH>Note</TH>
+              <TH className="text-right">When</TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={7}
+              empty={!movements || movements.length === 0}
+              emptyIcon={phase === 'before' ? Clock : phase === 'during' ? Radio : CheckCircle2}
+              emptyTitle={phase === 'before' ? 'No sales yet' : phase === 'during' ? 'Waiting for the first sale' : 'No sales were recorded'}
+              emptyDescription={phase === 'before'
+                ? `The event opens ${formatDateTime(store.start_date)}.`
+                : phase === 'during'
+                ? 'Sell at the Point of Sale with this event selected and it appears here.'
+                : 'Nothing was sold or moved during this event.'}
+            />
+            {movements.map((m, i) => (
+              <TR key={m.id} index={i}>
+                <TD>
+                  <div className="font-medium text-ink">{m.item_name}</div>
+                  <div className="font-mono text-caption text-ink-muted">{m.item_code}</div>
+                </TD>
+                <TD className="text-ink-secondary">{m.category || 'General'}</TD>
+                <TD><StatusPill kind="movement" value={m.movement_type} size="sm" /></TD>
+                <TD numeric className={cn('font-semibold', m.movement_type === 'in' && 'text-success-fg')}>{m.quantity}</TD>
+                <TD>{m.payment_method ? <StatusPill kind="payment" value={m.payment_method} size="sm" /> : <span className="text-ink-muted">—</span>}</TD>
+                <TD className="max-w-[14rem] truncate text-ink-secondary">{m.note || 'Store sale'}</TD>
+                <TD className="text-right text-caption text-ink-muted whitespace-nowrap">{formatDateTime(m.created_at)}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </Card>
     </Layout>
   );
 }
