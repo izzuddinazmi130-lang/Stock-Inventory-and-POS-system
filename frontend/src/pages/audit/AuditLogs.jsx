@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { 
-  History, Shield, RefreshCw, Search, Eye, Calendar, X, 
-  ArrowRight, User, AlertTriangle, Package, Boxes, LogIn, 
-  LogOut, CheckCircle, Laptop, Clock, Filter, Store, Building2,
-  FileText, ExternalLink
-} from 'lucide-react';
+import { History, Shield, RefreshCw, User, AlertTriangle, Package, Boxes, LogIn, LogOut, CheckCircle, Laptop, Store, Building2, ShoppingCart } from 'lucide-react';
+import {
+  Badge, Button, Card, FilterBar, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
+  Table, THead, TBody, TH, TR, TD, TableState,
+} from '../../components/ui';
 
 // Format relative time (e.g. "Just now", "5m ago", "2h ago")
 function formatRelativeTime(dateString) {
@@ -74,7 +73,7 @@ function parseAuditRecord(log) {
   
   let category = 'system'; // 'auth' | 'inventory' | 'damage' | 'catalog' | 'users' | 'stores' | 'system'
   let badgeLabel = action;
-  let badgeClass = 'bg-sunken text-ink-secondary border-line';
+  let tone = 'neutral';
   let ActionIcon = Shield;
   let summary = '';
   let targetLabel = '';
@@ -83,23 +82,23 @@ function parseAuditRecord(log) {
   if (action === 'LOGIN') {
     category = 'auth';
     badgeLabel = 'Sign In';
-    badgeClass = 'bg-accent-soft text-accent-fg border-accent-line';
+    tone = 'accent';
     ActionIcon = LogIn;
     const email = newData?.email || log.user_email || '';
-    summary = `User authenticated into HQ Command Center`;
+    summary = 'Signed in';
     targetLabel = email ? `Account: ${email}` : `User #${log.entity_id || log.user_id}`;
     if (email) detailsBadges.push({ label: 'User', value: email });
   } else if (action === 'LOGOUT') {
     category = 'auth';
     badgeLabel = 'Sign Out';
-    badgeClass = 'bg-sunken text-ink-secondary border-line';
+    tone = 'neutral';
     ActionIcon = LogOut;
-    summary = `User session terminated safely`;
+    summary = 'Signed out';
     targetLabel = log.user_name ? `${log.user_name}` : `User #${log.entity_id || log.user_id}`;
   } else if (action === 'CREATE_DAMAGE_REPORT') {
     category = 'damage';
     badgeLabel = 'Damage Logged';
-    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
+    tone = 'danger';
     ActionIcon = AlertTriangle;
     const sku = newData?.sku || '';
     const qty = newData?.quantity || 1;
@@ -114,7 +113,7 @@ function parseAuditRecord(log) {
   } else if (action === 'CREATE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Created';
-    badgeClass = 'bg-success-soft text-success-fg border-success-line';
+    tone = 'success';
     ActionIcon = Package;
     const name = newData?.name || newData?.item_name || '';
     const sku = newData?.sku || newData?.item_code || '';
@@ -126,7 +125,7 @@ function parseAuditRecord(log) {
   } else if (action === 'UPDATE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Edited';
-    badgeClass = 'bg-warning-soft text-warning-fg border-warning-line';
+    tone = 'warning';
     ActionIcon = Package;
     const name = newData?.item_name || newData?.name || oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
@@ -138,7 +137,7 @@ function parseAuditRecord(log) {
   } else if (action === 'DELETE_ITEM') {
     category = 'catalog';
     badgeLabel = 'Product Deleted';
-    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
+    tone = 'danger';
     ActionIcon = Package;
     const name = oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
@@ -149,7 +148,7 @@ function parseAuditRecord(log) {
   } else if (action === 'STOCK_IN') {
     category = 'inventory';
     badgeLabel = 'Stock Inward';
-    badgeClass = 'bg-success-soft text-success-fg border-success-line';
+    tone = 'success';
     ActionIcon = Boxes;
     summary = `Restocked inventory balance`;
     targetLabel = `Item #${log.entity_id}`;
@@ -159,7 +158,7 @@ function parseAuditRecord(log) {
   } else if (action === 'STOCK_OUT' || action === 'QR_SCAN_DEDUCT') {
     category = 'inventory';
     badgeLabel = action === 'QR_SCAN_DEDUCT' ? 'QR Stock Out' : 'Stock Out';
-    badgeClass = 'bg-info-soft text-info-fg border-info-line';
+    tone = 'info';
     ActionIcon = Boxes;
     summary = action === 'QR_SCAN_DEDUCT' 
       ? `Stocked out inventory via QR scanner scan`
@@ -171,7 +170,7 @@ function parseAuditRecord(log) {
   } else if (action.includes('STOCK_ADJUST') || action === 'STOCK_ADJUSTMENT') {
     category = 'inventory';
     badgeLabel = 'Stock Adjusted';
-    badgeClass = 'bg-violet-soft text-violet-fg border-violet-line';
+    tone = 'violet';
     ActionIcon = Boxes;
     summary = `Manual stock count adjustment recorded`;
     targetLabel = `Item #${log.entity_id}`;
@@ -181,21 +180,21 @@ function parseAuditRecord(log) {
   } else if (action === 'APPROVE_USER' || action === 'USER_APPROVAL') {
     category = 'users';
     badgeLabel = 'User Approved';
-    badgeClass = 'bg-success-soft text-success-fg border-success-line';
+    tone = 'success';
     ActionIcon = CheckCircle;
     summary = `Approved operator registration and granted system access`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'REJECT_USER' || action === 'USER_REJECTION') {
     category = 'users';
     badgeLabel = 'User Declined';
-    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
+    tone = 'danger';
     ActionIcon = User;
     summary = `Declined pending user registration request`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'DELETE_USER') {
     category = 'users';
     badgeLabel = 'User Removed';
-    badgeClass = 'bg-danger-soft text-danger-fg border-danger-line';
+    tone = 'danger';
     ActionIcon = User;
     const name = oldData?.full_name || '';
     const email = oldData?.email || '';
@@ -206,21 +205,21 @@ function parseAuditRecord(log) {
   } else if (action === 'USER_SUSPENDED') {
     category = 'users';
     badgeLabel = 'User Suspended';
-    badgeClass = 'bg-warning-soft text-warning-fg border-warning-line';
+    tone = 'warning';
     ActionIcon = User;
     summary = `Suspended user account access`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'USER_ACTIVATED') {
     category = 'users';
     badgeLabel = 'User Activated';
-    badgeClass = 'bg-success-soft text-success-fg border-success-line';
+    tone = 'success';
     ActionIcon = CheckCircle;
     summary = `Reactivated suspended user account`;
     targetLabel = `User #${log.entity_id}`;
   } else if (action === 'CREATE_USER') {
     category = 'users';
     badgeLabel = 'User Created';
-    badgeClass = 'bg-accent-soft text-accent-fg border-accent-line';
+    tone = 'accent';
     ActionIcon = User;
     const name = newData?.full_name || '';
     const email = newData?.email || '';
@@ -228,17 +227,31 @@ function parseAuditRecord(log) {
     targetLabel = email ? email : `User #${log.entity_id}`;
     if (email) detailsBadges.push({ label: 'Email', value: email });
     if (newData?.role) detailsBadges.push({ label: 'Role', value: newData.role });
+  } else if (action === 'POS_SALE_TRANSACTION' || action === 'POS_STOCK_IN_TRANSACTION') {
+    const sale = action === 'POS_SALE_TRANSACTION';
+    category = 'inventory';
+    badgeLabel = sale ? 'POS sale' : 'POS restock';
+    tone = sale ? 'info' : 'success';
+    ActionIcon = sale ? ShoppingCart : Boxes;
+    const units = oldData?.total_quantity;
+    summary = sale
+      ? `Sold ${units ?? ''} item${units === 1 ? '' : 's'} at the point of sale`.replace('  ', ' ')
+      : `Received ${units ?? ''} unit${units === 1 ? '' : 's'} at the point of sale`.replace('  ', ' ');
+    targetLabel = newData?.receipt_no ? `Receipt ${newData.receipt_no}` : '';
+    if (sale && newData?.grand_total !== undefined) detailsBadges.push({ label: 'Total', value: `RM ${parseFloat(newData.grand_total).toFixed(2)}` });
+    if (sale && newData?.payment_method) detailsBadges.push({ label: 'Paid', value: newData.payment_method.replace('_', ' ') });
+    if (sale && newData?.price_tier && newData.price_tier !== 'customer') detailsBadges.push({ label: 'Price list', value: newData.price_tier });
   } else if (action.includes('STORE')) {
     category = 'stores';
     badgeLabel = action.replace(/_/g, ' ');
-    badgeClass = 'bg-violet-soft text-violet-fg border-violet-line';
+    tone = 'violet';
     ActionIcon = Store;
     summary = `Updated pop-up store or event outlet details`;
     targetLabel = `Store #${log.entity_id}`;
   } else if (action.includes('BRANCH')) {
     category = 'branches';
     badgeLabel = action.replace(/_/g, ' ');
-    badgeClass = 'bg-info-soft text-info-fg border-info-line';
+    tone = 'info';
     ActionIcon = Building2;
     summary = `Updated branch warehouse configuration`;
     targetLabel = `Branch #${log.entity_id}`;
@@ -250,7 +263,7 @@ function parseAuditRecord(log) {
   return {
     category,
     badgeLabel,
-    badgeClass,
+    tone,
     ActionIcon,
     summary,
     targetLabel,
@@ -263,17 +276,18 @@ function parseAuditRecord(log) {
 }
 
 const CATEGORY_TABS = [
-  { id: 'all', label: 'All Activity' },
-  { id: 'auth', label: 'Logins & Auth' },
-  { id: 'damage', label: 'Damage Reports' },
-  { id: 'inventory', label: 'Stock Movements' },
-  { id: 'catalog', label: 'Product Catalog' },
-  { id: 'users', label: 'User Accounts' }
+  { id: 'all', label: 'All activity' },
+  { id: 'auth', label: 'Sign-ins' },
+  { id: 'damage', label: 'Damage' },
+  { id: 'inventory', label: 'Stock' },
+  { id: 'catalog', label: 'Products' },
+  { id: 'users', label: 'Users' }
 ];
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
@@ -284,6 +298,7 @@ export default function AuditLogs() {
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const params = {};
       if (searchQuery.trim()) params.search = searchQuery.trim();
       if (filterDate) {
@@ -296,6 +311,7 @@ export default function AuditLogs() {
       }
     } catch (err) {
       console.error('Audit fetch error:', err);
+      setLoadError(err.response?.data?.message || 'Could not load the audit log.');
     } finally {
       setLoading(false);
     }
@@ -354,480 +370,178 @@ export default function AuditLogs() {
     }).filter(d => d.changed);
   }, [inspectLog]);
 
+  const hasFilters = Boolean(searchQuery || filterDate || activeCategory !== 'all');
+  const resetFilters = () => { setSearchQuery(''); setFilterDate(''); setActiveCategory('all'); };
+  const firstLoad = loading && logs.length === 0;
+
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 text-ink-muted text-[11px] font-semibold uppercase tracking-wider mb-1">
-            <span>Security & Compliance</span>
-            <span>/</span>
-            <span>Audit Trail</span>
-          </div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">System Audit Log</h1>
-          <p className="text-ink-muted text-sm mt-0.5">
-            Real-time, immutable record of inventory operations, authentication events, and administrative changes.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={fetchAuditLogs} 
-            disabled={loading}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-surface text-ink-secondary text-sm font-medium rounded-lg border border-line hover:bg-subtle transition-colors disabled:opacity-50 shadow-xs"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-accent' : ''}`} />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Audit log"
+        description="A permanent record of sign-ins, stock changes, damage reports and admin actions."
+        actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchAuditLogs} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
+      />
 
-      {/* 3 KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Total Recorded Events
-            </span>
-            <div className="p-2 rounded-lg bg-accent-soft text-accent">
-              <History className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              {stats.total.toLocaleString()}
-            </span>
-            <span className="text-xs mt-1 block text-ink-muted">
-              Security & operational events in buffer
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Inventory & Loss Events
-            </span>
-            <div className="p-2 rounded-lg bg-warning-soft text-warning-fg">
-              <Boxes className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              {(stats.inventory + stats.damage).toLocaleString()}
-            </span>
-            <span className="text-xs mt-1 block text-warning-fg font-medium">
-              {stats.damage} damage reports · {stats.inventory} movements
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-xs">
-          <div className="flex items-start justify-between">
-            <span className="text-[11px] font-semibold tracking-wide uppercase text-ink-muted block">
-              Authentication & Logins
-            </span>
-            <div className="p-2 rounded-lg bg-success-soft text-success-fg">
-              <Shield className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold text-ink block tracking-tight">
-              {stats.auth.toLocaleString()}
-            </span>
-            <span className="text-xs mt-1 block text-success-fg font-medium">
-              Verified sessions logged
-            </span>
-          </div>
-        </div>
+        <KpiCard loading={firstLoad} label="Events" value={stats.total} icon={History} tone="accent" meta="In the current view" />
+        <KpiCard loading={firstLoad} label="Stock and damage" value={stats.inventory + stats.damage} icon={Boxes} tone="warning" meta={`${stats.damage} damage · ${stats.inventory} stock`} />
+        <KpiCard loading={firstLoad} label="Sign-ins and sign-outs" value={stats.auth} icon={Shield} tone="success" meta="Account sessions" />
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-surface border border-line rounded-xl p-4 mb-6 shadow-xs space-y-4">
-        {/* Category Tabs */}
-        <div className="flex flex-wrap gap-1.5 border-b border-line-soft pb-3">
-          {CATEGORY_TABS.map(tab => {
-            const count = tab.id === 'all' ? stats.total : (stats[tab.id] || 0);
-            const isActive = activeCategory === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveCategory(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-ink text-white shadow-xs'
-                    : 'bg-subtle text-ink-secondary hover:bg-sunken'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  isActive ? 'bg-surface/20 text-white' : 'bg-line text-ink-secondary'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
+        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by person, email, SKU, action or note…" aria-label="Search the audit log" />
+        <Input type="date" className="md:w-44" aria-label="Date" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+      </FilterBar>
 
-        {/* Inputs row */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by operator, email, SKU, action, or note..."
-              className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink-secondary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent"
+      <Card className="overflow-hidden">
+        <div className="px-5 pt-3 border-b border-line-soft">
+          <Tabs
+            label="Event type"
+            value={activeCategory}
+            onChange={setActiveCategory}
+            className="border-b-0"
+            tabs={CATEGORY_TABS.map(t => ({ value: t.id, label: t.label, count: t.id === 'all' ? stats.total : (stats[t.id] || 0) }))}
+          />
+        </div>
+        <Table minWidth="58rem">
+          <THead>
+            <TR>
+              <TH>When</TH>
+              <TH>Who</TH>
+              <TH>Event</TH>
+              <TH>Details</TH>
+              <TH>Device</TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={5}
+              loading={firstLoad}
+              error={!loading && loadError && logs.length === 0 ? loadError : null}
+              onRetry={fetchAuditLogs}
+              empty={!loading && !loadError && filteredLogs.length === 0}
+              emptyIcon={History}
+              emptyTitle="No matching events"
+              emptyDescription="Try another date, tab or search."
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
             />
-          </div>
-
-          {/* Date Picker */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-ink-muted">Date:</span>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
-              className="h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-
-          {/* Reset Filters */}
-          {(searchQuery || filterDate || activeCategory !== 'all') && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setFilterDate('');
-                setActiveCategory('all');
-              }}
-              className="h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-danger-fg hover:bg-danger-soft rounded-lg border border-danger-line transition-colors"
-            >
-              <X size={14} />
-              Reset Filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Audit Activity Table */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft bg-subtle/50">
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-accent" />
-            <h3 className="font-semibold text-ink text-sm">Activity Feed</h3>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sunken text-ink-secondary">
-              {filteredLogs.length} events
-            </span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="bg-subtle">
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
-                  Time
-                </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
-                  Operator / Actor
-                </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
-                  Event Category
-                </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line">
-                  Activity & Relevant Details
-                </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line whitespace-nowrap">
-                  Host & Device
-                </th>
-                <th className="px-4 py-3 text-[11px] font-semibold tracking-wide uppercase text-ink-muted border-b border-line text-center whitespace-nowrap">
-                  Inspect
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-12 text-center text-ink-muted text-sm">
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw size={16} className="animate-spin text-accent" />
-                      <span>Loading audit activity log...</span>
+            {filteredLogs.map((log, i) => {
+              const { badgeLabel, tone, ActionIcon, summary, targetLabel, detailsBadges, cleanIp, deviceInfo } = log.parsed;
+              const actorName = log.user_name || 'System';
+              const actorEmail = log.user_email || log.user_role || 'system';
+              const initials = actorName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'SY';
+              const when = new Date(log.created_at);
+              return (
+                <TR key={log.id} index={i} onClick={() => setInspectLog(log)}>
+                  <TD className="whitespace-nowrap">
+                    <div className="text-sm text-ink">{formatRelativeTime(log.created_at)}</div>
+                    <div className="text-caption text-ink-muted tabular-nums">
+                      {when.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                  </td>
-                </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-12 text-center">
-                    <History className="w-10 h-10 text-ink-subtle mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-ink-secondary">No matching audit events</p>
-                    <p className="text-xs text-ink-muted mt-0.5">Try clearing filters or search terms</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.map(log => {
-                  const { 
-                    badgeLabel, badgeClass, ActionIcon, summary, targetLabel, 
-                    detailsBadges, cleanIp, deviceInfo 
-                  } = log.parsed;
+                  </TD>
+                  <TD className="whitespace-nowrap">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-full bg-sunken text-ink-secondary flex items-center justify-center font-semibold text-caption flex-shrink-0">{initials}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-ink">{actorName}</div>
+                        <div className="text-caption text-ink-muted truncate max-w-[10rem]" title={actorEmail}>{actorEmail}</div>
+                      </div>
+                    </div>
+                  </TD>
+                  <TD className="whitespace-nowrap"><Badge tone={tone} size="sm" icon={ActionIcon}>{badgeLabel}</Badge></TD>
+                  <TD className="max-w-[22rem]">
+                    <div className="text-sm text-ink">{summary}</div>
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      {targetLabel && <Badge size="sm" className="font-mono">{targetLabel}</Badge>}
+                      {detailsBadges.map((badge, idx) => (
+                        <Badge key={idx} size="sm"><span className="text-ink-muted">{badge.label}:</span>{badge.value}</Badge>
+                      ))}
+                    </div>
+                  </TD>
+                  <TD className="whitespace-nowrap">
+                    <div className="text-caption font-mono text-ink-secondary">{cleanIp}</div>
+                    <div className="text-caption text-ink-muted flex items-center gap-1" title={log.user_agent}>
+                      <Laptop className="w-3 h-3" aria-hidden="true" /><span className="truncate max-w-[8rem]">{deviceInfo}</span>
+                    </div>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </Card>
 
-                  const actorName = log.user_name || 'System Operator';
-                  const actorEmail = log.user_email || log.user_role || 'system';
-                  const actorInitials = actorName
-                    .split(' ')
-                    .map(w => w[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2) || 'SY';
-
-                  const dateFormatted = new Date(log.created_at).toLocaleDateString('en-MY', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  });
-                  const timeFormatted = new Date(log.created_at).toLocaleTimeString('en-MY', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  });
-
-                  return (
-                    <tr key={log.id} className="hover:bg-subtle/70 transition-colors">
-                      {/* Column 1: Time */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
-                        <div className="font-semibold text-ink text-xs flex items-center gap-1">
-                          <Clock size={12} className="text-ink-muted" />
-                          <span>{formatRelativeTime(log.created_at)}</span>
-                        </div>
-                        <div className="text-[11px] text-ink-muted mt-0.5">{dateFormatted}</div>
-                        <div className="text-[10px] text-ink-muted">{timeFormatted}</div>
-                      </td>
-
-                      {/* Column 2: Actor / Operator */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
-                            {actorInitials}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-ink text-xs">{actorName}</div>
-                            <div className="text-[11px] text-ink-muted truncate max-w-[170px]" title={actorEmail}>
-                              {actorEmail}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Column 3: Category Badge */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${badgeClass}`}>
-                          <ActionIcon size={12} />
-                          <span>{badgeLabel}</span>
-                        </span>
-                      </td>
-
-                      {/* Column 4: Meaningful Activity Summary & Relevant Details */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-sm">
-                        <div className="font-medium text-ink text-xs">
-                          {summary}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                          {targetLabel && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium bg-sunken text-ink-secondary">
-                              {targetLabel}
-                            </span>
-                          )}
-                          {detailsBadges.map((badge, idx) => (
-                            <span 
-                              key={idx} 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-subtle border border-line text-ink-secondary"
-                            >
-                              <strong className="text-ink">{badge.label}:</strong>
-                              <span>{badge.value}</span>
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Column 5: Host & Device */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-sm whitespace-nowrap">
-                        <div className="text-xs font-mono text-ink-secondary font-medium">
-                          {cleanIp}
-                        </div>
-                        <div className="text-[11px] text-ink-muted mt-0.5 flex items-center gap-1" title={log.user_agent}>
-                          <Laptop size={11} />
-                          <span className="truncate max-w-[130px]">{deviceInfo}</span>
-                        </div>
-                      </td>
-
-                      {/* Column 6: Inspect Action */}
-                      <td className="px-4 py-3.5 border-b border-line-soft text-center whitespace-nowrap">
-                        <button
-                          onClick={() => setInspectLog(log)}
-                          className="inline-flex items-center gap-1 h-8 px-2.5 bg-sunken hover:bg-line text-ink-secondary text-xs font-medium rounded-lg transition-colors cursor-pointer"
-                          title="Inspect raw details and field diff"
-                        >
-                          <Eye size={13} />
-                          <span>Inspect</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* AUDIT RECORD INSPECTION MODAL                                             */}
-      {/* ========================================================================= */}
       {inspectLog && (
-        <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface border border-line rounded-xl shadow-2xl max-w-xl w-full p-6 relative my-8">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-line-soft">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${inspectLog.parsed.badgeClass}`}>
-                    <inspectLog.parsed.ActionIcon size={14} />
-                    {inspectLog.parsed.badgeLabel}
-                  </span>
-                  <span className="text-xs font-mono text-ink-muted">
-                    Log #{inspectLog.id}
-                  </span>
-                </div>
-                <h2 className="text-lg font-bold text-ink mt-1">
-                  {inspectLog.parsed.summary}
-                </h2>
-                <p className="text-xs text-ink-muted">
-                  {new Date(inspectLog.created_at).toLocaleString('en-MY')} ({formatRelativeTime(inspectLog.created_at)})
-                </p>
-              </div>
-              <button
-                onClick={() => setInspectLog(null)}
-                className="p-1 rounded-lg text-ink-muted hover:text-ink-secondary hover:bg-sunken transition-colors"
-              >
-                <X size={18} />
-              </button>
+        <Modal
+          size="lg"
+          icon={inspectLog.parsed.ActionIcon}
+          title={inspectLog.parsed.summary}
+          description={<>{new Date(inspectLog.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'medium' })} · {formatRelativeTime(inspectLog.created_at)} · <span className="font-mono">Log #{inspectLog.id}</span></>}
+          onClose={() => setInspectLog(null)}
+          footer={<Button variant="secondary" onClick={() => setInspectLog(null)}>Close</Button>}
+        >
+          <div className="flex flex-wrap gap-1.5">
+            <Badge tone={inspectLog.parsed.tone} icon={inspectLog.parsed.ActionIcon}>{inspectLog.parsed.badgeLabel}</Badge>
+            {inspectLog.parsed.targetLabel && <Badge className="font-mono">{inspectLog.parsed.targetLabel}</Badge>}
+          </div>
+
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="p-3 bg-subtle rounded-lg">
+              <dt className="text-caption text-ink-muted">Done by</dt>
+              <dd className="font-medium text-ink mt-0.5">{inspectLog.user_name || 'System'}</dd>
+              <dd className="text-caption text-ink-muted">{inspectLog.user_email || inspectLog.user_role}</dd>
             </div>
+            <div className="p-3 bg-subtle rounded-lg">
+              <dt className="text-caption text-ink-muted">From</dt>
+              <dd className="font-mono font-medium text-ink mt-0.5">{inspectLog.parsed.cleanIp}</dd>
+              <dd className="text-caption text-ink-muted truncate" title={inspectLog.user_agent}>{inspectLog.parsed.deviceInfo}</dd>
+            </div>
+            <div className="p-3 bg-subtle rounded-lg sm:col-span-2">
+              <dt className="text-caption text-ink-muted">Record</dt>
+              <dd className="font-mono text-caption text-ink mt-0.5">{inspectLog.entity_type || 'N/A'} · ID {inspectLog.entity_id || 'N/A'}</dd>
+            </div>
+          </dl>
 
-            <div className="space-y-4 text-xs">
-              {/* Operator & Machine Profile */}
-              <div className="p-3.5 bg-subtle border border-line rounded-xl">
-                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1.5">
-                  Actor & Network Metadata
-                </span>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-ink-muted block text-[10px]">OPERATOR</span>
-                    <span className="font-semibold text-ink block mt-0.5">
-                      {inspectLog.user_name || 'System / Unlinked'}
-                    </span>
-                    <span className="text-ink-muted block text-[11px]">
-                      {inspectLog.user_email || inspectLog.user_role}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-ink-muted block text-[10px]">ORIGIN HOST & IP</span>
-                    <span className="font-mono font-semibold text-ink block mt-0.5">
-                      {inspectLog.parsed.cleanIp}
-                    </span>
-                    <span className="text-ink-muted block text-[11px] truncate" title={inspectLog.user_agent}>
-                      {inspectLog.parsed.deviceInfo}
-                    </span>
-                  </div>
-                </div>
+          {fieldDiffs.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold text-ink mb-2">What changed <span className="text-ink-muted font-normal tabular-nums">({fieldDiffs.length})</span></h3>
+              <div className="border border-line rounded-lg overflow-hidden">
+                <Table dense>
+                  <THead><TR><TH>Field</TH><TH>Before</TH><TH>After</TH></TR></THead>
+                  <TBody>
+                    {fieldDiffs.map((diff, i) => (
+                      <TR key={i}>
+                        <TD className="font-mono text-caption text-ink-secondary">{diff.key}</TD>
+                        <TD className="font-mono text-caption text-danger-fg line-through break-all">{diff.oldVal === null || diff.oldVal === undefined ? 'null' : String(diff.oldVal)}</TD>
+                        <TD className="font-mono text-caption font-semibold text-success-fg break-all">{diff.newVal === null || diff.newVal === undefined ? 'null' : String(diff.newVal)}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
               </div>
+            </section>
+          )}
 
-              {/* Target Entity & Badges */}
-              <div>
-                <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">
-                  Target Entity Reference
-                </span>
-                <div className="p-3 bg-surface border border-line rounded-xl flex items-center justify-between">
-                  <div className="font-mono text-xs font-semibold text-ink">
-                    {inspectLog.parsed.targetLabel}
-                  </div>
-                  <span className="text-[11px] text-ink-muted font-mono">
-                    Table: {inspectLog.entity_type || 'N/A'} (ID: {inspectLog.entity_id || 'N/A'})
-                  </span>
-                </div>
-              </div>
-
-              {/* Specific Field Changes Diff */}
-              {fieldDiffs.length > 0 && (
+          <details className="border border-line rounded-lg bg-subtle group">
+            <summary className="px-3 py-2.5 text-sm font-medium text-ink-secondary cursor-pointer select-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+              Raw data (JSON)
+            </summary>
+            <div className="px-3 pb-3 space-y-2">
+              {inspectLog.new_values && (
                 <div>
-                  <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1.5">
-                    Field Modifications ({fieldDiffs.length})
-                  </span>
-                  <div className="border border-line rounded-xl overflow-hidden">
-                    <table className="w-full text-left">
-                      <thead className="bg-subtle border-b border-line">
-                        <tr>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Field</th>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Previous Value</th>
-                          <th className="p-2 text-[10px] font-semibold uppercase text-ink-muted">Updated Value</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-line-soft">
-                        {fieldDiffs.map((diff, i) => (
-                          <tr key={i} className="hover:bg-subtle">
-                            <td className="p-2 font-mono font-medium text-ink-secondary">{diff.key}</td>
-                            <td className="p-2 font-mono text-danger-fg line-through">
-                              {diff.oldVal === null || diff.oldVal === undefined ? 'null' : String(diff.oldVal)}
-                            </td>
-                            <td className="p-2 font-mono font-bold text-success-fg">
-                              {diff.newVal === null || diff.newVal === undefined ? 'null' : String(diff.newVal)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <p className="text-caption text-ink-muted mb-1">New values</p>
+                  <pre className="p-3 bg-ink text-white/90 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed">{JSON.stringify(inspectLog.parsed.newData, null, 2)}</pre>
                 </div>
               )}
-
-              {/* Technical JSON Payload (Collapsible) */}
-              <details className="border border-line rounded-xl p-3 bg-subtle group">
-                <summary className="font-semibold text-ink-secondary cursor-pointer select-none text-[11px] flex items-center justify-between">
-                  <span>View Technical JSON Payload</span>
-                  <span className="text-ink-muted text-[10px]">Click to toggle</span>
-                </summary>
-                <div className="mt-3 pt-3 border-t border-line/80 space-y-2">
-                  {inspectLog.new_values && (
-                    <div>
-                      <span className="text-[10px] font-semibold text-ink-muted block mb-0.5">NEW VALUES:</span>
-                      <pre className="p-2 bg-ink text-success rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
-                        {JSON.stringify(inspectLog.parsed.newData, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  {inspectLog.old_values && (
-                    <div>
-                      <span className="text-[10px] font-semibold text-ink-muted block mb-0.5">OLD VALUES:</span>
-                      <pre className="p-2 bg-ink text-danger-line rounded-lg overflow-x-auto text-[10px] font-mono leading-relaxed">
-                        {JSON.stringify(inspectLog.parsed.oldData, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+              {inspectLog.old_values && (
+                <div>
+                  <p className="text-caption text-ink-muted mb-1">Old values</p>
+                  <pre className="p-3 bg-ink text-white/70 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed">{JSON.stringify(inspectLog.parsed.oldData, null, 2)}</pre>
                 </div>
-              </details>
+              )}
             </div>
-
-            {/* Modal Footer */}
-            <div className="mt-6 pt-4 border-t border-line-soft flex justify-end">
-              <button
-                onClick={() => setInspectLog(null)}
-                className="h-9 px-4 bg-ink text-white text-xs font-medium rounded-lg hover:bg-ink-hover transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+          </details>
+        </Modal>
       )}
     </Layout>
   );
