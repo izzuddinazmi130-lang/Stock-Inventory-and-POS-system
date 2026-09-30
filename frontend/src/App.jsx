@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ConfirmProvider } from './components/ui/Confirm';
+import { AppShell } from './components/Layout';
 
 // Pages
 import Login from './pages/Login';
@@ -62,7 +63,8 @@ export default function App() {
             {/* Public */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes */}
+            {/* Protected routes share one persistent shell (sidebar + header) */}
+            <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
             <Route
               path="/dashboard"
               element={
@@ -153,6 +155,8 @@ export default function App() {
             {Styleguide && (
               <Route path="/styleguide" element={<ProtectedRoute><Suspense fallback={null}><Styleguide /></Suspense></ProtectedRoute>} />
             )}
+
+            </Route>
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

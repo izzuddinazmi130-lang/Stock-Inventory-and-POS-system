@@ -1,95 +1,122 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useBusiness } from '../context/BusinessContext';
-import {
-  LayoutDashboard, Package, Camera, Users,
-  FileBarChart, History, Building2, AlertTriangle, Store,
-  ShieldCheck, ArrowLeftRight, Receipt, PackageX
-} from 'lucide-react';
+import { navigationFor, isItemActive } from './navigation';
+import BrandMark from './BrandMark';
+import { cn, focusRing } from './ui/cn';
+import { Tooltip } from './ui/Tooltip';
 
-const SECTION_LABEL = 'px-4 mb-1 mt-5 text-[10px] font-semibold tracking-widest uppercase text-ink-muted';
+/**
+ * Navigation list. Used in the desktop sidebar (optionally collapsed to icons) and in the mobile drawer.
+ * A slim accent bar slides to the active item.
+ */
+export function NavList({ collapsed = false, onNavigate }) {
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const listRef = useRef(null);
+  const [bar, setBar] = useState(null);
+  const groups = navigationFor(user);
 
-function NavItem({ to, icon: Icon, label, count }) {
+  useLayoutEffect(() => {
+    const measure = () => {
+      const nav = listRef.current;
+      const el = nav?.querySelector('[aria-current="page"]');
+      if (!el) { setBar(null); return; }
+      // Measure against the nav itself (tooltip wrappers are positioned, so offsetTop would be wrong)
+      const top = el.getBoundingClientRect().top - nav.getBoundingClientRect().top;
+      setBar({ top: top + el.offsetHeight / 2 - 10 });
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro && listRef.current) ro.observe(listRef.current);
+    return () => ro?.disconnect();
+  }, [pathname, collapsed, groups.length]);
+
   return (
-    <NavLink
-      to={to}
-      end={to === '/dashboard'}
-      className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium mx-2 transition-colors ${
-          isActive
-            ? 'bg-[#DCE8FB] text-ink font-semibold'
-            : 'text-ink-muted hover:text-ink hover:bg-subtle'
-        }`
-      }
-    >
-      <Icon className="w-4 h-4 flex-shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
-      {count !== undefined && count !== null && (
-        <span className="text-[10px] font-semibold bg-sunken text-ink-muted rounded-full px-1.5 py-0.5 min-w-[20px] text-center">{count}</span>
+    <nav ref={listRef} aria-label="Main" className="relative px-3 py-2">
+      {bar && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 w-[3px] h-5 rounded-r-full bg-accent transition-[top] duration-base ease-out"
+          style={{ top: bar.top }}
+        />
       )}
-    </NavLink>
+      {groups.map((group, gi) => (
+        <div key={group.label || gi} className={cn(gi > 0 && 'mt-5')}>
+          {group.label && (
+            collapsed
+              ? <div className="mx-auto mb-2 w-5 h-px bg-line" aria-hidden="true" />
+              : <div className="px-3 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-ink-muted">{group.label}</div>
+          )}
+          <ul className="space-y-0.5">
+            {group.items.map(item => {
+              const active = isItemActive(item, pathname);
+              const Icon = item.icon;
+              const link = (
+                <Link
+                  to={item.to}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'group flex items-center gap-3 h-9 rounded-lg text-sm transition-colors duration-fast ease-out',
+                    focusRing,
+                    collapsed ? 'justify-center w-10 mx-auto' : 'px-3',
+                    active ? 'bg-sunken text-ink font-medium' : 'text-ink-secondary hover:bg-subtle hover:text-ink'
+                  )}
+                >
+                  <Icon className={cn('w-[18px] h-[18px] flex-shrink-0 transition-colors', active ? 'text-accent' : 'text-ink-muted group-hover:text-ink-secondary')} aria-hidden="true" />
+                  <span className={cn('truncate', collapsed && 'sr-only')}>{item.label}</span>
+                </Link>
+              );
+              return (
+                <li key={item.to}>
+                  {collapsed ? <Tooltip content={item.label} side="right" className="flex">{link}</Tooltip> : link}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
   );
 }
 
-export default function Sidebar() {
+/** Desktop sidebar (hidden below md; the header opens the same list in a drawer). */
+export default function Sidebar({ collapsed, onToggle }) {
   const { user } = useAuth();
-  const { selectedBusiness } = useBusiness();
   if (!user) return null;
-
-  const isSuperAdmin = user.role === 'super_admin';
-  const scopeLabel = selectedBusiness ? selectedBusiness.name.toUpperCase() : 'ALL BUSINESSES';
-
   return (
-    <aside className="w-56 bg-surface border-r border-line flex-shrink-0 min-h-[calc(100vh-64px)] flex flex-col py-3">
-      <div className="flex-1">
-        {isSuperAdmin ? (
-          <>
-            {/* Section 1 — Business scoped */}
-            <div className={SECTION_LABEL}>{scopeLabel} · SCOPE</div>
-            <nav className="space-y-0.5">
-              <NavItem to="/dashboard" icon={LayoutDashboard} label="Overview" />
-              <NavItem to="/businesses" icon={Building2} label="Businesses" />
-              <NavItem to="/products" icon={Package} label="Products" />
-              <NavItem to="/low-stock" icon={PackageX} label="Low Stock" />
-              <NavItem to="/sales" icon={Receipt} label="Sales History" />
-            </nav>
-
-            {/* Section 2 — HQ Controls */}
-            <div className={SECTION_LABEL}>HQ CONTROLS</div>
-            <nav className="space-y-0.5">
-              <NavItem to="/users" icon={Users} label="Users & Roles" />
-              <NavItem to="/damage" icon={AlertTriangle} label="Damage Records" />
-              <NavItem to="/reports" icon={FileBarChart} label="Reports" />
-              <NavItem to="/audit" icon={History} label="Audit Log" />
-            </nav>
-          </>
-        ) : (
-          <>
-            <div className={SECTION_LABEL}>MY BRANCH</div>
-            <nav className="space-y-0.5">
-              <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-              <NavItem to="/products" icon={Package} label="Products" />
-              <NavItem to="/low-stock" icon={PackageX} label="Low Stock" />
-              <NavItem to={`/branches/${user?.branch_id}/stores`} icon={Store} label="Stores" />
-              <NavItem to="/qr/scan" icon={Camera} label="QR & POS" />
-              <NavItem to="/sales" icon={Receipt} label="Sales History" />
-              <NavItem to="/damage" icon={AlertTriangle} label="Damage Records" />
-              <NavItem to="/reports" icon={FileBarChart} label="Reports" />
-            </nav>
-          </>
-        )}
+    <aside
+      className={cn(
+        'hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 bg-surface border-r border-line',
+        'transition-[width] duration-slow ease-out',
+        collapsed ? 'w-[4.5rem]' : 'w-60'
+      )}
+    >
+      <div className={cn('h-16 flex items-center border-b border-line-soft flex-shrink-0', collapsed ? 'justify-center' : 'px-5')}>
+        <Link to="/dashboard" className={cn('rounded-lg', focusRing)} aria-label="HQ Inventory home">
+          <BrandMark withName={!collapsed} />
+        </Link>
       </div>
-
-      {/* Footer health card */}
-      <div className="mx-3 mb-3 p-3 bg-subtle border border-line-soft rounded-xl">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-success-fg flex-shrink-0" />
-          <div>
-            <div className="text-[12px] font-semibold text-ink">System healthy</div>
-            <div className="text-[10px] text-ink-muted uppercase tracking-wide">LAST SYNC · just now</div>
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3">
+        <NavList collapsed={collapsed} />
+      </div>
+      <div className={cn('p-3 border-t border-line-soft', collapsed && 'flex justify-center')}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className={cn(
+            'flex items-center gap-3 h-9 rounded-lg text-sm text-ink-muted hover:text-ink hover:bg-subtle transition-colors',
+            focusRing,
+            collapsed ? 'w-10 justify-center' : 'w-full px-3'
+          )}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px]" aria-hidden="true" /> : <PanelLeftClose className="w-[18px] h-[18px]" aria-hidden="true" />}
+          {!collapsed && <span>Collapse</span>}
+        </button>
       </div>
     </aside>
   );

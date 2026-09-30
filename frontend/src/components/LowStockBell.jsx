@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, PackageX, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Bell, PackageX, PackageMinus, PackageCheck, ArrowRight } from 'lucide-react';
+import { cn, focusRing } from './ui/cn';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
@@ -63,46 +64,67 @@ export default function LowStockBell() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
     <div className="relative" ref={boxRef}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="relative p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors"
-        title="Stock alerts"
+        className={cn('relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-secondary hover:text-ink hover:bg-sunken transition-colors', focusRing)}
         aria-label={`Stock alerts: ${counts.total}`}
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-[18px] h-[18px]" aria-hidden="true" />
         {counts.total > 0 && (
-          <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center ${counts.out > 0 ? 'bg-danger' : 'bg-warning'}`}>
+          <span className={cn(
+            'absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold text-white flex items-center justify-center ring-2 ring-page tabular-nums',
+            counts.out > 0 ? 'bg-danger' : 'bg-warning'
+          )}>
             {counts.total > 99 ? '99+' : counts.total}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-surface border border-line rounded-xl shadow-lg overflow-hidden z-50">
+        <div
+          role="dialog"
+          aria-label="Stock alerts"
+          className="absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] bg-surface border border-line rounded-xl shadow-popover overflow-hidden z-50 animate-scale-in origin-top-right"
+        >
           <div className="px-4 py-3 border-b border-line-soft">
             <p className="text-sm font-semibold text-ink">Stock alerts</p>
-            <p className="text-xs text-ink-muted mt-0.5">
-              {counts.total === 0 ? 'Everything is above its alert level.' : <><strong className="text-danger-fg">{counts.out}</strong> out of stock · <strong className="text-warning-fg">{counts.low}</strong> running low</>}
+            <p className="text-caption text-ink-muted mt-0.5">
+              {counts.total === 0
+                ? 'Everything is above its alert level.'
+                : <><span className="font-semibold text-danger-fg tabular-nums">{counts.out}</span> out of stock · <span className="font-semibold text-warning-fg tabular-nums">{counts.low}</span> running low</>}
             </p>
           </div>
-          {items.length > 0 && (
+          {items.length === 0 ? (
+            <div className="px-4 py-6 flex flex-col items-center text-center">
+              <PackageCheck className="w-6 h-6 text-success mb-1.5" aria-hidden="true" />
+              <p className="text-caption text-ink-muted">No stock alerts right now.</p>
+            </div>
+          ) : (
             <ul className="divide-y divide-line-soft max-h-72 overflow-y-auto">
               {items.map(i => (
                 <li key={rowKey(i)} className="px-4 py-2.5 flex items-center gap-3">
                   {i.stock_status === 'out'
-                    ? <PackageX className="w-4 h-4 text-danger-fg flex-shrink-0" />
-                    : <AlertTriangle className="w-4 h-4 text-warning-fg flex-shrink-0" />}
+                    ? <PackageX className="w-4 h-4 text-danger-fg flex-shrink-0" aria-hidden="true" />
+                    : <PackageMinus className="w-4 h-4 text-warning-fg flex-shrink-0" aria-hidden="true" />}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink truncate">{label(i)}</p>
                     <p className="text-[11px] text-ink-muted truncate">
                       <span className="font-mono">{i.sku}</span>{i.branch_name ? ` · ${i.branch_name}` : ''}
                     </p>
                   </div>
-                  <span className={`text-xs font-semibold whitespace-nowrap ${i.stock_status === 'out' ? 'text-danger-fg' : 'text-warning-fg'}`}>
+                  <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', i.stock_status === 'out' ? 'text-danger-fg' : 'text-warning-fg')}>
                     {i.stock_status === 'out' ? 'Out' : `${i.quantity} left`}
                   </span>
                 </li>
@@ -112,9 +134,9 @@ export default function LowStockBell() {
           <Link
             to="/low-stock"
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs font-semibold text-accent hover:bg-accent-soft border-t border-line-soft"
+            className={cn('flex items-center justify-center gap-1 px-4 py-2.5 text-caption font-semibold text-accent hover:bg-accent-soft border-t border-line-soft transition-colors', focusRing)}
           >
-            {counts.total > PREVIEW ? `View all ${counts.total}` : 'Open low stock list'} <ArrowRight className="w-3.5 h-3.5" />
+            {counts.total > PREVIEW ? `View all ${counts.total}` : 'Open low stock list'} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>
         </div>
       )}
