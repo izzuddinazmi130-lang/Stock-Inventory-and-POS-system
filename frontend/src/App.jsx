@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { ToastProvider } from './components/ui/Toast';
+import { ConfirmProvider } from './components/ui/Confirm';
 
 // Pages
 import Login from './pages/Login';
@@ -22,6 +24,9 @@ import AddProductPage from './pages/products/AddProductPage';
 import DamageProducts from './pages/products/DamageProducts';
 import LowStock from './pages/products/LowStock';
 import SalesHistory from './pages/sales/SalesHistory';
+
+// Dev-only component gallery (never linked in the sidebar, not built into production routes)
+const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/dev/Styleguide')) : null;
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -51,6 +56,8 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <SocketProvider>
+          <ToastProvider>
+          <ConfirmProvider>
           <Routes>
             {/* Public */}
             <Route path="/login" element={<Login />} />
@@ -143,9 +150,15 @@ export default function App() {
             <Route path="/low-stock" element={<ProtectedRoute><LowStock /></ProtectedRoute>} />
             <Route path="/sales" element={<ProtectedRoute><SalesHistory /></ProtectedRoute>} />
 
+            {Styleguide && (
+              <Route path="/styleguide" element={<ProtectedRoute><Suspense fallback={null}><Styleguide /></Suspense></ProtectedRoute>} />
+            )}
+
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </ConfirmProvider>
+          </ToastProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
