@@ -181,14 +181,13 @@ export function ReportDamageModal({
             {previews.map((url, idx) => (
               <div key={url} className="relative aspect-square rounded-lg border border-line overflow-hidden bg-sunken animate-fade-in">
                 <img src={url} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover" />
-                <button
-                  type="button"
+                <ButtonBase
                   onClick={() => onRemovePhoto(idx)}
-                  className="absolute top-1 right-1 bg-ink/60 text-white rounded-full p-1 hover:bg-ink/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="absolute top-1 right-1 bg-ink/60 text-white rounded-full p-1.5 hover:bg-ink/80"
                   aria-label={`Remove photo ${idx + 1}`}
                 >
                   <X className="w-3 h-3" aria-hidden="true" />
-                </button>
+                </ButtonBase>
               </div>
             ))}
           </div>

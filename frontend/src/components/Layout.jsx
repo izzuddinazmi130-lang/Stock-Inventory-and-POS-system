@@ -14,8 +14,8 @@ function readCollapsed() {
     const saved = localStorage.getItem(COLLAPSE_KEY);
     if (saved !== null) return saved === '1';
   } catch { /* storage unavailable */ }
-  // Tablets start with the icon-only sidebar
-  return typeof window !== 'undefined' && window.innerWidth < 1024;
+  // Tablets and small laptops start with the icon-only sidebar (the POS needs the width)
+  return typeof window !== 'undefined' && window.innerWidth < 1280;
 }
 
 function Frame({ children }) {

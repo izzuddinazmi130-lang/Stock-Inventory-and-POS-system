@@ -233,6 +233,37 @@ export function Switch({ checked, onChange, label, description, disabled, classN
   );
 }
 
+/**
+ * − [ 3 ] + control for whole-number quantities.
+ *   <QuantityStepper value={qty} onChange={setQty} min={1} label="Quantity of Kaftan" size="lg" />
+ * `size="lg"` gives 44 px touch targets (POS).
+ */
+export function QuantityStepper({ value, onChange, min = 0, max = Infinity, label = 'Quantity', size = 'md', className }) {
+  const box = size === 'lg' ? 'w-11 h-11' : 'w-10 h-10';
+  const clamp = (n) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
+  const btn = cn(box, 'flex items-center justify-center text-ink-secondary hover:bg-subtle hover:text-ink transition-colors disabled:opacity-40 disabled:pointer-events-none', focusRing);
+  return (
+    <div className={cn('inline-flex items-center rounded-lg border border-line bg-surface shadow-xs', className)} role="group" aria-label={label}>
+      <button type="button" className={cn(btn, 'rounded-l-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) - 1))} disabled={(parseInt(value, 10) || 0) <= min} aria-label={`Decrease ${label.toLowerCase()}`}>
+        <span aria-hidden="true" className="text-lg leading-none">−</span>
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={Number.isFinite(max) ? max : undefined}
+        value={value}
+        onChange={e => onChange(clamp(parseInt(e.target.value, 10)))}
+        className={cn(size === 'lg' ? 'h-11 w-12' : 'h-10 w-14', 'text-center tabular-nums font-semibold text-sm text-ink border-x border-line bg-transparent focus:outline-none focus:bg-accent-soft/40')}
+        aria-label={label}
+      />
+      <button type="button" className={cn(btn, 'rounded-r-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) + 1))} disabled={(parseInt(value, 10) || 0) >= max} aria-label={`Increase ${label.toLowerCase()}`}>
+        <span aria-hidden="true" className="text-lg leading-none">+</span>
+      </button>
+    </div>
+  );
+}
+
 /** A titled group of fields inside a form. */
 export function FormSection({ title, description, children, className, actions }) {
   return (

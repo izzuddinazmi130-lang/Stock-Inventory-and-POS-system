@@ -24,9 +24,8 @@ export function Tooltip({ content, side = 'top', children, className }) {
         id={id}
         className={cn(
           'pointer-events-none absolute z-50 whitespace-nowrap rounded-lg bg-ink px-2 py-1 text-caption font-medium text-white shadow-popover',
-          'opacity-0 scale-95 transition duration-fast ease-out delay-0',
-          'group-hover/tooltip:opacity-100 group-hover/tooltip:scale-100 group-hover/tooltip:delay-300',
-          'group-has-[:focus-visible]/tooltip:opacity-100 group-has-[:focus-visible]/tooltip:scale-100',
+          // Out of the layout until shown, so a hidden tooltip near the screen edge can't cause sideways scrolling
+          'hidden group-hover/tooltip:block group-has-[:focus-visible]/tooltip:block animate-fade-in [animation-delay:250ms]',
           SIDES[side] || SIDES.top
         )}
       >

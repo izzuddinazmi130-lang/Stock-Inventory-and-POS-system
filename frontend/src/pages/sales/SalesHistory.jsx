@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
 import { SaleReceipt, ReceiptModal, PAYMENT_LABELS, rm, formatDateTime } from '../../components/pos/Receipt';
+import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard } from 'lucide-react';
 import {
-  Receipt, Search, ShoppingCart, RefreshCw, ChevronLeft, ChevronRight, Banknote, QrCode, CreditCard,
-  TrendingUp, Package, AlertTriangle
-} from 'lucide-react';
+  Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
+  StatusPill, Table, THead, TBody, TH, TR, TD, TableState,
+} from '../../components/ui';
 
-const PAYMENT_ICONS = { cash: Banknote, qr: QrCode, online_banking: CreditCard };
 
 // Local YYYY-MM-DD (not UTC, so "today" is the shop's today)
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -40,8 +39,6 @@ const PERIODS = [
   { value: 'all', label: 'All time' },
   { value: 'custom', label: 'Custom' },
 ];
-
-const selectClass = 'h-9 rounded-lg border border-line bg-surface px-2.5 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent';
 
 export default function SalesHistory() {
   const { user } = useAuth();
@@ -140,173 +137,116 @@ export default function SalesHistory() {
     ? (range.from === range.to ? formatDay(range.from) : `${formatDay(range.from)} – ${formatDay(range.to)}`)
     : 'All time';
 
+  const firstLoad = loading && sales.length === 0;
+  const hasFilters = Boolean(search || payment || businessId || branchId || period !== 'today');
+  const resetFilters = () => { setSearchInput(''); setPayment(''); setBusinessId(''); setBranchId(''); setPeriod('today'); setPage(1); };
+
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-xl font-bold text-ink">Sales history</h1>
-          <p className="text-sm text-ink-muted mt-0.5">Every sale from the Point of Sale, with its receipt. Click a sale to view or reprint the receipt.</p>
-        </div>
-        {!isSuperAdmin && (
-          <Link to="/qr/scan" className="inline-flex items-center gap-2 h-10 px-4 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover self-start sm:self-auto">
-            <ShoppingCart className="w-4 h-4" /> Open Point of Sale
-          </Link>
+      <PageHeader
+        title="Sales history"
+        description="Every sale from the point of sale, with its receipt. Open a sale to view or reprint the receipt."
+        actions={!isSuperAdmin && <Button icon={ScanLine} to="/qr/scan">Open point of sale</Button>}
+      />
+
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+        <SegmentedControl label="Period" value={period} onChange={changeFilter(setPeriod)} tabs={PERIODS} className="max-w-full overflow-x-auto" />
+        {period === 'custom' && (
+          <div className="flex items-center gap-2 animate-fade-in">
+            <Input type="date" size="sm" value={customFrom} max={customTo} onChange={e => changeFilter(setCustomFrom)(e.target.value)} aria-label="From date" />
+            <span className="text-caption text-ink-muted">to</span>
+            <Input type="date" size="sm" value={customTo} min={customFrom} onChange={e => changeFilter(setCustomTo)(e.target.value)} aria-label="To date" />
+          </div>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="bg-surface border border-line rounded-xl p-3 mb-5 space-y-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {PERIODS.map(p => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => changeFilter(setPeriod)(p.value)}
-              className={`h-8 px-3 rounded-full text-xs font-semibold border transition-colors ${period === p.value ? 'bg-accent border-accent text-white' : 'bg-surface border-line text-ink-secondary hover:bg-subtle'}`}
-            >
-              {p.label}
-            </button>
-          ))}
-          {period === 'custom' && (
-            <div className="flex items-center gap-1.5 ml-1">
-              <input type="date" value={customFrom} max={customTo} onChange={e => changeFilter(setCustomFrom)(e.target.value)} className={selectClass} aria-label="From date" />
-              <span className="text-xs text-ink-muted">to</span>
-              <input type="date" value={customTo} min={customFrom} onChange={e => changeFilter(setCustomTo)(e.target.value)} className={selectClass} aria-label="To date" />
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col md:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              placeholder="Search by receipt number, product name or SKU…"
-              className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <select value={payment} onChange={e => changeFilter(setPayment)(e.target.value)} className={selectClass} aria-label="Payment method">
-            <option value="">All payments</option>
-            {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-          {isSuperAdmin && (
-            <>
-              <select value={businessId} onChange={e => { changeFilter(setBusinessId)(e.target.value); setBranchId(''); }} className={selectClass} aria-label="Business">
-                <option value="">All businesses</option>
-                {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              <select value={branchId} onChange={e => changeFilter(setBranchId)(e.target.value)} className={selectClass} aria-label="Branch">
-                <option value="">All branches</option>
-                {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        <SummaryCard icon={Receipt} label="Sales" value={summary ? summary.sales_count : '—'} sub={rangeLabel} />
-        <SummaryCard icon={TrendingUp} label="Revenue" value={summary ? rm(summary.revenue) : '—'} sub="Total charged" />
-        <SummaryCard icon={ShoppingCart} label="Average sale" value={summary ? rm(summary.average) : '—'} sub="Per receipt" />
-        <SummaryCard icon={Package} label="Units sold" value={summary ? summary.units : '—'} sub="All items" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <KpiCard loading={firstLoad} label="Sales" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
+        <KpiCard loading={firstLoad} label="Revenue" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Total charged" />
+        <KpiCard loading={firstLoad} label="Average sale" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Per receipt" />
+        <KpiCard loading={firstLoad} label="Units sold" value={summary ? summary.units : 0} icon={Package} tone="neutral" meta="All items" />
       </div>
       {summary && summary.revenue > 0 && <PaymentSplit byPayment={summary.by_payment} total={summary.revenue} />}
 
-      {error && (
-        <div className="mb-4 p-3 bg-danger-soft border border-danger-line rounded-lg text-danger-fg text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
-        </div>
-      )}
-
-      {/* Sales list */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-subtle border-b border-line text-left text-[11px] uppercase tracking-wider text-ink-muted">
-                <th className="px-4 py-2.5 font-semibold">Receipt</th>
-                <th className="px-4 py-2.5 font-semibold">Date &amp; time</th>
-                <th className="px-4 py-2.5 font-semibold">Items</th>
-                <th className="px-4 py-2.5 font-semibold">Payment</th>
-                {isSuperAdmin && <th className="px-4 py-2.5 font-semibold">Branch</th>}
-                <th className="px-4 py-2.5 font-semibold">Served by</th>
-                <th className="px-4 py-2.5 font-semibold text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-soft">
-              {loading && sales.length === 0 ? (
-                <tr><td colSpan={isSuperAdmin ? 7 : 6} className="py-14 text-center text-ink-muted text-sm">
-                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" /> Loading sales…
-                </td></tr>
-              ) : sales.length === 0 ? (
-                <tr><td colSpan={isSuperAdmin ? 7 : 6} className="py-14 text-center">
-                  <Receipt className="w-9 h-9 mx-auto mb-2 text-ink-subtle" />
-                  <p className="text-sm font-semibold text-ink-secondary">No sales found</p>
-                  <p className="text-xs text-ink-muted mt-0.5">Try another date range or clear the search.</p>
-                </td></tr>
-              ) : sales.map(s => {
-                const PayIcon = PAYMENT_ICONS[s.payment_method] || Receipt;
-                const preview = s.items_preview || [];
-                return (
-                  <tr
-                    key={s.id}
-                    onClick={() => openReceipt(s.id)}
-                    onKeyDown={e => { if (e.key === 'Enter') openReceipt(s.id); }}
-                    tabIndex={0}
-                    className="cursor-pointer hover:bg-accent-soft/50 focus:bg-accent-soft/50 focus:outline-none"
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="font-mono text-xs font-bold text-accent">{s.receipt_no}</span>
-                      {openingId === s.id && <RefreshCw className="w-3 h-3 animate-spin inline ml-1.5 text-ink-muted" />}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-ink-secondary">{formatDateTime(s.created_at)}</td>
-                    <td className="px-4 py-3 max-w-xs">
-                      <p className="truncate text-ink">{preview[0] || '—'}</p>
-                      {preview.length > 1 && <p className="text-xs text-ink-muted">+ {preview.length - 1} more</p>}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-ink-secondary">
-                        <PayIcon className="w-3.5 h-3.5 text-ink-muted" /> {PAYMENT_LABELS[s.payment_method] || s.payment_method}
-                      </span>
-                    </td>
-                    {isSuperAdmin && <td className="px-4 py-3 whitespace-nowrap text-ink-secondary">{s.branch_name}</td>}
-                    <td className="px-4 py-3 whitespace-nowrap text-ink-secondary">{s.cashier_name || '—'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right font-mono font-bold text-ink">{rm(s.total_amount)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-line-soft text-sm">
-            <span className="text-ink-muted">Page {page} of {totalPages}</span>
-            <div className="flex gap-2">
-              <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="h-8 px-3 inline-flex items-center gap-1 rounded-lg border border-line text-ink-secondary hover:bg-subtle disabled:opacity-40">
-                <ChevronLeft className="w-4 h-4" /> Newer
-              </button>
-              <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 px-3 inline-flex items-center gap-1 rounded-lg border border-line text-ink-secondary hover:bg-subtle disabled:opacity-40">
-                Older <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+      <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
+        <SearchInput
+          wrapperClassName="md:flex-1 md:min-w-[16rem]"
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          placeholder="Search by receipt number, product, SKU or note…"
+          aria-label="Search sales"
+        />
+        <Select wrapperClassName="md:w-44" aria-label="Payment method" value={payment} onChange={e => changeFilter(setPayment)(e.target.value)}>
+          <option value="">All payments</option>
+          {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </Select>
+        {isSuperAdmin && (
+          <>
+            <Select wrapperClassName="md:w-44" aria-label="Business" value={businessId} onChange={e => { changeFilter(setBusinessId)(e.target.value); setBranchId(''); }}>
+              <option value="">All businesses</option>
+              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+            <Select wrapperClassName="md:w-44" aria-label="Branch" value={branchId} onChange={e => changeFilter(setBranchId)(e.target.value)}>
+              <option value="">All branches</option>
+              {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </Select>
+          </>
         )}
-      </div>
+      </FilterBar>
+
+      <Card className="overflow-hidden">
+        <CardHeader title="Receipts" description={firstLoad ? 'Loading…' : `${summary?.sales_count ?? sales.length} ${(summary?.sales_count ?? sales.length) === 1 ? 'sale' : 'sales'}`} />
+        <Table minWidth={isSuperAdmin ? '60rem' : '52rem'}>
+          <THead>
+            <TR>
+              <TH>Receipt</TH>
+              <TH>When</TH>
+              <TH>Items</TH>
+              <TH>Payment</TH>
+              {isSuperAdmin && <TH>Branch</TH>}
+              <TH>Served by</TH>
+              <TH numeric>Total</TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={isSuperAdmin ? 7 : 6}
+              loading={firstLoad}
+              error={!loading && error && sales.length === 0 ? error : null}
+              onRetry={load}
+              empty={!loading && !error && sales.length === 0}
+              emptyIcon={Receipt}
+              emptyTitle="No sales found"
+              emptyDescription="Try another period or clear the search."
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
+            />
+            {sales.map((s, i) => {
+              const preview = s.items_preview || [];
+              return (
+                <TR key={s.id} index={i} onClick={() => openReceipt(s.id)}>
+                  <TD className="whitespace-nowrap">
+                    <span className="font-mono text-caption font-semibold text-accent">{s.receipt_no}</span>
+                    {openingId === s.id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
+                  </TD>
+                  <TD className="whitespace-nowrap text-ink-secondary">{formatDateTime(s.created_at)}</TD>
+                  <TD className="max-w-xs">
+                    <p className="truncate text-ink">{preview[0] || '—'}</p>
+                    {preview.length > 1 && <p className="text-caption text-ink-muted">+ {preview.length - 1} more</p>}
+                  </TD>
+                  <TD><StatusPill kind="payment" value={s.payment_method} size="sm" /></TD>
+                  {isSuperAdmin && <TD className="whitespace-nowrap text-ink-secondary">{s.branch_name}</TD>}
+                  <TD className="whitespace-nowrap text-ink-secondary">{s.cashier_name || '—'}</TD>
+                  <TD numeric className="font-semibold">{rm(s.total_amount)}</TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} prevLabel="Newer" nextLabel="Older" />
+      </Card>
 
       {openSale && (
-        <ReceiptModal
-          onClose={() => setOpenSale(null)}
-          header={
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-ink">Receipt {openSale.receipt_no}</h3>
-              <p className="text-xs text-ink-muted mt-0.5">{formatDateTime(openSale.created_at)}</p>
-            </div>
-          }
-        >
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
           <SaleReceipt sale={openSale} />
         </ReceiptModal>
       )}
@@ -319,41 +259,28 @@ function formatDay(value) {
   return isNaN(d) ? value : d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function SummaryCard({ icon: Icon, label, value, sub }) {
-  return (
-    <div className="bg-surface border border-line rounded-xl p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{label}</span>
-        <Icon className="w-4 h-4 text-accent" />
-      </div>
-      <div className="mt-2 text-xl font-bold text-ink font-mono tracking-tight truncate">{value}</div>
-      <div className="text-xs text-ink-muted mt-0.5 truncate">{sub}</div>
-    </div>
-  );
-}
-
-// One bar showing how today's money came in
+// One bar showing how the money came in
 function PaymentSplit({ byPayment, total }) {
   const parts = [
-    { key: 'cash', color: 'bg-success' },
-    { key: 'qr', color: 'bg-accent' },
-    { key: 'online_banking', color: 'bg-warning' },
+    { key: 'cash', color: 'bg-success', icon: Banknote },
+    { key: 'qr', color: 'bg-accent', icon: QrCode },
+    { key: 'online_banking', color: 'bg-warning', icon: CreditCard },
   ];
   return (
-    <div className="bg-surface border border-line rounded-xl px-4 py-3 mb-5">
-      <div className="flex h-2 rounded-full overflow-hidden bg-sunken">
+    <Card className="px-4 py-3 mb-4">
+      <div className="flex h-2 rounded-full overflow-hidden bg-sunken" role="img" aria-label="Revenue by payment method">
         {parts.map(p => byPayment[p.key] > 0 && (
-          <div key={p.key} className={p.color} style={{ width: `${(byPayment[p.key] / total) * 100}%` }} />
+          <div key={p.key} className={`${p.color} transition-[width] duration-slow ease-out`} style={{ width: `${(byPayment[p.key] / total) * 100}%` }} />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-secondary">
+      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-caption text-ink-secondary">
         {parts.map(p => (
           <span key={p.key} className="inline-flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${p.color}`} />
-            {PAYMENT_LABELS[p.key]} <strong className="font-mono text-ink">{rm(byPayment[p.key])}</strong>
+            <span className={`w-2 h-2 rounded-full ${p.color}`} aria-hidden="true" />
+            {PAYMENT_LABELS[p.key]} <strong className="font-semibold text-ink tabular-nums">{rm(byPayment[p.key])}</strong>
           </span>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

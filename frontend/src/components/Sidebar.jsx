@@ -4,7 +4,8 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { navigationFor, isItemActive } from './navigation';
 import BrandMark from './BrandMark';
-import { cn, focusRing } from './ui/cn';
+import { cn } from './ui/cn';
+import { ButtonBase } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
 
 /**
@@ -60,8 +61,7 @@ export function NavList({ collapsed = false, onNavigate }) {
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'group flex items-center gap-3 h-9 rounded-lg text-sm transition-colors duration-fast ease-out',
-                    focusRing,
-                    collapsed ? 'justify-center w-10 mx-auto' : 'px-3',
+                            collapsed ? 'justify-center w-10 mx-auto' : 'px-3',
                     active ? 'bg-sunken text-ink font-medium' : 'text-ink-secondary hover:bg-subtle hover:text-ink'
                   )}
                 >
@@ -95,7 +95,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       )}
     >
       <div className={cn('h-16 flex items-center border-b border-line-soft flex-shrink-0', collapsed ? 'justify-center' : 'px-5')}>
-        <Link to="/dashboard" className={cn('rounded-lg', focusRing)} aria-label="HQ Inventory home">
+        <Link to="/dashboard" className={cn('rounded-lg')} aria-label="HQ Inventory home">
           <BrandMark withName={!collapsed} />
         </Link>
       </div>
@@ -103,12 +103,10 @@ export default function Sidebar({ collapsed, onToggle }) {
         <NavList collapsed={collapsed} />
       </div>
       <div className={cn('p-3 border-t border-line-soft', collapsed && 'flex justify-center')}>
-        <button
-          type="button"
+        <ButtonBase
           onClick={onToggle}
           className={cn(
             'flex items-center gap-3 h-9 rounded-lg text-sm text-ink-muted hover:text-ink hover:bg-subtle transition-colors',
-            focusRing,
             collapsed ? 'w-10 justify-center' : 'w-full px-3'
           )}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -116,7 +114,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         >
           {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px]" aria-hidden="true" /> : <PanelLeftClose className="w-[18px] h-[18px]" aria-hidden="true" />}
           {!collapsed && <span>Collapse</span>}
-        </button>
+        </ButtonBase>
       </div>
     </aside>
   );

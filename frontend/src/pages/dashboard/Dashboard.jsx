@@ -6,8 +6,8 @@ import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store, Sparkles, ScanLine, ArrowRight, PackageCheck, X } from 'lucide-react';
 import {
-  Button, Card, CardHeader, KpiCard, PageHeader, StatusPill, Badge, BusinessDot, EmptyState, ErrorState,
-  Table, THead, TBody, TH, TR, TD, TableState, Skeleton, cn, focusRing,
+  Button, ButtonBase, Card, CardHeader, KpiCard, PageHeader, StatusPill, Badge, BusinessDot, EmptyState, ErrorState,
+  Table, THead, TBody, TH, TR, TD, TableState, Skeleton, cn,
 } from '../../components/ui';
 
 export default function Dashboard() {
@@ -163,9 +163,9 @@ export default function Dashboard() {
         meta={isSuperAdmin && selectedBusiness ? (
           <Badge tone="accent" dot>
             Filtered: {selectedBusiness.name}
-            <button type="button" onClick={() => setSelectedBusiness(null)} className={cn('-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-accent-muted', focusRing)} aria-label="Clear business filter">
+            <ButtonBase onClick={() => setSelectedBusiness(null)} className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-accent-muted" aria-label="Clear business filter">
               <X className="w-3 h-3" aria-hidden="true" />
-            </button>
+            </ButtonBase>
           </Badge>
         ) : null}
         actions={<>

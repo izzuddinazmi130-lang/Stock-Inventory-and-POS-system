@@ -7,6 +7,9 @@ import { cn, focusRing } from './cn';
  * variant: "underline" (page sections) or "segmented" (compact switches inside toolbars/forms).
  */
 export function Tabs({ tabs, value, onChange, variant = 'underline', size = 'md', fullWidth = false, className, label }) {
+  // A tab can carry `tone: 'accent' | 'success'` to fill the segmented indicator with that colour when active
+  const activeTab = tabs.find(t => t.value === value);
+  const toneIndicator = { accent: 'bg-accent ring-accent', success: 'bg-success ring-success' }[activeTab?.tone];
   const listRef = useRef(null);
   const [indicator, setIndicator] = useState(null);
 
@@ -56,8 +59,8 @@ export function Tabs({ tabs, value, onChange, variant = 'underline', size = 'md'
         <span
           aria-hidden="true"
           className={cn(
-            'absolute transition-[left,width] duration-base ease-out',
-            segmented ? 'rounded-md bg-surface shadow-xs ring-1 ring-line/60' : 'bottom-0 h-0.5 rounded-full bg-accent'
+            'absolute transition-[left,width,background-color] duration-base ease-out',
+            segmented ? cn('rounded-md shadow-xs ring-1', toneIndicator || 'bg-surface ring-line/60') : 'bottom-0 h-0.5 rounded-full bg-accent'
           )}
           style={segmented
             ? { left: indicator.left, width: indicator.width, top: indicator.top, height: indicator.height }
@@ -81,7 +84,7 @@ export function Tabs({ tabs, value, onChange, variant = 'underline', size = 'md'
               focusRing,
               heights[size] || heights.md,
               fullWidth && 'flex-1',
-              active ? (segmented ? 'text-ink' : 'text-accent') : 'text-ink-muted hover:text-ink',
+              active ? (segmented ? (tab.tone ? 'text-white' : 'text-ink') : 'text-accent') : 'text-ink-muted hover:text-ink',
               tab.disabled && 'opacity-50 cursor-not-allowed'
             )}
           >

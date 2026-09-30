@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, PackageX, PackageMinus, PackageCheck, ArrowRight } from 'lucide-react';
-import { cn, focusRing } from './ui/cn';
+import { cn } from './ui/cn';
+import { ButtonBase } from './ui/Button';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
@@ -73,10 +74,9 @@ export default function LowStockBell() {
 
   return (
     <div className="relative" ref={boxRef}>
-      <button
-        type="button"
+      <ButtonBase
         onClick={() => setOpen(o => !o)}
-        className={cn('relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-secondary hover:text-ink hover:bg-sunken transition-colors', focusRing)}
+        className={cn('relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-secondary hover:text-ink hover:bg-sunken transition-colors')}
         aria-label={`Stock alerts: ${counts.total}`}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -90,7 +90,7 @@ export default function LowStockBell() {
             {counts.total > 99 ? '99+' : counts.total}
           </span>
         )}
-      </button>
+      </ButtonBase>
 
       {open && (
         <div
@@ -134,7 +134,7 @@ export default function LowStockBell() {
           <Link
             to="/low-stock"
             onClick={() => setOpen(false)}
-            className={cn('flex items-center justify-center gap-1 px-4 py-2.5 text-caption font-semibold text-accent hover:bg-accent-soft border-t border-line-soft transition-colors', focusRing)}
+            className={cn('flex items-center justify-center gap-1 px-4 py-2.5 text-caption font-semibold text-accent hover:bg-accent-soft border-t border-line-soft transition-colors')}
           >
             {counts.total > PREVIEW ? `View all ${counts.total}` : 'Open low stock list'} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>

@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LowStockBell from './LowStockBell';
 import { currentSectionLabel } from './navigation';
-import { cn, focusRing } from './ui/cn';
-import { IconButton } from './ui/Button';
+import { cn } from './ui/cn';
+import { ButtonBase, IconButton } from './ui/Button';
 import { SearchInput } from './ui/controls';
 import { Menu } from './ui/Menu';
 import { Badge } from './ui/Badge';
@@ -74,26 +74,24 @@ function GlobalSearch() {
           ) : (
             <>
               {results.map(item => (
-                <button
+                <ButtonBase
                   key={`${item.id}-${item.branch_id || ''}`}
-                  type="button"
                   onClick={() => { navigate(`/products?product_id=${item.id}`); setShowResults(false); setSearchVal(''); }}
-                  className={cn('w-full text-left px-4 py-2.5 hover:bg-subtle border-b border-line-soft last:border-b-0 flex items-center justify-between gap-2 transition-colors', focusRing)}
+                  className={cn('w-full text-left px-4 py-2.5 hover:bg-subtle border-b border-line-soft last:border-b-0 flex items-center justify-between gap-2 transition-colors')}
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-ink truncate">{item.name}</div>
                     <div className="text-caption font-mono text-accent">{item.sku}</div>
                   </div>
                   {item.branch_name && <span className="text-caption text-ink-muted whitespace-nowrap">{item.branch_name}</span>}
-                </button>
+                </ButtonBase>
               ))}
-              <button
-                type="button"
+              <ButtonBase
                 onClick={goToSearch}
-                className={cn('w-full text-center px-4 py-2 text-caption font-semibold text-accent hover:bg-accent-soft transition-colors', focusRing)}
+                className={cn('w-full text-center px-4 py-2 text-caption font-semibold text-accent hover:bg-accent-soft transition-colors')}
               >
                 See all results
-              </button>
+              </ButtonBase>
             </>
           )}
         </div>
@@ -139,17 +137,16 @@ export default function Header({ onOpenNav }) {
           }
           items={[{ label: 'Sign out', icon: LogOut, onClick: logout, tone: 'danger' }]}
           trigger={({ ref, ...props }) => (
-            <button
+            <ButtonBase
               ref={ref}
-              type="button"
               aria-label="Account menu"
-              className={cn('rounded-full p-0.5 hover:ring-4 hover:ring-sunken transition-shadow', focusRing)}
+              className={cn('rounded-full p-0.5 hover:ring-4 hover:ring-sunken transition-shadow')}
               {...props}
             >
               <span className="w-8 h-8 rounded-full bg-ink text-white text-caption font-semibold flex items-center justify-center">
                 {getInitials(user.full_name || user.email)}
               </span>
-            </button>
+            </ButtonBase>
           )}
         />
       </div>

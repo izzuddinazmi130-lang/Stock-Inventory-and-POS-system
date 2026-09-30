@@ -1,5 +1,7 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import Button from '../ui/Button';
 
 // Shared by the Point of Sale and Sales history so a receipt always looks the same.
 
@@ -86,31 +88,27 @@ function Row({ label, value, bold }) {
   );
 }
 
-/** Modal frame around a receipt: header (not printed), the receipt, and actions (not printed). */
-export function ReceiptModal({ header, children, onClose, closeLabel = 'Close', closeClassName = 'bg-accent hover:bg-accent-hover', autoFocusClose = true }) {
+/**
+ * Modal frame around a receipt: header and buttons are not printed, only the .pos-receipt block is.
+ * `closeVariant` picks the main button colour ("primary" for a sale, "success" for received stock).
+ */
+export function ReceiptModal({ header, children, onClose, closeLabel = 'Close', closeVariant = 'primary' }) {
   return (
-    <div
-      className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4"
-      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+    <Modal
+      size="sm"
+      hideClose
+      onClose={onClose}
+      bodyClassName="space-y-4"
+      footer={
+        <div className="pos-no-print grid grid-cols-2 gap-2 w-full">
+          <Button variant="secondary" size="lg" icon={Printer} onClick={() => window.print()}>Print</Button>
+          <Button variant={closeVariant} size="lg" onClick={onClose} data-autofocus>{closeLabel}</Button>
+        </div>
+      }
     >
       <style>{RECEIPT_PRINT_CSS}</style>
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col">
-        {header && <div className="pos-no-print pt-6 px-6">{header}</div>}
-        <div className="overflow-y-auto px-5 pt-4">{children}</div>
-        <div className="pos-no-print grid grid-cols-2 gap-2 p-5">
-          <button type="button" onClick={() => window.print()} className="h-11 rounded-xl bg-surface border border-line text-ink-secondary text-sm font-semibold hover:bg-subtle flex items-center justify-center gap-1.5">
-            <Printer className="w-4 h-4" /> Print
-          </button>
-          <button
-            type="button"
-            autoFocus={autoFocusClose}
-            onClick={onClose}
-            className={`h-11 rounded-xl text-white text-sm font-bold flex items-center justify-center ${closeClassName}`}
-          >
-            {closeLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+      {header && <div className="pos-no-print">{header}</div>}
+      {children}
+    </Modal>
   );
 }

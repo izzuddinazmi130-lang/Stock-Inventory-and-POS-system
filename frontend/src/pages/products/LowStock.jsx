@@ -5,7 +5,11 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
-import { AlertTriangle, PackageX, Search, RefreshCw, PackagePlus, CheckCircle, ArrowRight } from 'lucide-react';
+import { PackageMinus, PackageX, PackagePlus, PackageCheck, ArrowRight } from 'lucide-react';
+import {
+  Button, Card, FilterBar, KpiCard, PageHeader, SearchInput, Select, StatusPill, Tabs,
+  Table, THead, TBody, TH, TR, TD, TableState, cn,
+} from '../../components/ui';
 
 const TABS = [
   { value: 'all', label: 'All alerts' },
@@ -13,7 +17,6 @@ const TABS = [
   { value: 'low', label: 'Running low' },
 ];
 
-const selectClass = 'h-9 rounded-lg border border-line bg-surface px-2.5 text-sm text-ink-secondary focus:outline-none focus:ring-2 focus:ring-accent';
 
 // Builds the Point of Sale hand-off link: /qr/scan?receive=<productId>:<qty>,...
 const receiveLink = (rows) => `/qr/scan?receive=${rows.map(r => `${r.id}:${r.suggested_restock}`).join(',')}`;
@@ -83,159 +86,109 @@ export default function LowStock() {
 
   const tabCount = { all: counts.total, out: counts.out, low: counts.low };
 
+  const hasFilters = Boolean(search || businessId || branchId || tab !== 'all');
+  const resetFilters = () => { setSearch(''); setBusinessId(''); setBranchId(''); setTab('all'); };
+
   return (
     <Layout>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-xl font-bold text-ink">Low stock</h1>
-          <p className="text-sm text-ink-muted mt-0.5">
-            Products at or below their “alert at” level{isSuperAdmin ? ' in each branch' : ''}. Restock them before customers find the shelf empty.
-          </p>
-        </div>
-        {!isSuperAdmin && shown.length > 0 && (
-          <button
-            type="button"
-            onClick={() => navigate(receiveLink(shown))}
-            className="inline-flex items-center gap-2 h-10 px-4 bg-success text-white text-sm font-semibold rounded-lg hover:bg-success-hover self-start sm:self-auto"
-          >
-            <PackagePlus className="w-4 h-4" /> Restock {shown.length === 1 ? 'this item' : `all ${shown.length}`}
-          </button>
+      <PageHeader
+        title="Low stock"
+        description={`Products at or below their “alert at” level${isSuperAdmin ? ' in each branch' : ''}. Restock them before customers find the shelf empty.`}
+        actions={!isSuperAdmin && shown.length > 0 && (
+          <Button variant="success" icon={PackagePlus} onClick={() => navigate(receiveLink(shown))}>
+            Restock {shown.length === 1 ? 'this item' : `all ${shown.length}`}
+          </Button>
         )}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <KpiCard loading={loading && items.length === 0} label="Out of stock" value={counts.out} icon={PackageX} tone="danger" meta="Can't be sold right now" onClick={() => setTab('out')} className={cn(tab === 'out' && 'ring-1 ring-danger-line border-danger-line')} />
+        <KpiCard loading={loading && items.length === 0} label="Running low" value={counts.low} icon={PackageMinus} tone="warning" meta="At or below the alert level" onClick={() => setTab('low')} className={cn(tab === 'low' && 'ring-1 ring-warning-line border-warning-line')} />
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-        <button type="button" onClick={() => setTab('out')} className={`text-left bg-surface border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'out' ? 'border-danger-line ring-1 ring-danger-line' : 'border-line hover:border-line-strong'}`}>
-          <div className="w-10 h-10 rounded-lg bg-danger-soft text-danger-fg flex items-center justify-center flex-shrink-0"><PackageX className="w-5 h-5" /></div>
-          <div>
-            <div className="text-2xl font-bold text-ink">{counts.out}</div>
-            <div className="text-xs text-ink-muted">Out of stock: can't be sold right now</div>
-          </div>
-        </button>
-        <button type="button" onClick={() => setTab('low')} className={`text-left bg-surface border rounded-xl p-4 flex items-center gap-4 transition-colors ${tab === 'low' ? 'border-warning-line ring-1 ring-warning-line' : 'border-line hover:border-line-strong'}`}>
-          <div className="w-10 h-10 rounded-lg bg-warning-soft text-warning-fg flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5" /></div>
-          <div>
-            <div className="text-2xl font-bold text-ink">{counts.low}</div>
-            <div className="text-xs text-ink-muted">Running low: at or below the alert level</div>
-          </div>
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-surface border border-line rounded-xl p-3 mb-4 flex flex-col md:flex-row md:items-center gap-2">
-        <div className="inline-flex p-0.5 bg-sunken rounded-lg self-start">
-          {TABS.map(t => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setTab(t.value)}
-              className={`h-8 px-3 rounded-lg text-xs font-semibold transition-colors ${tab === t.value ? 'bg-surface text-ink shadow-sm' : 'text-ink-secondary hover:text-ink'}`}
-            >
-              {t.label} <span className="ml-0.5 text-ink-muted">{tabCount[t.value]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, SKU, size or category…"
-            className="h-9 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-          />
-        </div>
+      <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
+        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, SKU, size or category…" aria-label="Search low-stock products" />
         {isSuperAdmin && (
           <>
-            <select value={businessId} onChange={e => { setBusinessId(e.target.value); setBranchId(''); }} className={selectClass} aria-label="Business">
+            <Select wrapperClassName="md:w-44" aria-label="Business" value={businessId} onChange={e => { setBusinessId(e.target.value); setBranchId(''); }}>
               <option value="">All businesses</option>
               {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <select value={branchId} onChange={e => setBranchId(e.target.value)} className={selectClass} aria-label="Branch">
+            </Select>
+            <Select wrapperClassName="md:w-44" aria-label="Branch" value={branchId} onChange={e => setBranchId(e.target.value)}>
               <option value="">All branches</option>
               {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+            </Select>
           </>
         )}
-      </div>
+      </FilterBar>
 
-      {error && (
-        <div className="mb-4 p-3 bg-danger-soft border border-danger-line rounded-lg text-danger-fg text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+      <Card className="overflow-hidden">
+        <div className="px-5 pt-3 border-b border-line-soft">
+          <Tabs
+            label="Alert type"
+            value={tab}
+            onChange={setTab}
+            className="border-b-0"
+            tabs={TABS.map(t => ({ ...t, count: tabCount[t.value] }))}
+          />
         </div>
-      )}
-
-      {/* List */}
-      <div className="bg-surface border border-line rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="py-14 text-center text-sm text-ink-muted"><RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" /> Checking stock…</div>
-        ) : shown.length === 0 ? (
-          <div className="py-14 text-center">
-            <CheckCircle className="w-10 h-10 mx-auto mb-2 text-success" />
-            <p className="text-sm font-semibold text-ink-secondary">{items.length === 0 ? 'All stocked up' : 'Nothing matches'}</p>
-            <p className="text-xs text-ink-muted mt-0.5">{items.length === 0 ? 'No product is at or below its alert level.' : 'Try another tab or clear the search.'}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-subtle border-b border-line text-left text-[11px] uppercase tracking-wider text-ink-muted">
-                  <th className="px-4 py-2.5 font-semibold">Product</th>
-                  {isSuperAdmin && <th className="px-4 py-2.5 font-semibold">Branch</th>}
-                  <th className="px-4 py-2.5 font-semibold">In stock</th>
-                  <th className="px-4 py-2.5 font-semibold">Alert at</th>
-                  <th className="px-4 py-2.5 font-semibold">Suggested restock</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line-soft">
-                {shown.map(i => (
-                  <tr key={`${i.id}-${i.branch_id}`} className="hover:bg-subtle/60">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-ink">{i.name}</p>
-                      <p className="text-xs text-ink-muted">
-                        <span className="font-mono text-accent">{i.sku}</span>
-                        {i.size && <> · Size {i.size}</>}
-                        {i.category && <> · {i.category}</>}
-                      </p>
-                    </td>
-                    {isSuperAdmin && <td className="px-4 py-3 text-ink-secondary whitespace-nowrap">{i.branch_name}</td>}
-                    <td className="px-4 py-3 whitespace-nowrap"><StockBadge status={i.stock_status} quantity={i.quantity} /></td>
-                    <td className="px-4 py-3 font-mono text-ink-secondary">{i.min_quantity}</td>
-                    <td className="px-4 py-3 font-mono text-ink">+{i.suggested_restock}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {isSuperAdmin ? (
-                        <Link to={`/products?search=${encodeURIComponent(i.sku)}`} className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-fg">
-                          View product <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
-                      ) : (
-                        <Link to={receiveLink([i])} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-success-line bg-success-soft text-xs font-semibold text-success-fg hover:bg-success-muted">
-                          <PackagePlus className="w-3.5 h-3.5" /> Restock
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <Table minWidth={isSuperAdmin ? '52rem' : '44rem'}>
+          <THead>
+            <TR>
+              <TH>Product</TH>
+              {isSuperAdmin && <TH>Branch</TH>}
+              <TH>In stock</TH>
+              <TH numeric>Alert at</TH>
+              <TH numeric>Suggested restock</TH>
+              <TH className="w-px"><span className="sr-only">Action</span></TH>
+            </TR>
+          </THead>
+          <TBody>
+            <TableState
+              colSpan={isSuperAdmin ? 6 : 5}
+              loading={loading && items.length === 0}
+              error={!loading && error && items.length === 0 ? error : null}
+              onRetry={load}
+              empty={!loading && !error && shown.length === 0}
+              emptyIcon={PackageCheck}
+              emptyTitle={items.length === 0 ? 'All stocked up' : 'Nothing matches'}
+              emptyDescription={items.length === 0 ? 'No product is at or below its alert level.' : 'Try another tab or clear the search.'}
+            />
+            {shown.map((i, idx) => (
+              <TR key={`${i.id}-${i.branch_id}`} index={idx}>
+                <TD>
+                  <p className="font-medium text-ink">{i.name}</p>
+                  <p className="text-caption text-ink-muted">
+                    <span className="font-mono">{i.sku}</span>
+                    {i.size && <> · Size {i.size}</>}
+                    {i.category && <> · {i.category}</>}
+                  </p>
+                </TD>
+                {isSuperAdmin && <TD className="text-ink-secondary whitespace-nowrap">{i.branch_name}</TD>}
+                <TD className="whitespace-nowrap">
+                  <StatusPill kind="stock" value={i.stock_status} size="sm" label={i.stock_status === 'out' ? 'Out of stock' : `${i.quantity} left`} />
+                </TD>
+                <TD numeric className="text-ink-secondary">{i.min_quantity}</TD>
+                <TD numeric className="font-semibold text-ink">+{i.suggested_restock}</TD>
+                <TD className="text-right whitespace-nowrap">
+                  {isSuperAdmin ? (
+                    <Button variant="ghost" size="sm" iconRight={ArrowRight} to={`/products?search=${encodeURIComponent(i.sku)}`}>View product</Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" icon={PackagePlus} to={receiveLink([i])}>Restock</Button>
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </Card>
 
       {!isSuperAdmin && shown.length > 0 && (
-        <p className="text-xs text-ink-muted mt-3">
-          “Restock” opens the Point of Sale in <strong>Receive stock</strong> mode with the suggested quantity filled in. Change it to what actually arrived, then confirm.
-          The suggestion brings stock back to twice the alert level. Change the alert level in <Link to="/products" className="text-accent font-semibold">Products</Link>.
+        <p className="text-caption text-ink-muted mt-3">
+          “Restock” opens the point of sale in <strong className="font-medium text-ink-secondary">Receive stock</strong> mode with the suggested quantity filled in. Change it to what actually arrived, then confirm.
+          The suggestion brings stock back to twice the alert level. Change the alert level in <Link to="/products" className="text-accent font-medium hover:underline">Products</Link>.
         </p>
       )}
     </Layout>
   );
-}
-
-export function StockBadge({ status, quantity }) {
-  if (status === 'out') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft border border-danger-line px-2 py-0.5 text-xs font-semibold text-danger-fg">Out of stock</span>;
-  }
-  return <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft border border-warning-line px-2 py-0.5 text-xs font-semibold text-warning-fg">{quantity} left</span>;
 }

@@ -4,7 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { QrCode, Printer, Package, RefreshCw, Search, Minus, Plus, Building, AlertTriangle } from 'lucide-react';
+import { QrCode, Printer, Package, Building2, Ruler } from 'lucide-react';
+import { Alert, Button, ButtonBase, Card, CardHeader, Checkbox, EmptyState, PageHeader, QuantityStepper, SearchInput, Skeleton, cn } from '../../components/ui';
 
 // Only the label sheet is printed: everything else on the page (the app root) is hidden.
 const PRINT_CSS = `
@@ -155,158 +156,114 @@ export default function QrGenerator({ embedded = false }) {
 
   const setCopiesSafe = (n) => setCopies(Math.min(100, Math.max(1, parseInt(n, 10) || 1)));
 
+  const StepTitle = ({ n, children }) => (
+    <span className="flex items-center gap-2">
+      <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-semibold flex items-center justify-center">{n}</span>
+      {children}
+    </span>
+  );
+
   return (
     <Wrap>
       <style>{PRINT_CSS}</style>
 
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-ink">Print QR labels</h1>
-        <p className="text-sm text-ink-muted mt-0.5">Pick a product, check the label, then print. Stick the label on the item or shelf so it can be scanned at the Point of Sale.</p>
-      </div>
+      <PageHeader
+        title="Print QR labels"
+        description="Pick a product, check the label, then print. Stick the label on the item or shelf so it can be scanned at the point of sale."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ── Left: product picker ── */}
-        <section className="lg:col-span-5 bg-surface border border-line rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-line-soft flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-bold flex items-center justify-center">1</span>
-              Choose a product
-            </h2>
-            <span className="text-xs text-ink-muted">{filtered.length} of {items.length}</span>
-          </div>
+        <Card as="section" className="lg:col-span-5 overflow-hidden">
+          <CardHeader
+            title={<StepTitle n={1}>Choose a product</StepTitle>}
+            actions={<span className="text-caption text-ink-muted tabular-nums">{filtered.length} of {items.length}</span>}
+          />
           <div className="p-3 border-b border-line-soft">
-            <div className="relative">
-              <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, SKU, size or category…"
-                className="h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
+            <SearchInput value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, SKU, size or category…" aria-label="Search products" />
           </div>
 
-          <div className="max-h-[520px] overflow-y-auto divide-y divide-line-soft">
+          <div className="max-h-[520px] overflow-y-auto divide-y divide-line-soft" role="listbox" aria-label="Products">
             {itemsLoading ? (
-              <div className="py-12 text-center text-xs text-ink-muted">Loading products…</div>
+              <div className="p-3 space-y-2">{[0, 1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12" />)}</div>
             ) : filtered.length === 0 ? (
-              <div className="py-12 text-center text-xs text-ink-muted">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                {items.length === 0 ? 'No products yet.' : 'No products match your search.'}
-              </div>
+              <EmptyState compact icon={Package} title={items.length === 0 ? 'No products yet' : 'No products match your search'} />
             ) : filtered.map(item => {
               const isSelected = rowKey(item) === selectedKey;
               const variants = variantLine(item);
               return (
-                <button
+                <ButtonBase
                   key={rowKey(item)}
-                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => setSelectedKey(rowKey(item))}
-                  className={`w-full text-left px-4 py-3 flex items-center gap-3 border-l-4 transition-colors ${isSelected ? 'bg-accent-soft border-accent' : 'border-transparent hover:bg-subtle'}`}
+                  className={cn('w-full text-left px-4 py-3 flex items-center gap-3 border-l-[3px]', isSelected ? 'bg-accent-soft border-accent' : 'border-transparent hover:bg-subtle')}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-semibold truncate ${isSelected ? 'text-accent-fg' : 'text-ink'}`}>{item.item_name}</p>
-                    <p className="text-xs text-ink-muted mt-0.5 truncate">
-                      <span className="font-mono text-accent">{item.item_code}</span>
+                    <p className={cn('text-sm font-medium truncate', isSelected ? 'text-accent-fg' : 'text-ink')}>{item.item_name}</p>
+                    <p className="text-caption text-ink-muted mt-0.5 truncate">
+                      <span className="font-mono">{item.item_code}</span>
                       {variants && <> · {variants}</>}
                       {isSuperAdmin && item.branch_name && <> · {item.branch_name}</>}
                     </p>
                   </div>
-                  <span className={`flex-shrink-0 text-xs font-medium ${parseInt(item.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg'}`}>
+                  <span className={cn('flex-shrink-0 text-caption font-medium tabular-nums', parseInt(item.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg')}>
                     {parseInt(item.quantity, 10) || 0} in stock
                   </span>
-                </button>
+                </ButtonBase>
               );
             })}
           </div>
-        </section>
+        </Card>
 
         {/* ── Right: preview + print options ── */}
-        <section className="lg:col-span-7 bg-surface border border-line rounded-xl overflow-hidden lg:sticky lg:top-4">
-          <div className="px-4 py-3 border-b border-line-soft">
-            <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-bold flex items-center justify-center">2</span>
-              Check the label and print
-            </h2>
-          </div>
+        <Card as="section" className="lg:col-span-7 overflow-hidden lg:sticky lg:top-20">
+          <CardHeader title={<StepTitle n={2}>Check the label and print</StepTitle>} />
 
-          {error && (
-            <div className="mx-4 mt-4 p-3 bg-danger-soft border border-danger-line rounded-lg text-danger-fg text-sm flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {error}
-            </div>
-          )}
+          {error && <Alert tone="danger" className="mx-4 mt-4">{error}</Alert>}
 
           <div className="bg-subtle m-4 rounded-xl border border-line-soft min-h-[240px] flex items-center justify-center p-6">
             {loading ? (
-              <div className="text-center">
-                <RefreshCw className="w-6 h-6 text-accent animate-spin mx-auto mb-2" />
-                <p className="text-xs text-ink-muted">Preparing label…</p>
+              <div className="w-full max-w-md flex gap-4 items-center">
+                <Skeleton className="w-32 h-32 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/2" /><Skeleton className="h-6 w-1/3 mt-4" /></div>
               </div>
             ) : labelItem ? (
-              <Label item={labelItem} qrSvg={qrData.qr_svg} showPrice={showPrice} />
-            ) : (
-              <div className="text-center text-ink-muted">
-                <QrCode className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                <p className="text-xs">Choose a product to see its label.</p>
+              <div key={selectedKey} className="w-full flex justify-center animate-scale-in">
+                <Label item={labelItem} qrSvg={qrData.qr_svg} showPrice={showPrice} />
               </div>
+            ) : (
+              <EmptyState compact icon={QrCode} title="Choose a product to see its label" />
             )}
           </div>
 
           {labelItem && (
-            <div className="px-4 pb-1 -mt-1 text-xs text-ink-muted flex flex-wrap gap-x-4 gap-y-1">
+            <div className="px-4 pb-1 -mt-1 text-caption text-ink-muted flex flex-wrap gap-x-4 gap-y-1">
               <span>{labelItem.category}</span>
-              {labelItem.branch_name && <span className="inline-flex items-center gap-1"><Building className="w-3 h-3" />{labelItem.branch_name}</span>}
-              <span>Label size 70 × 36 mm</span>
+              {labelItem.branch_name && <span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3" aria-hidden="true" />{labelItem.branch_name}</span>}
+              <span className="inline-flex items-center gap-1"><Ruler className="w-3 h-3" aria-hidden="true" />70 × 36 mm</span>
             </div>
           )}
 
           {noPrice && showPrice && (
-            <div className="mx-4 mt-3 p-3 bg-warning-soft border border-warning-line rounded-lg text-warning-fg text-xs flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning-fg" />
+            <Alert tone="warning" className="mx-4 mt-3">
               This product has no customer price yet, so the label will show RM 0.00. Set a price in Products, or untick “Show price”.
-            </div>
+            </Alert>
           )}
 
           <div className="p-4 mt-3 border-t border-line-soft flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-ink-secondary">Copies</span>
-              <div className="flex items-center rounded-lg border border-line overflow-hidden">
-                <button type="button" onClick={() => setCopiesSafe(copies - 1)} className="h-9 w-9 flex items-center justify-center text-ink-secondary hover:bg-subtle" aria-label="Fewer copies">
-                  <Minus className="w-4 h-4" />
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={copies}
-                  onChange={e => setCopiesSafe(e.target.value)}
-                  className="h-9 w-14 border-x border-line text-center text-sm font-mono focus:outline-none"
-                  aria-label="Number of copies"
-                />
-                <button type="button" onClick={() => setCopiesSafe(copies + 1)} className="h-9 w-9 flex items-center justify-center text-ink-secondary hover:bg-subtle" aria-label="More copies">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              <span className="text-sm font-medium text-ink">Copies</span>
+              <QuantityStepper min={1} max={100} value={copies} onChange={setCopiesSafe} label="Number of copies" />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer select-none">
-              <input type="checkbox" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} className="w-4 h-4 rounded-lg border-line-strong text-accent focus:ring-accent" />
-              Show price
-            </label>
+            <Checkbox label="Show price" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} />
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              disabled={!canPrint}
-              className="sm:ml-auto inline-flex items-center justify-center gap-2 h-10 px-5 bg-accent text-white text-sm font-semibold rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Printer className="w-4 h-4" />
+            <Button icon={Printer} onClick={() => window.print()} disabled={!canPrint} className="sm:ml-auto">
               Print {copies} label{copies === 1 ? '' : 's'}
-            </button>
+            </Button>
           </div>
-        </section>
+        </Card>
       </div>
 
       {/* Print-only sheet, mounted outside the app root so nothing else prints */}

@@ -819,22 +819,22 @@ function SizeGrid({ rows, onChange, errors }) {
     { key: 'unit_price', label: 'Cost RM' },
   ];
   return (
-    <div className="overflow-x-auto -mx-1 px-1">
-      <table className="w-full min-w-[40rem]">
-        <thead>
-          <tr className="text-table-head uppercase text-ink-muted text-left">
-            <th className="pb-1.5 pr-2 w-24"><span className="sr-only">Row</span></th>
-            {cols.map(c => <th key={c.key} scope="col" className="pb-1.5 px-1 font-semibold">{c.label}</th>)}
-          </tr>
-        </thead>
-        <tbody>
+    <div className="border border-line rounded-lg overflow-hidden bg-surface">
+      <Table dense minWidth="40rem">
+        <THead>
+          <TR>
+            <TH className="w-24"><span className="sr-only">Row</span></TH>
+            {cols.map(c => <TH key={c.key} className="px-1.5">{c.label}</TH>)}
+          </TR>
+        </THead>
+        <TBody>
           {rows.map(row => (
-            <tr key={row.key}>
-              <td className="py-1 pr-2 text-sm font-semibold text-ink whitespace-nowrap">{row.label}</td>
+            <TR key={row.key}>
+              <TD className="text-sm font-semibold whitespace-nowrap">{row.label}</TD>
               {cols.map(c => {
                 const err = errors[`${row.key}.${c.key}`];
                 return (
-                  <td key={c.key} className="py-1 px-1">
+                  <TD key={c.key} className="px-1.5">
                     <Input
                       type="number"
                       size="sm"
@@ -850,13 +850,13 @@ function SizeGrid({ rows, onChange, errors }) {
                       error={Boolean(err)}
                       className="h-9 px-2 font-mono tabular-nums"
                     />
-                  </td>
+                  </TD>
                 );
               })}
-            </tr>
+            </TR>
           ))}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
       {rows.some(r => cols.some(c => errors[`${r.key}.${c.key}`])) && (
         <p className="mt-1 text-caption text-danger-fg flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Fix the highlighted boxes: stock must be a whole number, and nothing can be negative.</p>
       )}
