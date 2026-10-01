@@ -211,6 +211,12 @@ out.
   transparent PNGs in `src/assets/brand/`, and the favicon is `public/favicon.png`.
 - The sidebar remembers whether it is collapsed and starts collapsed below 1280px. On phones it becomes
   a drawer.
+- **Collapsed sidebar:**
+  - Hovering it with a mouse or trackpad (after 120ms) slides the full menu over the page; the content
+    doesn't move. Tabbing into it does the same.
+  - It tucks away when the pointer or focus leaves, or on Esc.
+  - "Keep open" at the bottom pins it expanded.
+  - Touch screens don't peek.
 
 ### Sign-in page
 `pages/Login.jsx` plus `components/auth/AuthPreview.jsx`. This is a full-height split screen on white,

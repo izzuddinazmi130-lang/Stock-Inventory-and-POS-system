@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -82,39 +82,81 @@ export function NavList({ collapsed = false, onNavigate }) {
   );
 }
 
-/** Desktop sidebar (hidden below md; the header opens the same list in a drawer). */
+const PEEK_OPEN_MS = 120;
+const PEEK_CLOSE_MS = 180;
+
+/** True on devices with a real pointer that can hover (mouse, trackpad), not touch screens. */
+function canHover() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+}
+
+/**
+ * Desktop sidebar (hidden below md; the header opens the same list in a drawer).
+ * When collapsed, hovering it (or tabbing into it) slides the full menu out over the page without moving
+ * the content; it tucks away again when the pointer or focus leaves, or on Esc. The toggle at the bottom
+ * pins it open.
+ */
 export default function Sidebar({ collapsed, onToggle }) {
   const { user } = useAuth();
+  const [peek, setPeek] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+  // Pinning or unpinning ends any peek
+  useEffect(() => { setPeek(false); }, [collapsed]);
+
   if (!user) return null;
+
+  const expanded = !collapsed || peek;
+  const schedule = (open, ms) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPeek(open), ms);
+  };
+
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col sticky top-0 h-screen flex-shrink-0 bg-surface border-r border-line',
+        'hidden md:block sticky top-0 z-40 h-screen flex-shrink-0',
         'transition-[width] duration-slow ease-out',
         collapsed ? 'w-[4.5rem]' : 'w-60'
       )}
+      onMouseEnter={() => { if (collapsed && canHover()) schedule(true, PEEK_OPEN_MS); }}
+      onMouseLeave={() => { if (collapsed) schedule(false, PEEK_CLOSE_MS); }}
+      onFocus={(e) => { if (collapsed && e.target.matches(':focus-visible')) { clearTimeout(timer.current); setPeek(true); } }}
+      onBlur={(e) => { if (collapsed && !e.currentTarget.contains(e.relatedTarget)) schedule(false, 0); }}
+      onKeyDown={(e) => { if (e.key === 'Escape' && peek) { clearTimeout(timer.current); setPeek(false); } }}
     >
-      <div className={cn('h-16 flex items-center border-b border-line-soft flex-shrink-0', collapsed ? 'justify-center' : 'px-5')}>
-        <Link to="/dashboard" className={cn('rounded-lg')} aria-label="HQ Inventory home">
-          <BrandMark withName={!collapsed} />
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3">
-        <NavList collapsed={collapsed} />
-      </div>
-      <div className={cn('p-3 border-t border-line-soft', collapsed && 'flex justify-center')}>
-        <ButtonBase
-          onClick={onToggle}
-          className={cn(
-            'flex items-center gap-3 h-9 rounded-lg text-sm text-ink-muted hover:text-ink hover:bg-subtle transition-colors',
-            collapsed ? 'w-10 justify-center' : 'w-full px-3'
-          )}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-        >
-          {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px]" aria-hidden="true" /> : <PanelLeftClose className="w-[18px] h-[18px]" aria-hidden="true" />}
-          {!collapsed && <span>Collapse</span>}
-        </ButtonBase>
+      {/* The panel overlays the page while peeking; the aside keeps the collapsed width in the layout */}
+      <div
+        className={cn(
+          'absolute inset-y-0 left-0 flex flex-col overflow-hidden bg-surface border-r border-line',
+          'transition-[width,box-shadow] duration-base ease-out',
+          expanded ? 'w-60' : 'w-[4.5rem]',
+          peek && 'shadow-popover'
+        )}
+      >
+        <div className={cn('h-16 flex items-center border-b border-line-soft flex-shrink-0', expanded ? 'px-5' : 'justify-center')}>
+          <Link to="/dashboard" className="rounded-lg" aria-label="HQ Inventory home">
+            <BrandMark withName={expanded} />
+          </Link>
+        </div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3">
+          <NavList collapsed={!expanded} />
+        </div>
+        <div className={cn('p-3 border-t border-line-soft', !expanded && 'flex justify-center')}>
+          <ButtonBase
+            onClick={onToggle}
+            className={cn(
+              'flex items-center gap-3 h-9 rounded-lg text-sm text-ink-muted hover:text-ink hover:bg-subtle transition-colors whitespace-nowrap',
+              expanded ? 'w-full px-3' : 'w-10 justify-center'
+            )}
+            aria-label={collapsed ? 'Keep sidebar open' : 'Collapse sidebar'}
+            aria-expanded={expanded}
+          >
+            {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px] flex-shrink-0" aria-hidden="true" /> : <PanelLeftClose className="w-[18px] h-[18px] flex-shrink-0" aria-hidden="true" />}
+            {expanded && <span>{collapsed ? 'Keep open' : 'Collapse'}</span>}
+          </ButtonBase>
+        </div>
       </div>
     </aside>
   );
