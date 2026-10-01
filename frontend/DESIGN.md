@@ -32,9 +32,16 @@ Tokens are CSS variables in `src/index.css`, stored as RGB channels so alpha wor
 | Surfaces | `bg-page`, `bg-surface`, `bg-subtle`, `bg-sunken` | Page background, cards, table headers/hover, tracks/chips |
 | Borders | `border-line`, `border-line-soft`, `border-line-strong` | Default borders, dividers inside cards, hovered inputs |
 | Text | `text-ink`, `text-ink-secondary`, `text-ink-muted`, `text-ink-subtle` | Body, secondary, captions, icons/placeholders only (not AA) |
-| Accent | `accent`, `accent-hover`, `accent-fg`, `accent-soft`, `accent-muted`, `accent-line` | Primary actions, links, active nav, focus |
+| Accent | `accent`, `accent-hover`, `accent-fg`, `accent-soft`, `accent-muted`, `accent-line` | The one brand violet (`#6D4AFF`): primary actions, links, active nav and tabs, focus rings, indicators. Don't add a second purple/indigo/blue for UI chrome |
 | Status | `success`, `warning`, `danger`, `info`, `violet`, each with the same 6 steps | In stock / low / critical, info, adjustments |
 | Business | `bg-brand-kaftanasia`, `bg-brand-astech` | Small identity dots only (`BusinessDot`) |
+
+Neutrals: `surface` #FFFFFF, `subtle` #F7F7FA, `line` #E6E6EB, `ink` #111118, `ink-muted` #6B6B76, `page` #F4F3F8.
+
+**Dark mode.** The same tokens are redefined under `[data-theme="dark"]` (opt in on any element) and
+under `.theme-system` when the OS is in dark mode. The sign-in page uses `theme-system`; the rest of
+the app is light only until it opts in. Images that need adjusting on dark use `logo-adaptive` (the logo
+turns white) and `illustration-adaptive` (slightly dimmed).
 
 Each status family follows one pattern: `soft` is the tinted background, `fg` is the text on it and
 `line` is the border. The bare name is the solid fill.
@@ -69,8 +76,8 @@ Each status family follows one pattern: `soft` is the tinted background, `fg` is
   inside their card (`Table minWidth`).
 
 ### Elevation
-`shadow-xs` for controls, `shadow-card` for cards, `shadow-popover` for menus and popovers, and
-`shadow-modal` for dialogs.
+`shadow-xs` for controls, `shadow-card` for cards, `shadow-popover` for menus and popovers,
+`shadow-modal` for dialogs, and `shadow-elevated` for large floating surfaces such as the sign-in card.
 
 ### Motion
 - Durations: `duration-fast` (150ms) for hover/colour, `duration-base` (200ms) for movement,
@@ -131,9 +138,14 @@ import { Button, Card, Table, … } from '../../components/ui';
 <SearchInput value={q} onChange={…} placeholder="Search…" />
 <Switch checked={on} onChange={setOn} label="Mark as new" description="…" />
 <QuantityStepper value={qty} onChange={setQty} min={1} max={100} size="lg" label="Quantity" />
+<PasswordInput value={pw} onChange={…} autoComplete="current-password" />   // show/hide eye inside the field
 {submitError && <FormAlert>{submitError}</FormAlert>}
 ```
-- `Field` wires up `id`, `aria-describedby` and `aria-invalid` for its child.
+- `Field` wires up `id`, `aria-describedby` and `aria-invalid` for its child. `hideRequiredMark` drops
+  the red asterisk when every field on a form is required (the sign-in page), and `labelClassName`
+  adjusts the label.
+- Focus: the border turns `accent` and a 3px `accent/20` ring appears. Browser autofill keeps the
+  field's own colours (see `index.css`).
 - Errors appear under the field in `text-danger-fg`.
 
 ### Feedback
@@ -185,6 +197,18 @@ out.
   transparent PNGs in `src/assets/brand/`, and the favicon is `public/favicon.png`.
 - The sidebar remembers whether it is collapsed and starts collapsed below 1280px. On phones it becomes
   a drawer.
+
+### Sign-in page
+`pages/Login.jsx`: a centred two-panel card (`rounded-3xl border-line shadow-elevated`, max 960px) on
+`bg-page` with one blurred `accent/15` glow. The left panel (`bg-subtle`, from 860px up) is a feature
+carousel: illustration, then title and one line, then dots (active dot = `accent` pill). It rotates every
+5s and pauses on hover, on focus and for reduced motion. The right panel has the tabs, then fields
+(`h-11 rounded-xl`, 13px labels, no asterisks, inline errors on submit), then a full-width button of the
+same height and radius. Below 860px only the form card shows, with the logo above it. All type is Inter:
+the heading is 30px semibold at -0.02em.
+
+The illustrations in `src/assets/illustrations/` are Storyset artwork, recoloured to the brand violet
+with their backgrounds removed. Keep the "Illustrations by Storyset" credit in the footer.
 
 ## 5. Accessibility checklist for new UI
 - Everything interactive is reachable by keyboard and shows the `focusRing`.

@@ -5,7 +5,7 @@ import Button from './Button';
 // `import { Modal, Field, … } from '../../components/ui/Form'` working.
 export { Modal } from './Modal';
 export {
-  Field, Input, Select, Textarea, MoneyInput, SearchInput, Checkbox, QuantityStepper, FormSection, ChoiceCards,
+  Field, Input, PasswordInput, Select, Textarea, MoneyInput, SearchInput, Checkbox, QuantityStepper, FormSection, ChoiceCards,
   Alert, FormAlert, inputClass, toDateInput,
 } from './controls';
 

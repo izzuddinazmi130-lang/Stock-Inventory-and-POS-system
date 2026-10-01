@@ -11,30 +11,30 @@
  */
 :root {
   /* Surfaces */
-  --page: 246 247 249;          /* app background */
+  --page: 244 243 248;          /* app background */
   --surface: 255 255 255;       /* cards, tables, modals */
-  --subtle: 248 250 252;        /* table headers, hover rows, inset panels */
-  --sunken: 241 245 249;        /* tracks, segmented controls, chips */
+  --subtle: 247 247 250;        /* table headers, hover rows, inset panels */
+  --sunken: 240 240 245;        /* tracks, segmented controls, chips */
 
   /* Borders */
-  --line: 228 231 236;
-  --line-soft: 241 243 246;
-  --line-strong: 203 213 225;
+  --line: 230 230 235;
+  --line-soft: 240 240 244;
+  --line-strong: 208 208 216;
 
   /* Text / neutrals (all text tokens meet WCAG AA on white except ink-subtle: icons, placeholders, disabled only) */
-  --ink: 15 23 42;
-  --ink-hover: 30 41 59;
-  --ink-secondary: 71 85 105;
-  --ink-muted: 100 116 139;
-  --ink-subtle: 148 163 184;
+  --ink: 17 17 24;
+  --ink-hover: 38 38 48;
+  --ink-secondary: 74 74 84;
+  --ink-muted: 107 107 118;
+  --ink-subtle: 152 152 162;
 
-  /* Brand accent (indigo) */
-  --accent: 79 70 229;
-  --accent-hover: 67 56 202;
-  --accent-fg: 67 56 202;
-  --accent-soft: 238 242 255;
-  --accent-muted: 224 231 255;
-  --accent-line: 199 210 254;
+  /* Brand accent: one violet (#6D4AFF) and its tints */
+  --accent: 109 74 255;
+  --accent-hover: 92 56 240;
+  --accent-fg: 88 51 230;
+  --accent-soft: 243 240 255;
+  --accent-muted: 233 227 255;
+  --accent-line: 212 200 255;
 
   /* Status: healthy / stock in */
   --success: 5 150 105;
@@ -81,6 +81,87 @@
   --brand-astech: 37 99 235;
 }
 
+/*
+ * Dark theme: the same tokens, redefined. Opt in with data-theme="dark" on any element, or add the
+ * `theme-system` class to follow the OS setting (the sign-in page does this).
+ */
+[data-theme='dark'] {
+  --page: 12 12 17;
+  --surface: 22 22 29;
+  --subtle: 28 28 36;
+  --sunken: 34 34 43;
+  --line: 46 46 58;
+  --line-soft: 36 36 46;
+  --line-strong: 64 64 78;
+  --ink: 240 240 245;
+  --ink-hover: 255 255 255;
+  --ink-secondary: 196 196 206;
+  --ink-muted: 160 160 172;
+  --ink-subtle: 112 112 124;
+  --accent: 124 94 255;
+  --accent-hover: 142 116 255;
+  --accent-fg: 178 160 255;
+  --accent-soft: 38 30 74;
+  --accent-muted: 52 40 104;
+  --accent-line: 76 60 150;
+  --danger-fg: 251 113 133;
+  --danger-soft: 60 20 32;
+  --danger-line: 110 36 56;
+  --success-fg: 52 211 153;
+  --success-soft: 14 48 38;
+  --success-line: 22 90 68;
+  --info-fg: 125 211 252;
+  --info-soft: 14 40 58;
+  --info-line: 22 78 110;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .theme-system {
+    --page: 12 12 17;
+    --surface: 22 22 29;
+    --subtle: 28 28 36;
+    --sunken: 34 34 43;
+    --line: 46 46 58;
+    --line-soft: 36 36 46;
+    --line-strong: 64 64 78;
+    --ink: 240 240 245;
+    --ink-hover: 255 255 255;
+    --ink-secondary: 196 196 206;
+    --ink-muted: 160 160 172;
+    --ink-subtle: 112 112 124;
+    --accent: 124 94 255;
+    --accent-hover: 142 116 255;
+    --accent-fg: 178 160 255;
+    --accent-soft: 38 30 74;
+    --accent-muted: 52 40 104;
+    --accent-line: 76 60 150;
+    --danger-fg: 251 113 133;
+    --danger-soft: 60 20 32;
+    --danger-line: 110 36 56;
+    --success-fg: 52 211 153;
+    --success-soft: 14 48 38;
+    --success-line: 22 90 68;
+    --info-fg: 125 211 252;
+    --info-soft: 14 40 58;
+    --info-line: 22 78 110;
+    color-scheme: dark;
+  }
+  /* The logo's dark lettering would vanish on a dark page: show it in white */
+  .theme-system .logo-adaptive {
+    filter: brightness(0) invert(1);
+  }
+  /* Soften the illustrations' light floors so they don't glare on a dark panel */
+  .theme-system .illustration-adaptive {
+    filter: brightness(0.85) saturate(1.05);
+  }
+}
+[data-theme='dark'] .logo-adaptive {
+  filter: brightness(0) invert(1);
+}
+[data-theme='dark'] .illustration-adaptive {
+  filter: brightness(0.85) saturate(1.05);
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
@@ -100,6 +181,15 @@
   }
   ::selection {
     background: rgb(var(--accent) / 0.15);
+  }
+  /* Browser autofill: keep the field's own colours instead of the blue/yellow fill */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px rgb(var(--surface)) inset;
+    -webkit-text-fill-color: rgb(var(--ink));
+    caret-color: rgb(var(--ink));
+    transition: background-color 9999s ease-out 0s;
   }
 }
 

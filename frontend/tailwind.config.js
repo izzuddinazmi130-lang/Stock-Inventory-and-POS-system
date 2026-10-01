@@ -61,6 +61,8 @@ export default {
         card: '0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03)',
         popover: '0 10px 30px -8px rgb(15 23 42 / 0.18), 0 2px 6px -2px rgb(15 23 42 / 0.08)',
         modal: '0 24px 48px -12px rgb(15 23 42 / 0.25)',
+        // Large floating surfaces (sign-in card)
+        elevated: '0 1px 2px rgb(0 0 0 / 0.04), 0 12px 40px rgb(17 17 24 / 0.08)',
       },
       ringColor: { DEFAULT: token('accent') },
       transitionTimingFunction: {

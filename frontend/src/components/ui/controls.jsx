@@ -1,15 +1,15 @@
-import React, { createContext, forwardRef, useContext, useId } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronDown, Info, Search, X, XCircle } from 'lucide-react';
+import React, { createContext, forwardRef, useContext, useId, useState } from 'react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Eye, EyeOff, Info, Search, X, XCircle } from 'lucide-react';
 import { cn, focusRing } from './cn';
 
 // ── Shared input styling ────────────────────────────────────────────────────
 export const inputClass = cn(
   'h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink shadow-xs',
   'placeholder:text-ink-muted transition-[border-color,box-shadow] duration-fast ease-out',
-  'hover:border-line-strong focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30',
+  'hover:border-line-strong focus:outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/20',
   'disabled:cursor-not-allowed disabled:bg-subtle disabled:text-ink-muted disabled:hover:border-line'
 );
-const errorClass = 'border-danger hover:border-danger focus:border-danger focus:ring-danger/25';
+const errorClass = 'border-danger hover:border-danger focus:border-danger focus:ring-danger/20';
 const CONTROL_SIZES = { sm: 'h-8 text-caption', md: 'h-10', lg: 'h-12 text-base' };
 
 /** Date value → 'YYYY-MM-DD' in local time for <input type="date"> (toISOString() would shift it to UTC). */
@@ -40,7 +40,7 @@ function useFieldProps(props) {
  * Label + control + hint or error. The control gets the label's id automatically.
  *   <Field label="Product name" required error={errors.name}><Input value=… /></Field>
  */
-export function Field({ label, required, optional, hint, error, children, className, labelAction }) {
+export function Field({ label, required, optional, hint, error, children, className, labelClassName, labelAction, hideRequiredMark = false }) {
   const id = useId();
   const hintId = `${id}-hint`;
   const message = error || hint;
@@ -49,9 +49,9 @@ export function Field({ label, required, optional, hint, error, children, classN
       <div className={className}>
         {label && (
           <div className="flex items-center justify-between gap-2 mb-1.5">
-            <label htmlFor={id} className="block text-sm font-medium text-ink">
+            <label htmlFor={id} className={cn('block text-sm font-medium text-ink', labelClassName)}>
               {label}
-              {required && <span className="text-danger-fg ml-0.5" aria-hidden="true">*</span>}
+              {required && !hideRequiredMark && <span className="text-danger-fg ml-0.5" aria-hidden="true">*</span>}
               {optional && <span className="text-ink-muted font-normal ml-1">(optional)</span>}
             </label>
             {labelAction}
@@ -87,6 +87,35 @@ export const Input = forwardRef(function Input(rawProps, ref) {
       {Icon && <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" aria-hidden="true" />}
       {input}
       {suffix && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-caption text-ink-muted">{suffix}</span>}
+    </div>
+  );
+});
+
+/** Password input with a show/hide toggle inside the field. Takes the same props as Input. */
+export const PasswordInput = forwardRef(function PasswordInput(rawProps, ref) {
+  const { error, size = 'md', className, wrapperClassName, ...props } = useFieldProps(rawProps);
+  const [visible, setVisible] = useState(false);
+  const Icon = visible ? EyeOff : Eye;
+  return (
+    <div className={cn('relative', wrapperClassName)}>
+      <input
+        ref={ref}
+        type={visible ? 'text' : 'password'}
+        className={cn(inputClass, CONTROL_SIZES[size], 'pr-11', error && errorClass, className)}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible(v => !v)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        className={cn(
+          'absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center',
+          'text-ink-muted hover:text-ink hover:bg-sunken transition-colors duration-fast', focusRing
+        )}
+      >
+        <Icon className="w-4 h-4" aria-hidden="true" />
+      </button>
     </div>
   );
 });
