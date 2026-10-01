@@ -182,6 +182,13 @@ const confirm = useConfirm();  if (!(await confirm({ title: 'Delete product?', m
 Modals render in a portal. They trap focus, close on Esc (topmost first), lock page scroll and animate
 out.
 
+**Unsaved work:**
+- **Form modals** (those with `onSubmit`) ask “Discard changes?” before closing via Esc, the backdrop or
+  ✕ once any field inside has been changed. Footer Cancel buttons close without asking. Opt out with
+  `guardUnsaved={false}`.
+- **Full-page forms** such as Add product warn on tab close or reload with a `beforeunload` listener
+  while they hold unsaved input.
+
 ### Data display
 ```jsx
 <Table minWidth="48rem">

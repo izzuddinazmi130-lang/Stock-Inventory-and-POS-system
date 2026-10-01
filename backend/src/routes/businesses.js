@@ -127,6 +127,32 @@ router.post('/:id/categories', authenticateToken, requireRole('super_admin'), va
   }
 });
 
+// PUT /:id/categories/:categoryId - rename a category. Products store the category name, so products of this
+// business that use the old name are renamed with it (in one transaction).
+router.put('/:id/categories/:categoryId', authenticateToken, requireRole('super_admin'), validateBusinessId, async (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ success: false, message: 'Category name is required' });
+  if (name.length > 100) return res.status(400).json({ success: false, message: 'Category name is too long (100 characters max)' });
+  const connection = await pool.getConnection();
+  try {
+    const [rows] = await connection.query('SELECT * FROM business_form_categories WHERE id = ? AND business_id = ?', [req.params.categoryId, req.params.id]);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Category not found' });
+    const old = rows[0];
+    await connection.beginTransaction();
+    await connection.query('UPDATE business_form_categories SET name = ? WHERE id = ?', [name, old.id]);
+    const [moved] = await connection.query('UPDATE products SET category = ? WHERE business_id = ? AND category = ?', [name, req.params.id, old.name]);
+    await connection.commit();
+    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_FORM_CATEGORY', 'business_form_categories', old.id, { name: old.name }, { name, products_renamed: moved.affectedRows }, req);
+    return res.json({ success: true, category: { ...old, name }, products_renamed: moved.affectedRows });
+  } catch (err) {
+    await connection.rollback().catch(() => {});
+    if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, message: 'This category already exists for the business' });
+    return res.status(500).json({ success: false, message: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
 router.delete('/:id/categories/:categoryId', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
     const [result] = await pool.query('DELETE FROM business_form_categories WHERE id = ? AND business_id = ?', [req.params.categoryId, req.params.id]);
@@ -160,6 +186,71 @@ router.post('/:id/variant-attributes', authenticateToken, requireRole('super_adm
     return res.json({ success: true, attribute: { id: result.insertId, business_id: Number(req.params.id), attribute_key: attributeKey, label, input_type: inputType, options, sort_order: sortOrder } });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, message: 'This field key or label already exists for the business' });
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /:id/variant-attributes/order - set the order fields appear on the product form. Body: { ids: [fieldId, ...] }
+router.put('/:id/variant-attributes/order', authenticateToken, requireRole('super_admin'), validateBusinessId, async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(Number).filter(Number.isInteger) : [];
+  if (!ids.length) return res.status(400).json({ success: false, message: 'Field order is required' });
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    for (let i = 0; i < ids.length; i++) {
+      await connection.query('UPDATE business_form_fields SET sort_order = ? WHERE id = ? AND business_id = ?', [(i + 1) * 10, ids[i], req.params.id]);
+    }
+    await connection.commit();
+    return res.json({ success: true });
+  } catch (err) {
+    await connection.rollback().catch(() => {});
+    return res.status(500).json({ success: false, message: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// PUT /:id/variant-attributes/:fieldId - edit a field's label, answer type and dropdown options.
+// The attribute_key never changes, so values already saved on products stay attached to the field.
+router.put('/:id/variant-attributes/:fieldId', authenticateToken, requireRole('super_admin'), validateBusinessId, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM business_form_fields WHERE id = ? AND business_id = ?', [req.params.fieldId, req.params.id]);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Field not found' });
+    const old = rows[0];
+    const label = String(req.body.label ?? old.label).trim();
+    const inputType = String(req.body.input_type ?? old.input_type).trim();
+    const options = parseOptions(req.body.options ?? old.options);
+    if (!label) return res.status(400).json({ success: false, message: 'Field label is required' });
+    if (label.length > 100) return res.status(400).json({ success: false, message: 'Field label is too long (100 characters max)' });
+    if (!['text', 'select'].includes(inputType)) return res.status(400).json({ success: false, message: 'Unknown field type' });
+    if (inputType === 'select' && options.length === 0) return res.status(400).json({ success: false, message: 'Select fields require at least one option' });
+
+    await pool.query(
+      'UPDATE business_form_fields SET label = ?, input_type = ?, options = ? WHERE id = ?',
+      [label, inputType, inputType === 'select' ? JSON.stringify(options) : null, old.id]
+    );
+
+    // Dropdown options that were removed but are still the saved answer on some products (they keep it)
+    const removed = inputType === 'select' ? parseOptions(old.options).filter(o => !options.includes(o)) : [];
+    let stillUsed = [];
+    if (removed.length) {
+      const [used] = await pool.query(
+        `SELECT pvv.value, COUNT(*) AS products FROM product_variant_values pvv
+         JOIN products p ON p.id = pvv.product_id
+         WHERE p.business_id = ? AND pvv.attribute_key = ? AND pvv.value IN (?)
+         GROUP BY pvv.value`,
+        [req.params.id, old.attribute_key, removed]
+      );
+      stillUsed = used.map(u => ({ value: u.value, products: Number(u.products) }));
+    }
+
+    const updated = { ...old, label, input_type: inputType, options: inputType === 'select' ? options : null };
+    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_FORM_FIELD', 'business_form_fields', old.id,
+      { label: old.label, input_type: old.input_type, options: parseOptions(old.options) },
+      { label, input_type: inputType, options: inputType === 'select' ? options : [] }, req);
+    return res.json({ success: true, attribute: updated, removed_options_in_use: stillUsed });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, message: 'Another field already uses this name' });
     return res.status(500).json({ success: false, message: err.message });
   }
 });

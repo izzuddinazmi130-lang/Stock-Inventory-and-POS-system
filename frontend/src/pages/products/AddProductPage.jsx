@@ -134,6 +134,15 @@ export default function AddProductPage() {
   const [createdProduct, setCreatedProduct] = useState(null);
   const [previewSku, setPreviewSku] = useState('');
 
+  // ── Warn before closing or reloading the tab with a half-filled product
+  const hasUnsavedWork = !createdProduct && JSON.stringify(form) !== JSON.stringify(EMPTY_FORM);
+  useEffect(() => {
+    if (!hasUnsavedWork) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasUnsavedWork]);
+
   // ── Init
   useEffect(() => {
     if (!user) return;

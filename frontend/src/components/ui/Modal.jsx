@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn, focusRing } from './cn';
 import { Alert } from './controls';
+import { useConfirm } from './Confirm';
 
 // ── Shared overlay behaviour ────────────────────────────────────────────────
 const stack = [];          // open overlays, topmost last (Esc / focus trap only act on the top one)
@@ -91,6 +92,9 @@ const MODAL_SIZES = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', 
  * Dialog with a sticky header and footer and a scrolling body.
  * Render it conditionally ({show && <Modal …/>}) or keep it mounted and toggle `open` to get an exit animation.
  * `onSubmit` turns the body + footer into a <form>; `error` shows a failure message inside the dialog.
+ * Form dialogs protect typed work: once a field inside has been changed, closing with Esc, the backdrop or
+ * the ✕ asks "Discard changes?" first (`guardUnsaved={false}` turns this off). Cancel buttons in the footer
+ * call your own onClose, so they stay a deliberate, unguarded close.
  *
  *   <Modal title="Edit product" onClose={close} onSubmit={save}
  *          footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button type="submit">Save</Button></>}>
@@ -106,12 +110,34 @@ export function Modal(props) {
 
 function ModalPanel({
   title, description, icon: Icon, iconTone = 'accent', onClose, onSubmit, footer, size = 'md', error, onDismissError,
-  children, closing, closeOnBackdrop = true, bodyClassName, hideClose = false, className,
+  children, closing, closeOnBackdrop = true, bodyClassName, hideClose = false, className, guardUnsaved = true,
 }) {
   const panelRef = useRef(null);
   const titleId = useId();
   const descId = useId();
-  useOverlay(panelRef, { onClose });
+  const confirm = useConfirm();
+  const dirty = useRef(false);
+  const asking = useRef(false);
+
+  // Esc, backdrop and ✕ go through here: confirm first if a form field was changed
+  const requestClose = async () => {
+    if (asking.current) return;
+    if (guardUnsaved && onSubmit && dirty.current) {
+      asking.current = true;
+      const discard = await confirm({
+        title: 'Discard changes?',
+        message: 'What you entered in this form hasn’t been saved and will be lost.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        tone: 'danger',
+      });
+      asking.current = false;
+      if (!discard) return;
+    }
+    onClose?.();
+  };
+  useOverlay(panelRef, { onClose: requestClose });
+  const markDirty = (e) => { if (e.target.closest?.('form')) dirty.current = true; };
 
   const Body = onSubmit ? 'form' : 'div';
   const iconTones = {
@@ -127,7 +153,7 @@ function ModalPanel({
         'fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-ink/40 backdrop-blur-[2px]',
         closing ? 'animate-fade-out' : 'animate-fade-in'
       )}
-      onMouseDown={e => { if (closeOnBackdrop && e.target === e.currentTarget) onClose?.(); }}
+      onMouseDown={e => { if (closeOnBackdrop && e.target === e.currentTarget) requestClose(); }}
     >
       <div
         ref={panelRef}
@@ -158,7 +184,7 @@ function ModalPanel({
             {!hideClose && (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
                 className={cn('p-1.5 -m-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors', focusRing)}
                 aria-label="Close"
               >
@@ -167,7 +193,7 @@ function ModalPanel({
             )}
           </div>
         )}
-        <Body onSubmit={onSubmit} className="flex flex-col min-h-0 flex-1">
+        <Body onSubmit={onSubmit} onInput={markDirty} onChange={markDirty} className="flex flex-col min-h-0 flex-1">
           <div className={cn('px-5 sm:px-6 py-5 overflow-y-auto space-y-6 flex-1', bodyClassName)}>
             {error && <Alert tone="danger" onClose={onDismissError}>{error}</Alert>}
             {children}
