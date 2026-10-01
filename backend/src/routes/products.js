@@ -911,14 +911,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Find any matching legacy stock_items by item_code (SKU) or id
-    const [legacyItems] = await connection.query(
-      'SELECT id FROM stock_items WHERE item_code = ? OR id = ?',
-      [product.sku, productId]
-    );
-    const relatedItemIds = [productId, ...legacyItems.map(r => r.id)];
-    const uniqueItemIds = Array.from(new Set(relatedItemIds));
-
     // 1. Gather all evidence photo records from damage reports for this product so we can delete them from disk
     const [photos] = await connection.query(`
       SELECT drp.photo_path 
@@ -939,26 +931,16 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     // 3. Delete damage reports
     await connection.query('DELETE FROM damage_reports WHERE product_id = ?', [productId]);
 
-    // 4. Delete all stock movements recorded for this product or legacy stock items
-    if (uniqueItemIds.length > 0) {
-      await connection.query('DELETE FROM stock_movements WHERE item_id IN (?)', [uniqueItemIds]);
-    }
+    // 4. Delete all stock movements recorded for this product
+    await connection.query('DELETE FROM stock_movements WHERE item_id = ?', [productId]);
 
-    // 5. Delete legacy stock returns/damage records
-    if (uniqueItemIds.length > 0) {
-      await connection.query('DELETE FROM stock_returns_damage WHERE item_id IN (?)', [uniqueItemIds]).catch(() => {});
-    }
-
-    // 6. Delete branch stock balances
+    // 5. Delete branch stock balances
     await connection.query('DELETE FROM product_branch_stock WHERE product_id = ?', [productId]);
 
-    // 7. Delete dynamic variant attribute values
+    // 6. Delete dynamic variant attribute values
     await connection.query('DELETE FROM product_variant_values WHERE product_id = ?', [productId]);
 
-    // 8. Delete legacy stock_items
-    await connection.query('DELETE FROM stock_items WHERE item_code = ? OR id = ?', [product.sku, productId]).catch(() => {});
-
-    // 9. Clean up any prototype variant/master/qr tables matching SKU if they exist
+    // 7. Clean up any prototype variant/master/qr tables matching SKU if they exist
     await connection.query('DELETE FROM qr_codes WHERE qr_code LIKE ?', [`%${product.sku}%`]).catch(() => {});
     await connection.query('DELETE FROM product_variants WHERE variant_sku = ?', [product.sku]).catch(() => {});
     await connection.query('DELETE FROM master_products WHERE sku = ?', [product.sku]).catch(() => {});
@@ -1001,8 +983,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
           damage_photos_count: photos.length,
           stock_movements: true,
           branch_stock: true,
-          variant_values: true,
-          legacy_stock_items: true
+          variant_values: true
         }
       },
       null,

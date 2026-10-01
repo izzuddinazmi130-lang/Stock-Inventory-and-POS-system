@@ -309,13 +309,12 @@ router.get('/:id/report', authenticateToken, async (req, res) => {
 
     const [movements] = await pool.query(`
       SELECT sm.*, 
-        COALESCE(p.sku, si.item_code) as item_code, 
-        COALESCE(p.name, si.item_name) as item_name, 
-        COALESCE(p.category, si.category) as category, 
+        p.sku as item_code, 
+        p.name as item_name, 
+        p.category as category, 
         sm.payment_method 
       FROM stock_movements sm 
       LEFT JOIN products p ON sm.item_id = p.id
-      LEFT JOIN stock_items si ON sm.item_id = si.id 
       WHERE sm.store_id = ? 
       ORDER BY sm.created_at DESC
     `, [req.params.id]);
