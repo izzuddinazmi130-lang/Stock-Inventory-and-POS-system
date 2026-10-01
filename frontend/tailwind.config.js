@@ -83,6 +83,8 @@ export default {
         progress: { from: { transform: 'scaleX(1)' }, to: { transform: 'scaleX(0)' } },
         shimmer: { '0%': { backgroundPosition: '-400px 0' }, '100%': { backgroundPosition: '400px 0' } },
         'row-flash': { '0%': { backgroundColor: 'rgb(var(--accent-soft))' }, '100%': { backgroundColor: 'transparent' } },
+        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+        drift: { '0%': { transform: 'translate(0, 0) scale(1)' }, '50%': { transform: 'translate(4%, 6%) scale(1.08)' }, '100%': { transform: 'translate(-3%, 2%) scale(0.96)' } },
       },
       animation: {
         'fade-in': 'fade-in 200ms cubic-bezier(0.2, 0, 0, 1) both',
@@ -96,6 +98,8 @@ export default {
         progress: 'progress linear both',
         shimmer: 'shimmer 1.4s linear infinite',
         'row-flash': 'row-flash 1.6s cubic-bezier(0.2, 0, 0, 1) both',
+        float: 'float 6s ease-in-out infinite',
+        drift: 'drift 18s ease-in-out infinite alternate',
       },
     },
   },

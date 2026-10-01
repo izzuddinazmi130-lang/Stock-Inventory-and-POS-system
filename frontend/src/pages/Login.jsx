@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, User, Building2, ScanLine, PackageMinus, ArrowRight } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, Package, QrCode, Receipt, BarChart3, Tags, Boxes } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
-import { Alert, BusinessDot, Button, Field, Input, Select } from '../components/ui';
+import { Alert, BusinessDot, Button, Field, Input, Select, SegmentedControl } from '../components/ui';
 
 export default function Login() {
   const { login } = useAuth();
@@ -105,116 +105,139 @@ export default function Login() {
   const switchMode = () => { setIsRegisterMode(!isRegisterMode); setError(''); setSuccess(''); };
 
   return (
-    <div className="min-h-screen bg-page lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      {/* Brand panel (large screens) */}
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-ink text-white p-12">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage: 'linear-gradient(rgb(255 255 255) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255) 1px, transparent 1px)', backgroundSize: '32px 32px' }}
-        />
-        <div aria-hidden="true" className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-accent/30 blur-3xl" />
-        <div className="relative flex items-center gap-2.5">
-          <BrandMark />
-          <span className="font-display text-lg font-semibold tracking-tight">HQ Inventory</span>
-        </div>
-        <div className="relative max-w-md">
-          <h2 className="font-display text-3xl font-semibold tracking-tight leading-tight">Stock, sales and every branch in one calm place.</h2>
-          <ul className="mt-8 space-y-4 text-sm text-white/80">
-            {[
-              [ScanLine, 'Scan and sell at the counter, with receipts'],
-              [PackageMinus, 'Low-stock alerts before shelves run empty'],
-              [Building2, 'Each branch sees only its own data'],
-            ].map(([Icon, text]) => (
-              <li key={text} className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4" aria-hidden="true" /></span>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="relative text-caption text-white/50">Multi-business inventory &amp; point of sale</p>
-      </aside>
+    <div className="relative min-h-screen overflow-hidden bg-page flex flex-col">
+      <LoginBackdrop />
 
-      {/* Form */}
-      <main className="flex min-h-screen items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-sm animate-slide-up">
-          <div className="lg:hidden flex justify-center mb-8"><BrandMark withName /></div>
+      <main className="relative flex flex-1 items-center justify-center px-4 py-10 sm:py-16">
+        <div className="relative w-full max-w-[26rem] animate-scale-in">
+          {/* Glow behind the card */}
+          <div aria-hidden="true" className="absolute -inset-px rounded-2xl bg-gradient-to-b from-accent/25 via-violet/10 to-transparent blur-xl" />
 
-          <div className="mb-6">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
-              {isRegisterMode ? 'Request an account' : 'Welcome back'}
-            </h1>
-            <p className="text-sm text-ink-muted mt-1">
-              {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to manage stock and sales.'}
-            </p>
-          </div>
+          <div className="relative rounded-2xl border border-line/80 bg-surface/85 backdrop-blur-xl shadow-modal px-6 py-8 sm:px-9 sm:py-10">
+            <div aria-hidden="true" className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
 
-          {error && <Alert tone="danger" className="mb-5" onClose={() => setError('')}>{error}</Alert>}
-          {success && <Alert tone="success" className="mb-5" onClose={() => setSuccess('')}>{success}</Alert>}
+            <div className="flex flex-col items-center text-center mb-7">
+              <div className="relative mb-5">
+                <div aria-hidden="true" className="absolute inset-0 rounded-xl bg-accent/40 blur-lg" />
+                <BrandMark size="lg" className="relative" />
+              </div>
+              <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+                {isRegisterMode ? 'Request an account' : 'Welcome back'}
+              </h1>
+              <p className="text-sm text-ink-muted mt-1.5 max-w-[18rem]">
+                {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to HQ Inventory to continue.'}
+              </p>
+            </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
-            {isRegisterMode && (
-              <Field label="Full name" required>
-                <Input icon={User} type="text" name="full_name" required autoComplete="name" placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} />
-              </Field>
-            )}
+            <SegmentedControl
+              fullWidth
+              label="Choose sign in or account request"
+              className="mb-6"
+              value={isRegisterMode ? 'register' : 'signin'}
+              onChange={v => { if ((v === 'register') !== isRegisterMode) switchMode(); }}
+              tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'register', label: 'Request access' }]}
+            />
 
-            <Field label={isRegisterMode ? 'Email address' : 'Email or username'} required>
-              <Input
-                icon={Mail}
-                type={isRegisterMode ? 'email' : 'text'}
-                name="email"
-                required
-                autoComplete={isRegisterMode ? 'email' : 'username'}
-                placeholder={isRegisterMode ? 'you@company.com' : 'you@company.com'}
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </Field>
+            {error && <Alert tone="danger" className="mb-5" onClose={() => setError('')}>{error}</Alert>}
+            {success && <Alert tone="success" className="mb-5" onClose={() => setSuccess('')}>{success}</Alert>}
 
-            <Field label="Password" required>
-              <Input icon={Lock} type="password" name="password" required minLength={6} autoComplete={isRegisterMode ? 'new-password' : 'current-password'} placeholder="••••••••" value={formData.password} onChange={handleChange} />
-            </Field>
-
-            {isRegisterMode && (
-              <>
-                <Field label="Confirm password" required>
-                  <Input icon={Lock} type="password" name="confirmPassword" autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter your password" />
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+              {isRegisterMode && (
+                <Field label="Full name" required>
+                  <Input icon={User} type="text" name="full_name" required autoComplete="name" placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} />
                 </Field>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Business" required>
-                    <div className="relative">
-                      {selectedBusiness && <BusinessDot business={selectedBusiness} className="absolute left-3 top-1/2 -translate-y-1/2 z-[1] pointer-events-none" />}
-                      <Select name="business_id" value={formData.business_id} onChange={handleChange} className={selectedBusiness ? 'pl-7' : ''}>
-                        <option value="">Select…</option>
-                        {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              )}
+
+              <Field label={isRegisterMode ? 'Email address' : 'Email or username'} required>
+                <Input
+                  icon={Mail}
+                  type={isRegisterMode ? 'email' : 'text'}
+                  name="email"
+                  required
+                  autoComplete={isRegisterMode ? 'email' : 'username'}
+                  placeholder={isRegisterMode ? 'you@company.com' : 'you@company.com'}
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </Field>
+
+              <Field label="Password" required>
+                <Input icon={Lock} type="password" name="password" required minLength={6} autoComplete={isRegisterMode ? 'new-password' : 'current-password'} placeholder="••••••••" value={formData.password} onChange={handleChange} />
+              </Field>
+
+              {isRegisterMode && (
+                <>
+                  <Field label="Confirm password" required>
+                    <Input icon={Lock} type="password" name="confirmPassword" autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter your password" />
+                  </Field>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Business" required>
+                      <div className="relative">
+                        {selectedBusiness && <BusinessDot business={selectedBusiness} className="absolute left-3 top-1/2 -translate-y-1/2 z-[1] pointer-events-none" />}
+                        <Select name="business_id" value={formData.business_id} onChange={handleChange} className={selectedBusiness ? 'pl-7' : ''}>
+                          <option value="">Select…</option>
+                          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </Select>
+                      </div>
+                    </Field>
+                    <Field label="Branch" required>
+                      <Select name="branch_id" value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0}>
+                        <option value="">{formData.business_id ? 'Select…' : 'Business first'}</option>
+                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </Select>
-                    </div>
-                  </Field>
-                  <Field label="Branch" required>
-                    <Select name="branch_id" value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0}>
-                      <option value="">{formData.business_id ? 'Select…' : 'Business first'}</option>
-                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </Select>
-                  </Field>
-                </div>
-              </>
-            )}
+                    </Field>
+                  </div>
+                </>
+              )}
 
-            <Button type="submit" loading={submitting} fullWidth size="lg" iconRight={submitting ? undefined : ArrowRight} className="mt-2">
-              {submitting ? 'Please wait…' : isRegisterMode ? 'Send request' : 'Sign in'}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-ink-muted">
-            {isRegisterMode ? 'Already have an account?' : 'New to the team?'}{' '}
-            <Button variant="link" onClick={switchMode} className="text-sm font-semibold">
-              {isRegisterMode ? 'Sign in' : 'Request an account'}
-            </Button>
-          </p>
+              <Button type="submit" loading={submitting} fullWidth size="lg" iconRight={submitting ? undefined : ArrowRight} className="mt-2">
+                {submitting ? 'Please wait…' : isRegisterMode ? 'Send request' : 'Sign in'}
+              </Button>
+            </form>
+          </div>
         </div>
       </main>
+
+      <footer className="relative pb-6 text-center text-caption text-ink-muted">
+        © {new Date().getFullYear()} HQ Inventory · Inventory &amp; point of sale
+      </footer>
+    </div>
+  );
+}
+
+/** Decorative background: drifting colour fields, a fading dot grid and floating inventory glyphs. */
+function LoginBackdrop() {
+  const tiles = [
+    { Icon: Package, className: 'left-[12%] top-[18%]', delay: '0s' },
+    { Icon: QrCode, className: 'left-[20%] bottom-[20%]', delay: '1.5s' },
+    { Icon: Receipt, className: 'right-[13%] top-[24%]', delay: '0.8s' },
+    { Icon: BarChart3, className: 'right-[19%] bottom-[16%]', delay: '2.2s' },
+    { Icon: Tags, className: 'left-[6%] top-[52%]', delay: '3s' },
+    { Icon: Boxes, className: 'right-[6%] top-[56%]', delay: '1.1s' },
+  ];
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <div className="absolute -top-40 -left-32 w-[36rem] h-[36rem] rounded-full bg-accent/20 blur-3xl animate-drift" />
+      <div className="absolute -bottom-48 -right-24 w-[34rem] h-[34rem] rounded-full bg-violet/20 blur-3xl animate-drift [animation-delay:-6s]" />
+      <div className="absolute top-1/3 left-1/2 w-[22rem] h-[22rem] -translate-x-1/2 rounded-full bg-info/10 blur-3xl animate-drift [animation-delay:-12s]" />
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          backgroundImage: 'radial-gradient(rgb(var(--ink-subtle) / 0.45) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+          maskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 20%, transparent 70%)',
+        }}
+      />
+      {tiles.map(({ Icon, className, delay }) => (
+        <div
+          key={className}
+          className={`absolute hidden lg:flex w-14 h-14 items-center justify-center rounded-2xl border border-line/80 bg-surface/70 backdrop-blur shadow-card text-accent/70 animate-float ${className}`}
+          style={{ animationDelay: delay }}
+        >
+          <Icon className="w-6 h-6" />
+        </div>
+      ))}
     </div>
   );
 }
