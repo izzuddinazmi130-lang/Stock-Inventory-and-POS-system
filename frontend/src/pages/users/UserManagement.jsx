@@ -2,7 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Users, Plus, ShieldCheck, Trash2, Pencil, UserCheck, Check, X, Eye, PauseCircle, PlayCircle } from 'lucide-react';
+import { Users, Plus, ShieldCheck, Trash2, Pencil, UserCheck, Check, X, Eye, PauseCircle, PlayCircle, KeyRound } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import ResetPasswordModal from './components/ResetPasswordModal';
 import {
   Modal, FormSection, Field, Input, Select, Button, ButtonBase, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
   SegmentedControl, StatusPill, BusinessDot, Table, THead, TBody, TH, TR, TD, TableState, useConfirm, useToast,
@@ -66,6 +68,8 @@ export default function UserManagement() {
 
   // User Branch Assignment Inspection Modal
   const [inspectUser, setInspectUser] = useState(null);
+  const [resetUser, setResetUser] = useState(null);
+  const { user: currentUser } = useAuth();
 
   // Sync state when URL params change (e.g. from deep links)
   useEffect(() => {
@@ -419,6 +423,7 @@ export default function UserManagement() {
                       items={[
                         { label: 'View access', icon: Eye, onClick: () => setInspectUser(u) },
                         { label: 'Change access', icon: Pencil, onClick: () => openEditModal(u) },
+                        { label: 'Reset password', icon: KeyRound, onClick: () => setResetUser(u), hidden: u.id === currentUser?.id || u.status === 'pending' || u.status === 'declined' },
                         { label: 'Suspend', icon: PauseCircle, onClick: () => handleSuspend(u.id, u.full_name), hidden: u.status !== 'active' },
                         { label: 'Activate', icon: PlayCircle, onClick: () => handleActivate(u.id, u.full_name), hidden: u.status !== 'suspended' },
                         { divider: true },
@@ -481,6 +486,8 @@ export default function UserManagement() {
           <UserAccessFields form={editForm} setForm={setEditForm} businesses={businesses} branches={editBranches} />
         </Modal>
       )}
+
+      <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
 
       {inspectUser && (
         <UserAccessModal

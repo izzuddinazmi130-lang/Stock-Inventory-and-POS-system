@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Menu as MenuIcon } from 'lucide-react';
+import { KeyRound, LogOut, Menu as MenuIcon } from 'lucide-react';
+import ChangePasswordModal from './auth/ChangePasswordModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LowStockBell from './LowStockBell';
@@ -104,6 +105,7 @@ function GlobalSearch() {
 export default function Header({ onOpenNav }) {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const [changingPassword, setChangingPassword] = useState(false);
   if (!user) return null;
 
   const isSuper = user.role === 'super_admin';
@@ -135,7 +137,11 @@ export default function Header({ onOpenNav }) {
               <ScopeBadge className="mt-2 sm:hidden" />
             </div>
           }
-          items={[{ label: 'Sign out', icon: LogOut, onClick: logout, tone: 'danger' }]}
+          items={[
+            { label: 'Change password', icon: KeyRound, onClick: () => setChangingPassword(true) },
+            { divider: true },
+            { label: 'Sign out', icon: LogOut, onClick: logout, tone: 'danger' },
+          ]}
           trigger={({ ref, ...props }) => (
             <ButtonBase
               ref={ref}
@@ -150,6 +156,7 @@ export default function Header({ onOpenNav }) {
           )}
         />
       </div>
+      <ChangePasswordModal open={changingPassword} onClose={() => setChangingPassword(false)} />
     </header>
   );
 }

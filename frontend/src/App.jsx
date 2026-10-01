@@ -8,6 +8,7 @@ import { AppShell } from './components/Layout';
 
 // Pages
 import Login from './pages/Login';
+import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import ProductsList from './pages/products/ProductsList';
 import QrHub from './pages/qr/QrHub';
@@ -29,6 +30,13 @@ import SalesHistory from './pages/sales/SalesHistory';
 // Dev-only component gallery (never linked in the sidebar, not built into production routes)
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/dev/Styleguide')) : null;
 
+// Signed-in only, without the password-change redirect (used by the change-password page itself)
+const RequireSignIn = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? children : <Navigate to="/login" replace />;
+};
+
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
@@ -43,6 +51,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Signed in with a temporary password: choose a new one first (the API enforces this too)
+  if (user.must_change_password) {
+    return <Navigate to="/change-password" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -62,6 +75,7 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<Login />} />
+            <Route path="/change-password" element={<RequireSignIn><ChangePassword /></RequireSignIn>} />
 
             {/* Protected routes share one persistent shell (sidebar + header) */}
             <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>

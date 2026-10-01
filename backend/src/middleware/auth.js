@@ -22,7 +22,7 @@ const authenticateToken = async (req, res, next) => {
     
     // Verify user in database
     const [users] = await pool.query(`
-      SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active,
+      SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active, u.must_change_password,
              u.business_id, u.branch_id,
              b.name AS branch_name,
              biz.name AS business_name
@@ -37,6 +37,14 @@ const authenticateToken = async (req, res, next) => {
     }
 
     req.user = users[0];
+
+    // After a password reset the user must pick a new password before doing anything else
+    if (req.user.must_change_password) {
+      const allowed = ['/api/auth/me', '/api/auth/logout', '/api/auth/change-password'];
+      if (!allowed.includes(req.originalUrl.split('?')[0])) {
+        return res.status(403).json({ success: false, code: 'PASSWORD_CHANGE_REQUIRED', message: 'Please choose a new password to continue.' });
+      }
+    }
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });

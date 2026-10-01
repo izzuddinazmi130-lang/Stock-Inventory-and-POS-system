@@ -2,7 +2,17 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
+const crypto = require('crypto');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
+
+// Readable temporary passwords (no 0/O, 1/l/I) e.g. "Kp7m-Xw3r-Tz"
+const TEMP_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const tempPassword = () => {
+  const pick = (n) => Array.from(crypto.randomBytes(n), b => TEMP_ALPHABET[b % TEMP_ALPHABET.length]).join('');
+  return `${pick(4)}-${pick(4)}-${pick(2)}`;
+};
+// Never put password hashes in the audit log
+const withoutSecrets = (row) => { const { password_hash, ...rest } = row || {}; return rest; };
 
 // Require Super Admin for all user management routes
 router.use(authenticateToken, requireRole('super_admin'));
@@ -274,9 +284,37 @@ router.put('/:id', async (req, res) => {
       [effectiveBusiness, effectiveBranch, targetRole, userId]
     );
 
-    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_USER', 'users', userId, users[0], { business_id, branch_id, role }, req);
+    await recordAuditLog(req.user.id, req.user.role, 'UPDATE_USER', 'users', userId, withoutSecrets(users[0]), { business_id, branch_id, role }, req);
 
     return res.json({ success: true, message: 'User updated successfully!' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/users/:id/reset-password - Super Admin sets a temporary password for a user who forgot theirs.
+// Body: { password? } (generated when omitted). The temporary password is returned once, so it can be passed
+// on to the user, and the user must choose a new one the next time they sign in.
+router.post('/:id/reset-password', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Use “Change password” in your account menu to change your own password.' });
+    }
+    const [users] = await pool.query('SELECT id, email, full_name, role, status FROM users WHERE id = ? AND deleted_at IS NULL', [userId]);
+    if (!users.length) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const custom = typeof req.body.password === 'string' ? req.body.password.trim() : '';
+    if (custom && custom.length < 6) {
+      return res.status(400).json({ success: false, message: 'Temporary password must be at least 6 characters.' });
+    }
+    const temporary = custom || tempPassword();
+    const hash = await bcrypt.hash(temporary, 10);
+    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 1, updated_at = NOW() WHERE id = ?', [hash, userId]);
+
+    await recordAuditLog(req.user.id, req.user.role, 'RESET_PASSWORD', 'users', userId, null,
+      { email: users[0].email, full_name: users[0].full_name, generated: !custom }, req);
+    return res.json({ success: true, temporary_password: temporary, user: users[0] });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

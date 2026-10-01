@@ -118,7 +118,7 @@ export default function Login() {
             if (remember) localStorage.setItem(REMEMBER_KEY, formData.email);
             else localStorage.removeItem(REMEMBER_KEY);
           } catch { /* storage unavailable: nothing to remember */ }
-          navigate('/dashboard');
+          navigate(res.user?.must_change_password ? '/change-password' : '/dashboard');
         } else {
           showErrors({ password: res.message || 'Incorrect email or password.' });
         }
@@ -228,7 +228,7 @@ export default function Login() {
                     </div>
                     {showForgot && (
                       <Alert tone="info" onClose={() => setShowForgot(false)}>
-                        Passwords are reset by your HQ administrator. Ask them to set a new one for you.
+                        Ask your HQ Super Admin to reset it. They’ll give you a temporary password, and you’ll choose your own new one right after signing in.
                       </Alert>
                     )}
                   </>

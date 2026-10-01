@@ -1,5 +1,6 @@
 // User object shape: { id, email, username, full_name, role ('super_admin'|'admin'),
-//   business_id, branch_id, branch_name, business_name, is_active }
+//   business_id, branch_id, branch_name, business_name, is_active,
+//   must_change_password (true after a Super Admin password reset, until the user picks a new one) }
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 

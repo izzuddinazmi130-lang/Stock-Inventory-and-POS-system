@@ -109,7 +109,8 @@ router.post('/login', async (req, res) => {
         branch_name: user.branch_name,
         branch_code: user.branch_code,
         business_id: user.business_id,
-        business_name: user.business_name
+        business_name: user.business_name,
+        must_change_password: Boolean(user.must_change_password)
       }
     });
 
@@ -124,7 +125,7 @@ router.get('/me', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.query(`
       SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active,
-             u.business_id, u.branch_id,
+             u.business_id, u.branch_id, u.must_change_password,
              b.name AS branch_name,
              b.branch_code AS branch_code,
              biz.name AS business_name
@@ -140,8 +141,40 @@ router.get('/me', authenticateToken, async (req, res) => {
 
     return res.json({
       success: true,
-      user: users[0]
+      user: { ...users[0], must_change_password: Boolean(users[0].must_change_password) }
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/auth/change-password - the signed-in user changes their own password.
+// Also how a user replaces a temporary password after a Super Admin reset.
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ success: false, message: 'Enter your current password and a new password.' });
+    }
+    if (String(new_password).length < 6) {
+      return res.status(400).json({ success: false, code: 'weak_password', message: 'New password must be at least 6 characters.' });
+    }
+    const [rows] = await pool.query('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const hash = rows[0].password_hash.replace(/^\$2y\$/, '$2a$');
+    const matches = hash.startsWith('$2') ? await bcrypt.compare(current_password, hash) : current_password === rows[0].password_hash;
+    if (!matches) {
+      return res.status(400).json({ success: false, code: 'wrong_password', message: 'Your current password is incorrect.' });
+    }
+    if (current_password === new_password) {
+      return res.status(400).json({ success: false, code: 'same_password', message: 'Choose a password different from the current one.' });
+    }
+
+    const newHash = await bcrypt.hash(String(new_password), 10);
+    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = NOW() WHERE id = ?', [newHash, req.user.id]);
+    await recordAuditLog(req.user.id, req.user.role, 'CHANGE_PASSWORD', 'users', req.user.id, null, { after_reset: Boolean(req.user.must_change_password) }, req);
+    return res.json({ success: true, message: 'Password changed.' });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
