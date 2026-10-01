@@ -77,8 +77,17 @@ One family everywhere: **Inter**. Labels are 13–14px medium, body 14px and hel
 - Page content is padded by the shell. Sections are separated with `space-y-6` / `mb-6`.
 - Inside cards, use `px-5 py-4` for headers and `p-5` for bodies (`CardHeader` / `CardBody`).
 - Grids: KPIs use `grid gap-4 sm:grid-cols-2 xl:grid-cols-4`, and forms use `grid gap-4 sm:grid-cols-2`.
-- Breakpoints checked: **375, 768, 1024, 1440**. No page may scroll horizontally. Wide tables scroll
-  inside their card (`Table minWidth`).
+- Breakpoints checked: **375, 768, 1024, 1440**. No page may scroll horizontally.
+- **Phones (< 640px):**
+  - `Table` turns each row into a stacked card. The first cell is the title, and every other cell shows
+    its column heading as a label, so keep headings short and meaningful. Cells without a heading
+    (actions) sit right-aligned on their own line. Use `stack={false}` only for grids that must stay
+    tabular.
+  - From 640px up, wide tables scroll inside their card (`Table minWidth`).
+- **KPI rows** use `kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4`. Phones show two per row,
+  and an odd last card spans the full width.
+- **Tab strips** scroll sideways without a scrollbar (`no-scrollbar`), and tabs are at least 36px tall
+  on phones.
 
 ### Elevation
 `shadow-xs` for controls, `shadow-card` for cards, `shadow-popover` for menus and popovers,

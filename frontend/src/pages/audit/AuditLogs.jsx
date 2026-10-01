@@ -382,7 +382,7 @@ export default function AuditLogs() {
         actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchAuditLogs} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Events" value={stats.total} icon={History} tone="accent" meta="In the current view" />
         <KpiCard loading={firstLoad} label="Stock and damage" value={stats.inventory + stats.damage} icon={Boxes} tone="warning" meta={`${stats.damage} damage · ${stats.inventory} stock`} />
         <KpiCard loading={firstLoad} label="Sign-ins and sign-outs" value={stats.auth} icon={Shield} tone="success" meta="Account sessions" />

@@ -178,7 +178,7 @@ export default function Dashboard() {
         <Card><ErrorState description={loadError} onRetry={fetchData} /></Card>
       ) : (
       <>
-      <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6', isSuperAdmin ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-3')}>
+      <div className={cn('kpi-grid grid grid-cols-2 gap-3 sm:gap-4 mb-6', isSuperAdmin ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-3')}>
         {isSuperAdmin ? (
           <>
             <KpiCard loading={firstLoad} label="Businesses" value={businessCount} meta="Registered" icon={Building2} tone="neutral" to="/businesses" />

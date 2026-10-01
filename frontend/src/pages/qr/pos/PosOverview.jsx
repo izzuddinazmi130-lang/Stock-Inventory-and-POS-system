@@ -73,14 +73,14 @@ export default function PosOverview({ Wrap }) {
         Scanning, checkout and receiving stock happen on the branch POS. Here you can watch what every branch is doing.
       </Alert>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Transactions" value={Number(summaryStats.total_transactions) || 0} icon={Activity} tone="accent" meta="All branches" />
         <KpiCard loading={firstLoad} label="Stock out" value={Number(summaryStats.stock_out_qty) || 0} icon={ArrowUpFromLine} tone="info" meta="Units sold or taken out" />
         <KpiCard loading={firstLoad} label="Stock in" value={Number(summaryStats.stock_in_qty) || 0} icon={ArrowDownToLine} tone="success" meta="Units received" />
         <KpiCard loading={firstLoad} label="Branches" value={adminBranches.length} icon={Building2} tone="neutral" meta="Configured outlets" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {QUICK_LINKS.map(link => (
           <Card key={link.to} as={Link} to={link.to} interactive className="p-4 flex items-start gap-3 group">
             <span className="w-9 h-9 rounded-lg bg-sunken text-ink-secondary flex items-center justify-center flex-shrink-0 group-hover:bg-accent-soft group-hover:text-accent transition-colors">

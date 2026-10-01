@@ -325,7 +325,7 @@ export default function UserManagement() {
         actions={<Button icon={Plus} onClick={openAddModal}>Add user</Button>}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Users" value={Number(userStats.total) || 0} icon={Users} tone="accent" meta="All accounts" />
         <KpiCard loading={firstLoad} label="Super admins" value={Number(userStats.superadmins) || 0} icon={ShieldCheck} tone="violet" meta="Full HQ access" />
         <KpiCard

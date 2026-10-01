@@ -40,7 +40,8 @@ export function Tabs({ tabs, value, onChange, variant = 'underline', size = 'md'
   };
 
   const segmented = variant === 'segmented';
-  const heights = segmented ? { sm: 'h-7 px-2.5 text-caption', md: 'h-8 px-3 text-sm', lg: 'h-11 px-4 text-sm' } : { sm: 'h-9 text-caption', md: 'h-10 text-sm', lg: 'h-11 text-sm' };
+  // Phones get taller segments (easier to tap)
+  const heights = segmented ? { sm: 'h-9 sm:h-7 px-2.5 text-caption', md: 'h-9 sm:h-8 px-3 text-sm', lg: 'h-11 px-4 text-sm' } : { sm: 'h-10 sm:h-9 text-caption', md: 'h-10 text-sm', lg: 'h-11 text-sm' };
 
   return (
     <div
@@ -50,7 +51,7 @@ export function Tabs({ tabs, value, onChange, variant = 'underline', size = 'md'
       onKeyDown={onKeyDown}
       className={cn(
         'relative flex items-center',
-        segmented ? 'p-1 bg-sunken rounded-lg gap-1' : 'gap-5 border-b border-line overflow-x-auto',
+        segmented ? 'p-1 bg-sunken rounded-lg gap-1' : 'gap-5 border-b border-line overflow-x-auto no-scrollbar',
         fullWidth ? 'w-full' : segmented && 'w-fit',
         className
       )}

@@ -63,7 +63,7 @@ export default function KpiCard({ label, value, format, icon: Icon, tone = 'acce
       onClick={onClick}
       type={Tag === 'button' ? 'button' : undefined}
       className={cn(
-        'block text-left w-full bg-surface border border-line rounded-xl p-5 shadow-card',
+        'block text-left w-full min-w-0 bg-surface border border-line rounded-xl p-4 sm:p-5 shadow-card',
         (to || onClick) && cn('transition-[border-color,box-shadow,transform] duration-base ease-out hover:border-line-strong hover:shadow-popover hover:-translate-y-px', focusRing),
         className
       )}

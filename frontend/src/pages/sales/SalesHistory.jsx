@@ -160,7 +160,7 @@ export default function SalesHistory() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <KpiCard loading={firstLoad} label="Sales" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
         <KpiCard loading={firstLoad} label="Revenue" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Total charged" />
         <KpiCard loading={firstLoad} label="Average sale" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Per receipt" />

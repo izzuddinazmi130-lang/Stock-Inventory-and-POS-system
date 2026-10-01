@@ -184,7 +184,7 @@ export default function BranchDetail() {
       <Layout>
         <Skeleton className="h-4 w-48 mb-3" />
         <Skeleton className="h-8 w-72 mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
+        <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
         <Skeleton className="h-64 rounded-xl" />
       </Layout>
     );
@@ -258,7 +258,7 @@ export default function BranchDetail() {
         </dl>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard label="Products" value={Number(stats.totalItems) || 0} icon={Package} tone="accent" meta="Stocked in this branch" />
         <KpiCard label="Units on hand" value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta="All products" />
         <KpiCard label="Low stock" value={Number(stats.lowStockCount) || 0} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} />

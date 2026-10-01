@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useRef } from 'react';
 import { cn } from './cn';
 import { SkeletonRows } from './Skeleton';
 import EmptyState, { ErrorState } from './EmptyState';
@@ -6,7 +6,10 @@ import EmptyState, { ErrorState } from './EmptyState';
 const TableContext = createContext({ dense: false });
 
 /**
- * Data table. Scrolls horizontally on narrow screens; give `maxHeight` for a scrolling body with a sticky header.
+ * Data table. On phones (< 640px) each row becomes a stacked card: the first cell is the title and every
+ * other cell shows its column heading as a label (`stack={false}` keeps the scrolling table instead).
+ * From 640px up it is a normal table that scrolls sideways if it is wider than its card (`minWidth`).
+ * Give `maxHeight` for a scrolling body with a sticky header.
  *   <Table>
  *     <THead><TR><TH>Product</TH><TH numeric>Qty</TH></TR></THead>
  *     <TBody>
@@ -15,11 +18,38 @@ const TableContext = createContext({ dense: false });
  *     </TBody>
  *   </Table>
  */
-export function Table({ children, dense = false, className, tableClassName, minWidth, maxHeight }) {
+export function Table({ children, dense = false, stack = true, className, tableClassName, minWidth, maxHeight }) {
+  const tableRef = useRef(null);
+
+  // Give every body cell its column heading as data-label, used as the label in the stacked phone layout.
+  // Runs after every render (rows come and go with filters and paging).
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!stack || !table) return;
+    const headings = [];
+    table.querySelectorAll('thead tr:last-child th').forEach(th => {
+      const span = th.colSpan || 1;
+      for (let i = 0; i < span; i++) headings.push(th.textContent.trim());
+    });
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      let col = 0;
+      Array.from(tr.children).forEach(td => {
+        const span = td.colSpan || 1;
+        if (span === 1 && headings[col]) td.setAttribute('data-label', headings[col]);
+        else td.removeAttribute('data-label');
+        col += span;
+      });
+    });
+  });
+
   return (
     <TableContext.Provider value={{ dense }}>
       <div className={cn('overflow-x-auto', maxHeight && 'overflow-y-auto', className)} style={maxHeight ? { maxHeight } : undefined}>
-        <table className={cn('w-full text-sm border-separate border-spacing-0', tableClassName)} style={minWidth ? { minWidth } : undefined}>
+        <table
+          ref={tableRef}
+          className={cn('w-full text-sm border-separate border-spacing-0', stack && 'table-stack', minWidth && 'table-min', tableClassName)}
+          style={minWidth ? { '--table-min-width': typeof minWidth === 'number' ? `${minWidth}px` : minWidth } : undefined}
+        >
           {children}
         </table>
       </div>
@@ -94,7 +124,8 @@ export function TD({ numeric = false, className, children, ...props }) {
       )}
       {...props}
     >
-      {children}
+      {/* `contents` = no box on wider screens; on phones it becomes the value block beside the label */}
+      <div className="td-content contents">{children}</div>
     </td>
   );
 }

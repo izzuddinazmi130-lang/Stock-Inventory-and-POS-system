@@ -41,7 +41,8 @@ function Chip({ children, onRemove, removeLabel, tone = 'neutral' }) {
       <ButtonBase
         onClick={onRemove}
         aria-label={removeLabel}
-        className="w-6 h-6 rounded-full flex items-center justify-center text-ink-muted hover:bg-danger-muted hover:text-danger-fg"
+        // The ::after pad makes the tap area ~40px without changing the chip's look
+        className="relative w-6 h-6 rounded-full flex items-center justify-center text-ink-muted hover:bg-danger-muted hover:text-danger-fg after:absolute after:-inset-2 after:content-['']"
       >
         <X className="w-3.5 h-3.5" aria-hidden="true" />
       </ButtonBase>

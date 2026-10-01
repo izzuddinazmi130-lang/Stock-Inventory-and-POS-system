@@ -106,7 +106,7 @@ export default function FloorReport() {
         </>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Total sales" value={Number(summary.total_sales) || 0} format={money} icon={TrendingUp} tone="accent" className="col-span-2 lg:col-span-1" />
         <KpiCard loading={firstLoad} label="Cash" value={Number(summary.total_cash) || 0} format={money} icon={Banknote} tone="neutral" />
         <KpiCard loading={firstLoad} label="QR / e-Wallet" value={Number(summary.total_qr) || 0} format={money} icon={QrCode} tone="neutral" />

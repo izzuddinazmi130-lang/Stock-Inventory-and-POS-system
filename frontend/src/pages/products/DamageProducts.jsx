@@ -332,7 +332,7 @@ export default function DamageProducts() {
         </>}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={loading && reports.length === 0} label="Reports" value={stats.totalReports} icon={AlertTriangle} tone="warning" meta={hasActiveFilters ? 'Matching the filters' : 'All time'} />
         <KpiCard loading={loading && reports.length === 0} label="Units written off" value={stats.totalQuantity} icon={PackageX} tone="danger" meta="Removed from stock" />
         <KpiCard

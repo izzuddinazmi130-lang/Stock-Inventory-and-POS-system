@@ -176,7 +176,7 @@ export default function StoreReport() {
       <Layout>
         <Skeleton className="h-4 w-64 mb-3" />
         <Skeleton className="h-8 w-80 mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
+        <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">{[0, 1, 2].map(i => <SkeletonKpi key={i} />)}</div>
         <Skeleton className="h-64 rounded-xl" />
       </Layout>
     );
@@ -230,7 +230,7 @@ export default function StoreReport() {
 
       {phaseAlert && <Alert tone={phaseAlert.tone} icon={phaseAlert.icon} title={phaseAlert.title} className="mb-6">{phaseAlert.body}</Alert>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard label="Revenue" value={Number(summary.total_sales) || 0} format={v => `RM ${v.toFixed(2)}`} icon={TrendingUp} tone="accent" meta={`${summary.total_items_sold || movements.length} items sold`} />
         <KpiCard label="Cash" value={Number(summary.total_cash) || 0} format={v => `RM ${v.toFixed(2)}`} icon={Banknote} tone="neutral" meta="Collected at the booth" />
         <KpiCard label="QR / online" value={Number(summary.total_online) || 0} format={v => `RM ${v.toFixed(2)}`} icon={CreditCard} tone="neutral" meta="e-Wallet and card" />

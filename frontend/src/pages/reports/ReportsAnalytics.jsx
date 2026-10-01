@@ -231,7 +231,7 @@ export default function ReportsAnalytics() {
         <SegmentedControl label="Time period" value={dateRange} onChange={setDateRange} tabs={TIMELINE_OPTIONS} className="max-w-full overflow-x-auto" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Transactions" value={Number(summary.total_transactions) || 0} icon={Activity} tone="accent" meta="Movement records" />
         <KpiCard loading={firstLoad} label="Stock added" value={Number(summary.stock_in_qty) || 0} format={v => `+${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowDownToLine} tone="success" meta="Units in" />
         <KpiCard loading={firstLoad} label="Stock out" value={Number(summary.stock_out_qty) || 0} format={v => `−${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowUpFromLine} tone="info" meta="Units sold or taken out" />

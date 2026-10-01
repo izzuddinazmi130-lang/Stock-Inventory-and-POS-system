@@ -206,6 +206,115 @@
   background-color: rgb(var(--ink-subtle));
 }
 
+/* Tables keep their minimum width on tablets and up (they scroll inside their card) */
+.table-min {
+  min-width: var(--table-min-width);
+}
+
+/*
+ * Phones: tables become stacked cards (see Table.jsx). The first cell is the row's title; the other cells
+ * are "label  value" lines using the column heading from data-label. Loading/empty/error rows (colspan)
+ * keep their own layout.
+ */
+@media (max-width: 639px) {
+  .table-min.table-stack {
+    min-width: 0;
+  }
+  .table-stack thead {
+    display: none;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tbody > tr {
+    position: relative;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgb(var(--line-soft));
+  }
+  .table-stack tbody > tr:last-child {
+    border-bottom: 0;
+  }
+  .table-stack tbody > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 3px 0;
+    border-bottom: 0;
+    background: transparent;
+    text-align: right;
+    white-space: normal;
+  }
+  .table-stack tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    text-align: left;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: rgb(var(--ink-muted));
+  }
+  .table-stack .td-content {
+    display: block;
+    min-width: 0;
+    text-align: right;
+  }
+  /* Inner rows (e.g. name + SKU, dot + business) keep their layout, aligned to the right */
+  .table-stack td:not(:first-child) .td-content > .flex,
+  .table-stack td:not(:first-child) .td-content > .inline-flex {
+    justify-content: flex-end;
+  }
+  .table-stack td:not(:first-child) .td-content > .flex-col {
+    align-items: flex-end;
+  }
+  /* Row title */
+  .table-stack tbody > tr > td:first-child {
+    display: block;
+    padding: 0 0 6px;
+    text-align: left;
+  }
+  .table-stack tbody > tr > td:first-child .td-content {
+    text-align: left;
+  }
+  .table-stack tbody > tr > td:first-child::before {
+    content: none;
+  }
+  /* Cells without a heading (row actions): right-aligned on their own line */
+  .table-stack tbody > tr > td:not(:first-child):not([data-label]) {
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+  /* Loading / empty / error rows */
+  .table-stack tbody > tr > td[colspan] {
+    display: block;
+    padding: 0;
+    text-align: left;
+  }
+  .table-stack tbody > tr:has(> td[colspan]) {
+    padding: 0;
+  }
+}
+
+/* Horizontal scrollers (tab strips) without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* KPI grids: two columns on phones; an odd last card spans the full row */
+@media (max-width: 639px) {
+  .kpi-grid > :last-child:nth-child(odd) {
+    grid-column: span 2 / span 2;
+  }
+}
+
 /* Skeleton shimmer */
 .skeleton {
   background: linear-gradient(90deg, rgb(var(--sunken)) 0px, rgb(var(--line-soft)) 120px, rgb(var(--sunken)) 240px);

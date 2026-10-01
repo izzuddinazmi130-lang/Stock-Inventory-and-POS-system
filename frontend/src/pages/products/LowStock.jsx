@@ -101,7 +101,7 @@ export default function LowStock() {
         )}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="kpi-grid grid grid-cols-2 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={loading && items.length === 0} label="Out of stock" value={counts.out} icon={PackageX} tone="danger" meta="Can't be sold right now" onClick={() => setTab('out')} className={cn(tab === 'out' && 'ring-1 ring-danger-line border-danger-line')} />
         <KpiCard loading={loading && items.length === 0} label="Running low" value={counts.low} icon={PackageMinus} tone="warning" meta="At or below the alert level" onClick={() => setTab('low')} className={cn(tab === 'low' && 'ring-1 ring-warning-line border-warning-line')} />
       </div>
