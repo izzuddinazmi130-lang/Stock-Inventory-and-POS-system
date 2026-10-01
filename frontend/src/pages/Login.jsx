@@ -237,7 +237,7 @@ function Showcase() {
       onMouseLeave={() => setPaused(false)}
       className="relative hidden md:flex flex-col p-10 bg-gradient-to-br from-violet-soft via-surface to-accent-soft border-r border-line-soft"
     >
-      <BrandMark withName />
+      <BrandMark withName size="lg" />
 
       <div className="relative flex-1 my-6 min-h-[18rem]">
         {SLIDES.map((s, i) => (

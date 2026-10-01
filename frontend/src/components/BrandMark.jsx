@@ -1,23 +1,29 @@
 import React from 'react';
 import { cn } from './ui/cn';
+import logo from '../assets/brand/logo.png';
+import logoMark from '../assets/brand/logo-mark.png';
 
-/** The app's logo mark: a stacked-box glyph on the accent colour. */
+/**
+ * The company logo. `withName` shows the full HQ AS Tech lockup with the product subtitle;
+ * without it only the square HQ mark is shown (collapsed sidebar, small spaces).
+ */
 export default function BrandMark({ className, withName = false, subtitle = 'Inventory & POS', size = 'md' }) {
   const lg = size === 'lg';
-  return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
-      <span className={cn('bg-accent text-white flex items-center justify-center shadow-xs flex-shrink-0', lg ? 'w-12 h-12 rounded-xl' : 'w-8 h-8 rounded-lg')}>
-        <svg viewBox="0 0 24 24" className={lg ? 'w-6 h-6' : 'w-[18px] h-[18px]'} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 3 4 7l8 4 8-4-8-4Z" />
-          <path d="m4 12 8 4 8-4" />
-          <path d="m4 17 8 4 8-4" />
-        </svg>
+  if (!withName) {
+    return (
+      <span className={cn('inline-flex flex-shrink-0', className)}>
+        <img src={logoMark} alt="HQ AS Tech" draggable="false" className={cn('object-contain', lg ? 'w-12 h-12' : 'w-9 h-9')} />
       </span>
-      {withName && (
-        <span className="min-w-0 leading-tight">
-          <span className="block font-display font-semibold text-[15px] text-ink tracking-tight">HQ Inventory</span>
-          {subtitle && <span className="block text-[11px] text-ink-muted">{subtitle}</span>}
-        </span>
+    );
+  }
+  return (
+    <span className={cn('inline-flex items-center gap-3', className)}>
+      <img src={logo} alt="HQ AS Tech" draggable="false" className={cn('w-auto flex-shrink-0', lg ? 'h-14' : 'h-11')} />
+      {subtitle && (
+        <>
+          <span aria-hidden="true" className="h-7 w-px bg-line" />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted leading-tight">{subtitle}</span>
+        </>
       )}
     </span>
   );

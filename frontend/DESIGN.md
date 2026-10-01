@@ -180,6 +180,9 @@ out.
 - `components/Layout.jsx` is the app shell: sidebar, header and route transition. Pages still wrap
   their content in `<Layout>`, which passes straight through inside the shell.
 - Navigation per role lives in `components/navigation.js`.
+- The logo is `components/BrandMark.jsx`: `<BrandMark withName />` shows the full HQ AS Tech logo with
+  the "Inventory & POS" subtitle, and `<BrandMark />` shows only the square HQ mark. The images are
+  transparent PNGs in `src/assets/brand/`, and the favicon is `public/favicon.png`.
 - The sidebar remembers whether it is collapsed and starts collapsed below 1280px. On phones it becomes
   a drawer.
 
