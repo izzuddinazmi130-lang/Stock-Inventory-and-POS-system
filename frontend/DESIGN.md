@@ -18,8 +18,11 @@ Run `npm run dev` and open **`/styleguide`** (development builds only) to see ev
    `EmptyState` and `ErrorState`.
 5. **Icons come from `lucide-react` only.** The stroke width is set globally to 1.75. Size them `w-4 h-4`
    inline, `w-[18px] h-[18px]` in navigation and `w-5 h-5` in large controls. Always add `aria-hidden="true"`.
-6. **Radius:** controls use `rounded-lg`, cards/modals/panels use `rounded-xl`, and pills/avatars use
-   `rounded-full`.
+6. **Radius:** controls and chips use `rounded-lg` (10px), cards/modals/panels use `rounded-xl` (12px),
+   and pills/avatars use `rounded-full`.
+8. **Spacing** follows the 4/8px scale (`gap-2`, `p-4`, `mb-6`, `space-y-8`…). Avoid odd values.
+9. **The primary colour is an accent, not a fill:** keep it to roughly 10% of a screen (one primary
+   button, links, focus, the active tab). Everything else is neutral.
 7. **Touch targets:** at least 40px everywhere, and at least **44px on the point of sale** (use `size="lg"`).
 
 ## 2. Tokens
@@ -31,17 +34,17 @@ Tokens are CSS variables in `src/index.css`, stored as RGB channels so alpha wor
 |---|---|---|
 | Surfaces | `bg-page`, `bg-surface`, `bg-subtle`, `bg-sunken` | Page background, cards, table headers/hover, tracks/chips |
 | Borders | `border-line`, `border-line-soft`, `border-line-strong` | Default borders, dividers inside cards, hovered inputs |
-| Text | `text-ink`, `text-ink-secondary`, `text-ink-muted`, `text-ink-subtle` | Body, secondary, captions, icons/placeholders only (not AA) |
+| Text | `text-ink`, `text-ink-secondary`, `text-ink-muted`, `text-ink-subtle` | Body, strong secondary, secondary/captions, placeholders and icons only (not AA for text) |
 | Accent | `accent`, `accent-hover`, `accent-fg`, `accent-soft`, `accent-muted`, `accent-line` | The one brand violet (`#6D4AFF`): primary actions, links, active nav and tabs, focus rings, indicators. Don't add a second purple/indigo/blue for UI chrome |
-| Status | `success`, `warning`, `danger`, `info`, `violet`, each with the same 6 steps | In stock / low / critical, info, adjustments |
+| Status | `success` #16A34A, `warning` #D97706, `danger` #DC2626, `info` #2563EB, `violet`, each with the same 6 steps | In stock, low stock, out of stock, syncing/info, adjustments |
 | Business | `bg-brand-kaftanasia`, `bg-brand-astech` | Small identity dots only (`BusinessDot`) |
 
-Neutrals: `surface` #FFFFFF, `subtle` #F7F7FA, `line` #E6E6EB, `ink` #111118, `ink-muted` #6B6B76, `page` #F4F3F8.
+Neutrals: `surface` #FFFFFF, `page` #FAFAFB, `subtle` #F7F7F9, `line` #E5E7EB, `ink` #111827,
+`ink-muted` #6B7280, `ink-subtle` #9CA3AF (placeholders).
 
 **Dark mode.** The same tokens are redefined under `[data-theme="dark"]` (opt in on any element) and
-under `.theme-system` when the OS is in dark mode. The sign-in page uses `theme-system`; the rest of
-the app is light only until it opts in. Images that need adjusting on dark use `logo-adaptive` (the logo
-turns white) and `illustration-adaptive` (slightly dimmed).
+under `.theme-system` when the OS is in dark mode. Nothing opts in yet: the whole system, sign-in
+included, is light. When a screen does opt in, add `logo-adaptive` to logo images so the logo turns white.
 
 Each status family follows one pattern: `soft` is the tinted background, `fg` is the text on it and
 `line` is the border. The bare name is the solid fill.
@@ -51,22 +54,24 @@ Each status family follows one pattern: `soft` is the tinted background, `fg` is
 ```
 
 **What each status colour means:**
-- success: stock in, healthy, active.
+- success: in stock, stock in, synced, healthy, active.
 - warning: low stock, pending.
 - danger: out of stock, damage, destructive actions.
-- info: stock out/sales movement.
+- info: syncing, stock out/sales movement.
 - violet: manual adjustment.
 
 ### Type
 
 | | Class | Notes |
 |---|---|---|
-| Page title | `font-display text-2xl font-semibold tracking-tight` | Space Grotesk. Rendered by `PageHeader` |
+| Page title | `font-display text-2xl font-semibold tracking-tight` | Inter (`font-display` is an alias). Rendered by `PageHeader` |
 | Section title | `text-sm font-semibold text-ink` | Rendered by `CardHeader` |
 | Body | `text-sm text-ink` | Inter |
 | Caption | `text-caption text-ink-muted` | 12/16 |
 | Table header | `text-table-head uppercase` | 11px, tracked. Rendered by `TH` |
-| Numbers | `tabular-nums` | All money, quantities and counts. `font-mono` for SKUs and receipt numbers |
+| Numbers | (global) | `body` sets `tabular-nums`, so all figures line up. `font-mono` for SKUs and receipt numbers |
+
+One family everywhere: **Inter**. Labels are 13–14px medium, body 14px and helper text 12–13px.
 
 ### Spacing and layout
 - Page content is padded by the shell. Sections are separated with `space-y-6` / `mb-6`.
@@ -199,16 +204,27 @@ out.
   a drawer.
 
 ### Sign-in page
-`pages/Login.jsx`: a centred two-panel card (`rounded-3xl border-line shadow-elevated`, max 960px) on
-`bg-page` with one blurred `accent/15` glow. The left panel (`bg-subtle`, from 860px up) is a feature
-carousel: illustration, then title and one line, then dots (active dot = `accent` pill). It rotates every
-5s and pauses on hover, on focus and for reduced motion. The right panel has the tabs, then fields
-(`h-11 rounded-xl`, 13px labels, no asterisks, inline errors on submit), then a full-width button of the
-same height and radius. Below 860px only the form card shows, with the logo above it. All type is Inter:
-the heading is 30px semibold at -0.02em.
+`pages/Login.jsx` plus `components/auth/AuthPreview.jsx`. This is a full-height split screen on white,
+with no floating card:
+- **Left (45%, from 900px up):** `AuthPreview` on `bg-subtle` with a faint dot grid and a `border-r`.
+  It holds three decorative mini cards (`rounded-xl border-line shadow-soft`) with sample figures:
+  - a stock summary with status dots;
+  - a product row with site badges and a "Synced" chip;
+  - a QR receiving confirmation.
 
-The illustrations in `src/assets/illustrations/` are Storyset artwork, recoloured to the brand violet
-with their backgrounds removed. Keep the "Illustrations by Storyset" credit in the footer.
+  Below the cards is a 3-slide caption carousel. It rotates every 5s, pauses on hover, on focus and for
+  reduced motion, and crossfades. The active slide outlines its matching card, and the active dot is an
+  `accent` pill.
+- **Right:**
+  - the logo and "HQ Inventory" wordmark at the top-left;
+  - a form column of max 400px, vertically centred, with a 28px heading at -0.02em;
+  - `SegmentedControl` tabs;
+  - fields `h-11` with 10px radius, 13px labels, no asterisks and inline errors (a wrong password shows
+    under the password field);
+  - "Remember me" and "Forgot password?" on one row;
+  - a full-width 44px button with the lock note under it;
+  - the footer at the bottom.
+- **Below 900px:** only the form column shows, with the logo centred above it.
 
 ## 5. Accessibility checklist for new UI
 - Everything interactive is reachable by keyboard and shows the `focusRing`.

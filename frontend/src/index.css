@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,22 +11,22 @@
  */
 :root {
   /* Surfaces */
-  --page: 244 243 248;          /* app background */
+  --page: 250 250 251;          /* app background */
   --surface: 255 255 255;       /* cards, tables, modals */
-  --subtle: 247 247 250;        /* table headers, hover rows, inset panels */
-  --sunken: 240 240 245;        /* tracks, segmented controls, chips */
+  --subtle: 247 247 249;        /* table headers, hover rows, inset panels */
+  --sunken: 243 244 246;        /* tracks, segmented controls, chips */
 
   /* Borders */
-  --line: 230 230 235;
-  --line-soft: 240 240 244;
-  --line-strong: 208 208 216;
+  --line: 229 231 235;
+  --line-soft: 243 244 246;
+  --line-strong: 209 213 219;
 
   /* Text / neutrals (all text tokens meet WCAG AA on white except ink-subtle: icons, placeholders, disabled only) */
-  --ink: 17 17 24;
-  --ink-hover: 38 38 48;
-  --ink-secondary: 74 74 84;
-  --ink-muted: 107 107 118;
-  --ink-subtle: 152 152 162;
+  --ink: 17 24 39;
+  --ink-hover: 31 41 55;
+  --ink-secondary: 55 65 81;
+  --ink-muted: 107 114 128;
+  --ink-subtle: 156 163 175;
 
   /* Brand accent: one violet (#6D4AFF) and its tints */
   --accent: 109 74 255;
@@ -36,15 +36,15 @@
   --accent-muted: 233 227 255;
   --accent-line: 212 200 255;
 
-  /* Status: healthy / stock in */
-  --success: 5 150 105;
-  --success-hover: 4 120 87;
-  --success-fg: 4 120 87;
-  --success-soft: 236 253 245;
-  --success-muted: 209 250 229;
-  --success-line: 167 243 208;
+  /* Status: in stock / healthy (#16A34A) */
+  --success: 22 163 74;
+  --success-hover: 21 128 61;
+  --success-fg: 21 128 61;
+  --success-soft: 240 253 244;
+  --success-muted: 220 252 231;
+  --success-line: 187 247 208;
 
-  /* Status: low / pending */
+  /* Status: low stock / pending (#D97706) */
   --warning: 217 119 6;
   --warning-hover: 180 83 9;
   --warning-fg: 180 83 9;
@@ -52,21 +52,21 @@
   --warning-muted: 254 243 199;
   --warning-line: 253 230 138;
 
-  /* Status: critical / damage / destructive */
-  --danger: 225 29 72;
-  --danger-hover: 190 18 60;
-  --danger-fg: 190 18 60;
-  --danger-soft: 255 241 242;
-  --danger-muted: 255 228 230;
-  --danger-line: 254 205 211;
+  /* Status: out of stock / damage / destructive (#DC2626) */
+  --danger: 220 38 38;
+  --danger-hover: 185 28 28;
+  --danger-fg: 185 28 28;
+  --danger-soft: 254 242 242;
+  --danger-muted: 254 226 226;
+  --danger-line: 254 202 202;
 
-  /* Informational */
-  --info: 2 132 199;
-  --info-hover: 3 105 161;
-  --info-fg: 3 105 161;
-  --info-soft: 240 249 255;
-  --info-muted: 224 242 254;
-  --info-line: 186 230 253;
+  /* Syncing / informational (#2563EB) */
+  --info: 37 99 235;
+  --info-hover: 29 78 216;
+  --info-fg: 29 78 216;
+  --info-soft: 239 246 255;
+  --info-muted: 219 234 254;
+  --info-line: 191 219 254;
 
   /* Stock adjustment */
   --violet: 124 58 237;
@@ -150,16 +150,9 @@
   .theme-system .logo-adaptive {
     filter: brightness(0) invert(1);
   }
-  /* Soften the illustrations' light floors so they don't glare on a dark panel */
-  .theme-system .illustration-adaptive {
-    filter: brightness(0.85) saturate(1.05);
-  }
 }
 [data-theme='dark'] .logo-adaptive {
   filter: brightness(0) invert(1);
-}
-[data-theme='dark'] .illustration-adaptive {
-  filter: brightness(0.85) saturate(1.05);
 }
 
 @layer base {
@@ -168,6 +161,8 @@
   }
   body {
     @apply bg-page text-ink font-sans antialiased;
+    /* Inventory screens are number-heavy: keep figures in columns everywhere */
+    font-variant-numeric: tabular-nums;
     margin: 0;
   }
   /* One icon weight everywhere (lucide defaults to 2) */

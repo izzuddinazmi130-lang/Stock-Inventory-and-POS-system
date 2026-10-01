@@ -5,7 +5,7 @@ import { cn, focusRing } from './cn';
 // ── Shared input styling ────────────────────────────────────────────────────
 export const inputClass = cn(
   'h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink shadow-xs',
-  'placeholder:text-ink-muted transition-[border-color,box-shadow] duration-fast ease-out',
+  'placeholder:text-ink-subtle transition-[border-color,box-shadow] duration-fast ease-out',
   'hover:border-line-strong focus:outline-none focus:border-accent focus:ring-[3px] focus:ring-accent/20',
   'disabled:cursor-not-allowed disabled:bg-subtle disabled:text-ink-muted disabled:hover:border-line'
 );

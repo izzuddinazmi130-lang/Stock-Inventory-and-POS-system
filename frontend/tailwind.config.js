@@ -47,9 +47,15 @@ export default {
           astech: token('brand-astech'),
         },
       },
+      // Controls (inputs, buttons, chips) use rounded-lg = 10px; cards and panels use rounded-xl = 12px
+      borderRadius: {
+        lg: '0.625rem',
+        xl: '0.75rem',
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+        // One family across the system; `font-display` is kept as an alias so existing titles stay Inter
+        display: ['Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         // Type scale (see DESIGN.md)
@@ -63,6 +69,8 @@ export default {
         modal: '0 24px 48px -12px rgb(15 23 42 / 0.25)',
         // Large floating surfaces (sign-in card)
         elevated: '0 1px 2px rgb(0 0 0 / 0.04), 0 12px 40px rgb(17 17 24 / 0.08)',
+        // Preview cards and the active tab on the sign-in page
+        soft: '0 1px 2px rgb(0 0 0 / 0.05), 0 8px 24px rgb(17 24 39 / 0.06)',
       },
       ringColor: { DEFAULT: token('accent') },
       transitionTimingFunction: {
