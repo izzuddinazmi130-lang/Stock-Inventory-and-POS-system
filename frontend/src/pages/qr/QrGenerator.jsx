@@ -4,8 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { QrCode, Printer, Package, Building2, Ruler } from 'lucide-react';
-import { Alert, Button, ButtonBase, Card, CardHeader, Checkbox, EmptyState, PageHeader, QuantityStepper, SearchInput, Skeleton, cn } from '../../components/ui';
+import { QrCode, Printer, Package, Building2, Ruler, Download, ChevronDown, FileImage, FileText, Image as ImageIcon } from 'lucide-react';
+import { Alert, Button, ButtonBase, Card, CardHeader, Checkbox, EmptyState, Menu, PageHeader, QuantityStepper, SearchInput, Skeleton, cn, useToast } from '../../components/ui';
+import { labelImage, labelsPdf, saveBlob } from './labelExport';
 
 // Only the label sheet is printed: everything else on the page (the app root) is hidden.
 const PRINT_CSS = `
@@ -91,6 +92,8 @@ export default function QrGenerator({ embedded = false }) {
   const [error, setError] = useState('');
   const [copies, setCopies] = useState(1);
   const [showPrice, setShowPrice] = useState(true);
+  const [downloading, setDownloading] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -156,6 +159,32 @@ export default function QrGenerator({ embedded = false }) {
 
   const setCopiesSafe = (n) => setCopies(Math.min(100, Math.max(1, parseInt(n, 10) || 1)));
 
+  // Download the label as an image (one label) or a PDF (all copies on A4, like the print sheet)
+  const download = async (format) => {
+    if (!canPrint) return;
+    setDownloading(format);
+    try {
+      const label = {
+        name: labelItem.item_name,
+        variants: variantLine(labelItem),
+        sku: labelItem.item_code,
+        price: showPrice ? money(labelItem.selling_price) : null,
+      };
+      const base = `QR-label-${String(labelItem.item_code || labelItem.id).replace(/[^A-Za-z0-9_-]+/g, '-')}`;
+      if (format === 'pdf') {
+        saveBlob(await labelsPdf({ qrSvg: qrData.qr_svg, label, copies }), `${base}-${copies}x.pdf`);
+        toast.success(`Saved a PDF with ${copies} label${copies === 1 ? '' : 's'}.`);
+      } else {
+        saveBlob(await labelImage({ qrSvg: qrData.qr_svg, label, format }), `${base}.${format}`);
+        toast.success(`Saved the label as ${format.toUpperCase()}.`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Could not create the file.');
+    } finally {
+      setDownloading('');
+    }
+  };
+
   const StepTitle = ({ n, children }) => (
     <span className="flex items-center gap-2">
       <span className="w-5 h-5 rounded-full bg-accent text-white text-[11px] font-semibold flex items-center justify-center">{n}</span>
@@ -169,7 +198,7 @@ export default function QrGenerator({ embedded = false }) {
 
       <PageHeader
         title="Print QR labels"
-        description="Pick a product, check the label, then print. Stick the label on the item or shelf so it can be scanned at the point of sale."
+        description="Pick a product, check the label, then print or download it (PNG, JPG or PDF). Stick the label on the item or shelf so it can be scanned at the point of sale."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -257,11 +286,29 @@ export default function QrGenerator({ embedded = false }) {
               <QuantityStepper min={1} max={100} value={copies} onChange={setCopiesSafe} label="Number of copies" />
             </div>
 
-            <Checkbox label="Show price" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} />
+            <Checkbox label="Show price" className="whitespace-nowrap" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} />
 
-            <Button icon={Printer} onClick={() => window.print()} disabled={!canPrint} className="sm:ml-auto">
-              Print {copies} label{copies === 1 ? '' : 's'}
-            </Button>
+            <div className="flex gap-2 sm:ml-auto">
+              <Menu
+                label="Download label"
+                align="end"
+                width="w-64"
+                items={[
+                  { label: 'PNG image (1 label)', icon: FileImage, onClick: () => download('png') },
+                  { label: 'JPG image (1 label)', icon: ImageIcon, onClick: () => download('jpg') },
+                  { divider: true },
+                  { label: `PDF, A4 (${copies} label${copies === 1 ? '' : 's'})`, icon: FileText, onClick: () => download('pdf') },
+                ]}
+                trigger={({ ref, ...props }) => (
+                  <Button ref={ref} variant="secondary" icon={Download} loading={Boolean(downloading)} disabled={!canPrint} {...props}>
+                    Download <ChevronDown className="w-4 h-4 -mr-1" aria-hidden="true" />
+                  </Button>
+                )}
+              />
+              <Button icon={Printer} onClick={() => window.print()} disabled={!canPrint}>
+                Print {copies} label{copies === 1 ? '' : 's'}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
