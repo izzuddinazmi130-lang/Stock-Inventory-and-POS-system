@@ -1,5 +1,11 @@
 import React from 'react';
-import { FormSection, Field, Input, ChoiceCards } from '../ui/Form';
+import { FormSection, Field, Input, Select, ChoiceCards } from '../ui/Form';
+
+// Malaysian states and federal territories for the State dropdown
+const MALAYSIAN_STATES = [
+  'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang',
+  'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'W.P. Kuala Lumpur', 'W.P. Labuan', 'W.P. Putrajaya',
+];
 
 // Fields shared by every "add / edit branch" form.
 // Pass `showStatus` on edit forms to let the branch be switched on or off.
@@ -10,10 +16,10 @@ export default function BranchFields({ form, setForm, showStatus = false }) {
       <FormSection title="Branch identity">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Branch name" required>
-            <Input required placeholder="e.g. Bangi Central" value={form.name} onChange={set('name')} />
+            <Input required placeholder="e.g. Kuala Terengganu" value={form.name} onChange={set('name')} />
           </Field>
-          <Field label="Branch code" optional hint="Short code printed at the start of every SKU, e.g. KAF-BG.">
-            <Input placeholder="e.g. KAF-BG" value={form.branch_code} onChange={e => setForm({ ...form, branch_code: e.target.value.toUpperCase() })} className="font-mono" />
+          <Field label="Branch code" optional hint="Short code printed at the start of every SKU, e.g. KAF-KT.">
+            <Input placeholder="e.g. KAF-KT" value={form.branch_code} onChange={e => setForm({ ...form, branch_code: e.target.value.toUpperCase() })} className="font-mono" />
           </Field>
         </div>
         {showStatus && (
@@ -36,13 +42,18 @@ export default function BranchFields({ form, setForm, showStatus = false }) {
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="City" optional>
-            <Input placeholder="e.g. Bandar Baru Bangi" value={form.city} onChange={set('city')} />
+            <Input placeholder="e.g. Chendering" value={form.city} onChange={set('city')} />
           </Field>
           <Field label="State" optional>
-            <Input placeholder="e.g. Selangor" value={form.state} onChange={set('state')} />
+            <Select value={form.state || ''} onChange={set('state')}>
+              <option value="">Select a state…</option>
+              {MALAYSIAN_STATES.map(state => <option key={state} value={state}>{state}</option>)}
+              {/* A state saved earlier as free text stays selectable, so editing the branch doesn't drop it */}
+              {form.state && !MALAYSIAN_STATES.includes(form.state) && <option value={form.state}>{form.state}</option>}
+            </Select>
           </Field>
           <Field label="Postcode" optional>
-            <Input inputMode="numeric" placeholder="e.g. 43650" value={form.postcode} onChange={set('postcode')} />
+            <Input inputMode="numeric" placeholder="e.g. 20000" value={form.postcode} onChange={set('postcode')} />
           </Field>
         </div>
       </FormSection>
@@ -53,10 +64,10 @@ export default function BranchFields({ form, setForm, showStatus = false }) {
             <Input placeholder="Full name" value={form.contact_person} onChange={set('contact_person')} />
           </Field>
           <Field label="Phone" optional>
-            <Input type="tel" placeholder="+60 3-8920 1122" value={form.contact_phone} onChange={set('contact_phone')} />
+            <Input type="tel" placeholder="+60 12-33445566" value={form.contact_phone} onChange={set('contact_phone')} />
           </Field>
           <Field label="Email" optional>
-            <Input type="email" placeholder="branch@company.com" value={form.contact_email} onChange={set('contact_email')} />
+            <Input type="email" placeholder="you@gmail.com" value={form.contact_email} onChange={set('contact_email')} />
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
