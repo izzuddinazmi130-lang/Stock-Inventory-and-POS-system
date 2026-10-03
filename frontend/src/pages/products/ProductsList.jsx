@@ -325,13 +325,39 @@ export default function ProductsList() {
   const handleDelete = async (id, name) => {
     const ok = await confirm({
       title: `Delete ${name}?`,
-      message: 'This permanently removes everything about this product in every branch: stock, movements, damage reports and photos. It cannot be undone.',
+      message: 'This permanently removes everything about this product in every branch: stock, movements, damage reports and photos. It cannot be undone.\n\nTo take it out of just one branch, use “Remove from branch” instead.',
       confirmLabel: 'Delete product',
       tone: 'danger',
     });
     if (!ok) return;
     try {
       const res = await api.delete(`/products/${id}`);
+      if (res.data.success) {
+        setSuccess(res.data.message);
+        fetchItems();
+      }
+    } catch (err) {
+      notifyError(err.response?.data?.message || err.message);
+    }
+  };
+
+  // ── Remove a product from ONE branch (it stays in the others) ──
+  const handleRemoveFromBranch = async (product, branch, branchCount) => {
+    const qty = parseInt(branch.quantity, 10) || 0;
+    const others = branchCount - 1;
+    const ok = await confirm({
+      title: `Remove ${product.item_name} from ${branch.branch_name}?`,
+      message: [
+        others === 1 ? 'It stays in the other branch with its stock.' : `It stays in the other ${others} branches with their stock.`,
+        qty !== 0 ? `The ${qty} unit${Math.abs(qty) === 1 ? '' : 's'} counted at ${branch.branch_name} will be written off (recorded as a stock adjustment).` : null,
+        'Past sales and stock history for this branch are kept.',
+      ].filter(Boolean).join('\n\n'),
+      confirmLabel: 'Remove from branch',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await api.delete(`/products/${product.id}/branches/${branch.branch_id}`);
       if (res.data.success) {
         setSuccess(res.data.message);
         fetchItems();
@@ -560,6 +586,7 @@ export default function ProductsList() {
             onQr={openQrModal}
             onEdit={openEditModal}
             onDelete={handleDelete}
+            onRemoveFromBranch={handleRemoveFromBranch}
           />
         ) : (
           <ByBranchTable
@@ -575,6 +602,7 @@ export default function ProductsList() {
             onQr={openQrModal}
             onEdit={openEditModal}
             onDelete={handleDelete}
+            onRemoveFromBranch={handleRemoveFromBranch}
           />
         )}
       </Card>

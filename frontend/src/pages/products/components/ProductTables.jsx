@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpDown, ChevronRight, Pencil, QrCode, Trash2, Package, Plus, RotateCcw, Building2 } from 'lucide-react';
+import { ArrowUpDown, ChevronRight, Pencil, QrCode, Trash2, Package, Plus, RotateCcw, Building2, MinusCircle } from 'lucide-react';
 import {
   Badge, BusinessDot, Button, ButtonBase, IconButton, Menu, StatusPill, Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../../components/ui';
@@ -74,7 +74,7 @@ function EmptyAction({ hasFilters, onClearFilters }) {
 /** One row per product per branch (default view). */
 export function ByBranchTable({
   items, loading, error, onRetry, isSuperAdmin, highlightId, hasFilters, onClearFilters,
-  onAdjust, onQr, onEdit, onDelete,
+  onAdjust, onQr, onEdit, onDelete, onRemoveFromBranch,
 }) {
   const cols = isSuperAdmin ? 6 : 5;
   return (
@@ -133,6 +133,13 @@ export function ByBranchTable({
                       { label: 'Show QR label', icon: QrCode, onClick: () => onQr(item) },
                       { label: 'Edit product', icon: Pencil, onClick: () => onEdit(item) },
                       { divider: true },
+                      {
+                        label: isSuperAdmin ? `Remove from ${item.branch_name || 'this branch'}` : 'Remove from this branch',
+                        icon: MinusCircle,
+                        tone: 'danger',
+                        onClick: () => onRemoveFromBranch(item, { branch_id: item.branch_id, branch_name: item.branch_name, quantity: item.quantity }, Number(item.branch_count) || 1),
+                        hidden: !(Number(item.branch_count) > 1),
+                      },
                       { label: 'Delete product', icon: Trash2, tone: 'danger', onClick: () => onDelete(item.id, item.item_name) },
                     ]}
                   />
@@ -149,7 +156,7 @@ export function ByBranchTable({
 /** One row per product with the combined stock; expand to see each branch (super admin). */
 export function CombinedTable({
   products, loading, error, onRetry, expandedIds, onToggle, hasFilters, onClearFilters,
-  onAdjust, onQr, onEdit, onDelete,
+  onAdjust, onQr, onEdit, onDelete, onRemoveFromBranch,
 }) {
   return (
     <Table minWidth="60rem">
@@ -232,6 +239,14 @@ export function CombinedTable({
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className={cn('font-semibold tabular-nums', level === 'out' ? 'text-danger-fg' : level === 'low' ? 'text-warning-fg' : 'text-ink')}>{br.quantity}</span>
                               <Button variant="secondary" size="sm" onClick={() => onAdjust(prod, br.branch_id)}>Adjust</Button>
+                              {prod.branches.length > 1 && (
+                                <IconButton
+                                  icon={MinusCircle}
+                                  label={`Remove from ${br.branch_name}`}
+                                  className="hover:bg-danger-muted hover:text-danger-fg"
+                                  onClick={() => onRemoveFromBranch(prod, br, prod.branches.length)}
+                                />
+                              )}
                             </div>
                           </div>
                         );

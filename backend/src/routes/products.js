@@ -94,7 +94,8 @@ router.get('/', authenticateToken, async (req, res) => {
         p.min_quantity, p.min_quantity as minimum_quantity, 
         p.status, p.new_until,
         p.business_id, b2.name as business_name, b2.industry as business_type,
-        pbs.branch_id, br.name as branch_name, br.branch_code, pbs.quantity
+        pbs.branch_id, br.name as branch_name, br.branch_code, pbs.quantity,
+        (SELECT COUNT(*) FROM product_branch_stock s2 WHERE s2.product_id = p.id) AS branch_count
       FROM products p
       JOIN product_branch_stock pbs ON pbs.product_id = p.id
       JOIN branches br ON br.id = pbs.branch_id
@@ -346,7 +347,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
         p.price_customer as selling_price, p.price_dealer, p.price_staff, p.cost_price,
         p.min_quantity as minimum_quantity, p.status, p.new_until,
         p.business_id, b2.name as business_name, b2.industry as business_type,
-        pbs.branch_id, br.name as branch_name, br.branch_code, pbs.quantity
+        pbs.branch_id, br.name as branch_name, br.branch_code, pbs.quantity,
+        (SELECT COUNT(*) FROM product_branch_stock s2 WHERE s2.product_id = p.id) AS branch_count
       FROM products p
       JOIN product_branch_stock pbs ON pbs.product_id = p.id
       JOIN branches br ON br.id = pbs.branch_id
@@ -877,6 +879,81 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
 });
 
 // ─── DELETE /api/products/:id ────────────────────────────────────────────────
+// ─── DELETE /api/products/:id/branches/:branchId ─────────────────────────────
+// Take a product out of ONE branch; it stays (with its stock) in every other branch.
+//  - Branch admin: own branch only. Super admin: any branch.
+//  - Not allowed for the last branch that stocks it (use DELETE /:id to remove the product completely).
+//  - Units still held at that branch are written off with an 'adjust' movement so reports stay correct.
+//  - Sales, past movements and damage reports for that branch are kept.
+router.delete('/:id/branches/:branchId', authenticateToken, async (req, res) => {
+  const productId = parseInt(req.params.id, 10);
+  const branchId = parseInt(req.params.branchId, 10);
+  if (isNaN(productId) || isNaN(branchId)) {
+    return res.status(400).json({ success: false, message: 'Invalid product or branch.' });
+  }
+  const connection = await pool.getConnection();
+  try {
+    const [products] = await connection.query('SELECT * FROM products WHERE id = ?', [productId]);
+    if (!products.length) return res.status(404).json({ success: false, message: 'Product not found.' });
+    const product = products[0];
+
+    if (req.user.role !== 'super_admin') {
+      const scope = await resolveScope(req, { level: 'branch' });
+      if (scope.branchId !== branchId || !assertProductInUserBusiness(req.user, product)) {
+        return res.status(403).json({ success: false, message: 'You can only remove products from your own branch.' });
+      }
+    }
+
+    const [[branch]] = await connection.query('SELECT id, name FROM branches WHERE id = ?', [branchId]);
+    if (!branch) return res.status(404).json({ success: false, message: 'Branch not found.' });
+
+    await connection.beginTransaction();
+    const [stockRows] = await connection.query('SELECT branch_id, quantity FROM product_branch_stock WHERE product_id = ? FOR UPDATE', [productId]);
+    const here = stockRows.find(r => r.branch_id === branchId);
+    if (!here) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: `This product is not stocked at ${branch.name}.` });
+    }
+    if (stockRows.length === 1) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        code: 'ONLY_BRANCH',
+        message: `${branch.name} is the only branch that stocks this product. Use “Delete product” to remove it completely.`,
+      });
+    }
+
+    const qty = parseInt(here.quantity, 10) || 0;
+    if (qty !== 0) {
+      await connection.query(
+        `INSERT INTO stock_movements (branch_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, note, performed_by, created_at)
+         VALUES (?, ?, 'adjust', ?, ?, 0, ?, ?, ?, ?, NOW())`,
+        [branchId, productId, Math.abs(qty), qty, product.cost_price || 0, product.price_customer || 0, `Removed from branch ${branch.name}`, req.user.id]
+      );
+    }
+    await connection.query('DELETE FROM product_branch_stock WHERE product_id = ? AND branch_id = ?', [productId, branchId]);
+    await connection.commit();
+
+    await recordAuditLog(req.user.id, req.user.role, 'REMOVE_PRODUCT_FROM_BRANCH', 'product_branch_stock', productId,
+      { branch_id: branchId, branch_name: branch.name, quantity: qty },
+      { sku: product.sku, name: product.name, remaining_branches: stockRows.length - 1 }, req);
+    emitToBusiness(req, product.business_id, 'inventory_updated', { product_id: productId, branch_id: branchId, action: 'remove_from_branch' });
+
+    const left = stockRows.length - 1;
+    return res.json({
+      success: true,
+      message: `${product.name} was removed from ${branch.name}. It is still stocked in ${left} other branch${left === 1 ? '' : 'es'}.`,
+      written_off: qty,
+    });
+  } catch (err) {
+    await connection.rollback().catch(() => {});
+    if (handleScopeError(res, err)) return;
+    return res.status(500).json({ success: false, message: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
 router.delete('/:id', authenticateToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -907,7 +984,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       }
       if (inOtherBranch) {
         connection.release();
-        return res.status(403).json({ success: false, message: 'This product is also stocked in other branches of your business. Only a Super Admin can delete it.' });
+        return res.status(403).json({ success: false, message: 'This product is also stocked in other branches. Use “Remove from this branch” to take it out of your branch only; deleting it everywhere needs a Super Admin.' });
       }
     }
 
