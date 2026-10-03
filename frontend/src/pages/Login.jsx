@@ -3,12 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle2, Lock } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
-import AuthPreview from '../components/auth/AuthPreview';
+import AuthPreview, { AuthArtwork } from '../components/auth/AuthPreview';
 import {
   Alert, BusinessDot, Button, Checkbox, Field, Input, PasswordInput, Select, SegmentedControl, cn,
 } from '../components/ui';
 
 const REMEMBER_KEY = 'hq-remembered-login';
+// Faint blue and violet light around the card, picking up the colours of the artwork
+const PAGE_GLOW = {
+  backgroundImage: [
+    'radial-gradient(45% 55% at 0% 0%, rgb(var(--info) / 0.10) 0%, transparent 70%)',
+    'radial-gradient(45% 55% at 100% 100%, rgb(var(--accent) / 0.10) 0%, transparent 70%)',
+  ].join(', '),
+};
 const EMPTY_FORM = { email: '', password: '', confirmPassword: '', full_name: '', business_id: '', branch_id: '' };
 
 // Sign-in controls: 44px tall, 10px radius (rounded-lg), 14px text, 13px labels
@@ -143,21 +150,26 @@ export default function Login() {
   const selectedBusiness = businesses.find(b => String(b.id) === String(formData.business_id));
 
   return (
-    <div className="min-h-screen bg-surface text-ink flex">
-      <AuthPreview className="hidden min-[900px]:flex w-[45%] min-h-screen" />
+    <div className="relative min-h-screen overflow-hidden bg-page text-ink flex flex-col items-center justify-center px-3 py-6 sm:px-6 sm:py-10">
+      {/* Soft colour wash behind the card */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={PAGE_GLOW} />
 
-      <div className="flex min-h-screen flex-1 flex-col px-6 py-8 sm:px-10">
-        <header className="flex justify-center min-[900px]:justify-start">
-          <span className="inline-flex items-center gap-2.5">
-            <BrandMark />
-            <span className="text-[15px] font-semibold tracking-[-0.01em] text-ink">HQ Inventory</span>
-          </span>
-        </header>
+      <div className="relative grid w-full max-w-[1120px] rounded-[28px] border border-line/70 bg-surface p-2.5 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_30px_80px_-24px_rgb(var(--ink)/0.22)] sm:p-3 min-[900px]:min-h-[680px] min-[900px]:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] animate-slide-up">
+        <AuthPreview className="hidden min-[900px]:flex" />
 
-        <main className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-[400px] animate-slide-up">
+        {/* Phones and small tablets: a slim strip of the artwork instead of the side panel */}
+        <div className="relative h-28 overflow-hidden rounded-[22px] min-[900px]:hidden">
+          <AuthArtwork />
+          <div className="relative flex h-full items-end p-5">
+            <BrandMark className="[&_img]:brightness-0 [&_img]:invert" />
+          </div>
+        </div>
+
+        <main className="flex items-center justify-center px-4 py-10 sm:px-10 min-[900px]:px-14 min-[900px]:py-12">
+          <div className="w-full max-w-[400px]">
+            <BrandMark size="lg" className="mb-7 hidden min-[900px]:inline-flex" />
             <div className="mb-8">
-              <h1 className="text-[28px] font-semibold leading-9 tracking-[-0.02em] text-ink">
+              <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
                 {isRegisterMode ? 'Request access' : 'Welcome back'}
               </h1>
               <p className="mt-2 text-sm text-ink-muted">
@@ -272,11 +284,11 @@ export default function Login() {
             )}
           </div>
         </main>
-
-        <footer className="text-center text-caption text-ink-muted min-[900px]:text-left">
-          © {new Date().getFullYear()} HQ Inventory
-        </footer>
       </div>
+
+      <footer className="relative mt-6 text-center text-caption text-ink-muted">
+        © {new Date().getFullYear()} HQ Inventory · Inventory &amp; point of sale
+      </footer>
     </div>
   );
 }

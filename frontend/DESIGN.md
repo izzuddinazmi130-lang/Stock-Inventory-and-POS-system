@@ -226,26 +226,17 @@ out.
   - Touch screens don't peek.
 
 ### Sign-in page
-`pages/Login.jsx` plus `components/auth/AuthPreview.jsx`. This is a full-height split screen on white,
-with no floating card:
-- **Left (45%, from 900px up):** `AuthPreview`, an inset brand panel (`rounded-[28px]`, inside a 12px white
-  margin):
-  - **Background:** layered from tokens: an `accent` → `accent-hover` → `ink` gradient with two soft colour
-    fields, a fading 44px grid, fine film grain (SVG noise at 18%, overlay blend) and one slow drifting glow.
-  - **Centrepiece (decorative, sample figures):** a frosted-glass "Stock overview" card with a trend line and
-    the in / low / out split, plus two white floating chips: "Received 24 units" and "Synced across 3 sites".
-  - **Caption:** white, 22px semibold, with white dot indicators. It rotates every 5s, pauses on hover, on
-    focus and for reduced motion, and the active slide lifts the element it describes.
-- **Right:**
-  - the logo and "HQ Inventory" wordmark at the top-left;
-  - a form column of max 400px, vertically centred, with a 28px heading at -0.02em;
-  - `SegmentedControl` tabs;
-  - fields `h-11` with 10px radius, 13px labels, no asterisks and inline errors (a wrong password shows
-    under the password field);
-  - "Remember me" and "Forgot password?" on one row;
-  - a full-width 44px button with the lock note under it;
-  - the footer at the bottom.
-- **Below 900px:** only the form column shows, with the logo centred above it.
+`pages/Login.jsx` plus `components/auth/AuthPreview.jsx`:
+- **Page:** `bg-page` with a faint `info` / `accent` wash, and one floating white card (max 1120px,
+  `rounded-[28px]`, 12px inner padding, soft large shadow) centred on it. The footer sits under the card.
+- **Left panel (from 900px up):** `AuthArtwork`, the gradient photo `src/assets/auth/gradient.jpg`, rotated
+  180° so its dark area sits bottom-left. It has fine film grain and an `ink` fade at the bottom for text
+  contrast.
+  - The HQ mark sits top-left in white.
+  - At the bottom is a rotating headline: eyebrow, 32px semibold title, one line, then white dots. It
+    rotates every 5s and pauses on hover, on focus and for reduced motion.
+- **Right:** the HQ mark, a 30px heading, the subtitle, then the tabs and forms (unchanged).
+- **Below 900px:** a 112px strip of the same artwork with the white mark replaces the side panel.
 
 ## 5. Accessibility checklist for new UI
 - Everything interactive is reachable by keyboard and shows the `focusRing`.
