@@ -170,13 +170,17 @@ export default function Login() {
               one size and the logo, heading and tabs never move when switching tabs. */}
           <div className="w-full max-w-[400px] min-h-[49.5rem] sm:min-h-[43rem] min-[900px]:min-h-[47.5rem]">
             <BrandMark size="lg" className="mb-7 hidden min-[900px]:inline-flex" />
-            <div key={isRegisterMode ? 'heading-register' : 'heading-signin'} className="mb-8 animate-fade-in">
-              <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
-                {isRegisterMode ? 'Request access' : 'Welcome back'}
-              </h1>
-              <p className="mt-2 text-sm text-ink-muted">
-                {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to manage your inventory.'}
-              </p>
+            {/* The heading is the only child here: re-keying it on a tab switch replays the fade without ever
+                leaving a second heading next to it */}
+            <div className="mb-8">
+              <div key={isRegisterMode ? 'register' : 'signin'} className="animate-fade-in">
+                <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
+                  {isRegisterMode ? 'Request access' : 'Welcome back'}
+                </h1>
+                <p className="mt-2 text-sm text-ink-muted">
+                  {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to manage your inventory.'}
+                </p>
+              </div>
             </div>
 
             <SegmentedControl
@@ -189,7 +193,8 @@ export default function Login() {
             />
 
             {/* Switching tabs fades the fields in (no height change: see the reserved height above) */}
-            <div key={isRegisterMode ? 'body-register' : 'body-signin'} className="animate-slide-up">
+            <div className="relative">
+            <div key={isRegisterMode ? 'register' : 'signin'} className="animate-slide-up">
             {error && <Alert tone="danger" className="mb-6" onClose={() => setError('')}>{error}</Alert>}
 
             {isRegisterMode && requestSent ? (
@@ -286,6 +291,7 @@ export default function Login() {
                 </div>
               </form>
             )}
+            </div>
             </div>
           </div>
         </main>
