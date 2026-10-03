@@ -228,15 +228,14 @@ out.
 ### Sign-in page
 `pages/Login.jsx` plus `components/auth/AuthPreview.jsx`. This is a full-height split screen on white,
 with no floating card:
-- **Left (45%, from 900px up):** `AuthPreview` on `bg-subtle` with a faint dot grid and a `border-r`.
-  It holds three decorative mini cards (`rounded-xl border-line shadow-soft`) with sample figures:
-  - a stock summary with status dots;
-  - a product row with site badges and a "Synced" chip;
-  - a QR receiving confirmation.
-
-  Below the cards is a 3-slide caption carousel. It rotates every 5s, pauses on hover, on focus and for
-  reduced motion, and crossfades. The active slide outlines its matching card, and the active dot is an
-  `accent` pill.
+- **Left (45%, from 900px up):** `AuthPreview`, an inset brand panel (`rounded-[28px]`, inside a 12px white
+  margin):
+  - **Background:** layered from tokens: an `accent` → `accent-hover` → `ink` gradient with two soft colour
+    fields, a fading 44px grid, fine film grain (SVG noise at 18%, overlay blend) and one slow drifting glow.
+  - **Centrepiece (decorative, sample figures):** a frosted-glass "Stock overview" card with a trend line and
+    the in / low / out split, plus two white floating chips: "Received 24 units" and "Synced across 3 sites".
+  - **Caption:** white, 22px semibold, with white dot indicators. It rotates every 5s, pauses on hover, on
+    focus and for reduced motion, and the active slide lifts the element it describes.
 - **Right:**
   - the logo and "HQ Inventory" wordmark at the top-left;
   - a form column of max 400px, vertically centred, with a 28px heading at -0.02em;
