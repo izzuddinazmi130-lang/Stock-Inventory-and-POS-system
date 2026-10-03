@@ -236,6 +236,11 @@ out.
   - At the bottom is a rotating headline: eyebrow, 32px semibold title, one line, then white dots. It
     rotates every 5s and pauses on hover, on focus and for reduced motion.
 - **Right:** the HQ mark, a 30px heading, the subtitle, then the tabs and forms (unchanged).
+  - **Constant size:** the form column reserves the height of the taller "Request access" form at each
+    breakpoint (`min-h-[49.5rem] sm:min-h-[43rem] min-[900px]:min-h-[47.5rem]`). The card is the same size in
+    both tabs, and the logo, heading and tabs never move.
+  - **Tab switch:** the heading fades and the fields fade-and-rise in (200ms; off with reduced motion).
+  - **If you add fields to either form,** re-measure and update these heights.
 - **Below 900px:** a 112px strip of the same artwork with the white mark replaces the side panel.
 
 ## 5. Accessibility checklist for new UI

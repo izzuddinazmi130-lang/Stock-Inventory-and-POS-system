@@ -166,9 +166,11 @@ export default function Login() {
         </div>
 
         <main className="flex items-center justify-center px-4 py-10 sm:px-10 min-[900px]:px-14 min-[900px]:py-12">
-          <div className="w-full max-w-[400px]">
+          {/* Reserves the height of the taller "Request access" form at every breakpoint, so the card keeps
+              one size and the logo, heading and tabs never move when switching tabs. */}
+          <div className="w-full max-w-[400px] min-h-[49.5rem] sm:min-h-[43rem] min-[900px]:min-h-[47.5rem]">
             <BrandMark size="lg" className="mb-7 hidden min-[900px]:inline-flex" />
-            <div className="mb-8">
+            <div key={isRegisterMode ? 'heading-register' : 'heading-signin'} className="mb-8 animate-fade-in">
               <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
                 {isRegisterMode ? 'Request access' : 'Welcome back'}
               </h1>
@@ -186,6 +188,8 @@ export default function Login() {
               tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'register', label: 'Request access' }]}
             />
 
+            {/* Switching tabs fades the fields in (no height change: see the reserved height above) */}
+            <div key={isRegisterMode ? 'body-register' : 'body-signin'} className="animate-slide-up">
             {error && <Alert tone="danger" className="mb-6" onClose={() => setError('')}>{error}</Alert>}
 
             {isRegisterMode && requestSent ? (
@@ -282,6 +286,7 @@ export default function Login() {
                 </div>
               </form>
             )}
+            </div>
           </div>
         </main>
       </div>
