@@ -212,7 +212,7 @@ export default function Login() {
               <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-4">
                 {isRegisterMode && (
                   <Field label="Full name" labelClassName={label} required hideRequiredMark error={fieldErrors.full_name}>
-                    <Input className={control} type="text" name="full_name" autoComplete="name" placeholder="e.g. Sarah Jenkins" value={formData.full_name} onChange={handleChange} />
+                    <Input className={control} type="text" name="full_name" autoComplete="name" placeholder="e.g. Ali bin Abu" value={formData.full_name} onChange={handleChange} />
                   </Field>
                 )}
 
@@ -222,7 +222,7 @@ export default function Login() {
                     type={isRegisterMode ? 'email' : 'text'}
                     name="email"
                     autoComplete={isRegisterMode ? 'email' : 'username'}
-                    placeholder="you@company.com"
+                    placeholder="you@gmail.com"
                     value={formData.email}
                     onChange={handleChange}
                   />

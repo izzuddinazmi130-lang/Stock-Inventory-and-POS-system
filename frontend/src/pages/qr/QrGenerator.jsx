@@ -300,14 +300,11 @@ export default function QrGenerator({ embedded = false }) {
                   { label: `PDF, A4 (${copies} label${copies === 1 ? '' : 's'})`, icon: FileText, onClick: () => download('pdf') },
                 ]}
                 trigger={({ ref, ...props }) => (
-                  <Button ref={ref} variant="secondary" icon={Download} loading={Boolean(downloading)} disabled={!canPrint} {...props}>
+                  <Button ref={ref} variant="primary" icon={Download} loading={Boolean(downloading)} disabled={!canPrint} {...props}>
                     Download <ChevronDown className="w-4 h-4 -mr-1" aria-hidden="true" />
                   </Button>
                 )}
               />
-              <Button icon={Printer} onClick={() => window.print()} disabled={!canPrint}>
-                Print {copies} label{copies === 1 ? '' : 's'}
-              </Button>
             </div>
           </div>
         </Card>

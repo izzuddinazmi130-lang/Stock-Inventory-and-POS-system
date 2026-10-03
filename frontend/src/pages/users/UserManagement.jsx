@@ -455,10 +455,10 @@ export default function UserManagement() {
           <FormSection title="Account">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Full name" required>
-                <Input required placeholder="e.g. Sarah Jenkins" value={addForm.full_name} onChange={e => setAddForm({ ...addForm, full_name: e.target.value })} />
+                <Input required placeholder="e.g. Ali bin Abu" value={addForm.full_name} onChange={e => setAddForm({ ...addForm, full_name: e.target.value })} />
               </Field>
               <Field label="Email" required hint="Used to sign in.">
-                <Input type="email" required placeholder="name@company.com" value={addForm.email} onChange={e => setAddForm({ ...addForm, email: e.target.value })} />
+                <Input type="email" required placeholder="you@gmail.com" value={addForm.email} onChange={e => setAddForm({ ...addForm, email: e.target.value })} />
               </Field>
             </div>
             <Field label="Password" required hint="At least 6 characters. Share it with the user privately.">

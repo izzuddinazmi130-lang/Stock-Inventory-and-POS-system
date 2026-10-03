@@ -475,7 +475,7 @@ export default function AddProductPage() {
                 autoFocus
                 value={form.item_name}
                 onChange={e => setField('item_name', e.target.value)}
-                placeholder="e.g. Kaftan Aisyah Embroidered"
+                placeholder="e.g. Kaftan Safira"
                 error={errors.item_name}
                 maxLength={200}
               />

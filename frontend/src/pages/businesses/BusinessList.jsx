@@ -286,10 +286,10 @@ function BusinessFields({ form, setForm }) {
             <Input placeholder="Full name" value={form.contact_person} onChange={set('contact_person')} />
           </Field>
           <Field label="Email" optional>
-            <Input type="email" placeholder="contact@business.com" value={form.contact_email} onChange={set('contact_email')} />
+            <Input type="email" placeholder="you@gmail.com" value={form.contact_email} onChange={set('contact_email')} />
           </Field>
           <Field label="Phone" optional>
-            <Input type="tel" placeholder="+60 12-345 6789" value={form.contact_phone} onChange={set('contact_phone')} />
+            <Input type="tel" placeholder="+60 12-33445566" value={form.contact_phone} onChange={set('contact_phone')} />
           </Field>
         </div>
       </FormSection>
