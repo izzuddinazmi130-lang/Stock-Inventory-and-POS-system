@@ -21,3 +21,4 @@ export { default as KpiCard, useCountUp } from './KpiCard';
 export { default as FilterBar } from './FilterBar';
 export { default as ScopeBadge } from './ScopeBadge';
 export { Menu } from './Menu';
+export { default as BusinessBranchFilter } from './BusinessBranchFilter';

@@ -5,7 +5,7 @@ import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { Plus, RefreshCw, Building2, Layers, PackagePlus } from 'lucide-react';
 import {
-  Button, Card, CardHeader, FilterBar, PageHeader, SearchInput, Select, SegmentedControl, useConfirm, useToast,
+  Button, BusinessBranchFilter, Card, CardHeader, FilterBar, PageHeader, SearchInput, Select, SegmentedControl, useConfirm, useToast,
 } from '../../components/ui';
 import { ByBranchTable, CombinedTable } from './components/ProductTables';
 import { AdjustStockModal, EditProductModal, QrLabelModal, AddToBranchModal } from './components/ProductModals';
@@ -518,16 +518,16 @@ export default function ProductsList() {
           aria-label="Search products"
         />
         {isSuperAdmin && (
-          <>
-            <Select wrapperClassName="md:w-44" aria-label="Business" value={filterBusiness} onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); }}>
-              <option value="">All businesses</option>
-              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-            <Select wrapperClassName="md:w-40" aria-label="Branch" value={filterBranch} onChange={e => setFilterBranch(e.target.value)} disabled={!filterBusiness && branches.length === 0}>
-              <option value="">All branches</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </>
+          <BusinessBranchFilter
+            businesses={businesses}
+            branches={branches}
+            businessId={filterBusiness}
+            branchId={filterBranch}
+            onBusinessChange={id => { setFilterBusiness(id); setFilterBranch(''); }}
+            onBranchChange={setFilterBranch}
+            businessClassName="md:w-44"
+            branchClassName="md:w-52"
+          />
         )}
         <Select wrapperClassName="md:w-40" aria-label="Category" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
           <option value="All">All categories</option>

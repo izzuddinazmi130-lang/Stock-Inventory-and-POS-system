@@ -9,7 +9,8 @@ router.use(authenticateToken, requireRole('super_admin'));
 // GET /api/audit
 router.get('/', async (req, res) => {
   try {
-    const { search, start_date, end_date, limit } = req.query;
+    // business_id / branch_id narrow the log to actions by people working in that business / branch
+    const { search, start_date, end_date, limit, business_id, branch_id } = req.query;
     let query = `
       SELECT 
         a.*,
@@ -26,6 +27,16 @@ router.get('/', async (req, res) => {
       query += ` AND (a.action LIKE ? OR u.full_name LIKE ? OR u.email LIKE ? OR a.new_values LIKE ? OR a.old_values LIKE ?)`;
       const s = `%${search.trim()}%`;
       params.push(s, s, s, s, s);
+    }
+
+    if (business_id) {
+      query += ` AND u.business_id = ?`;
+      params.push(parseInt(business_id, 10) || 0);
+    }
+
+    if (branch_id) {
+      query += ` AND u.branch_id = ?`;
+      params.push(parseInt(branch_id, 10) || 0);
     }
 
     if (start_date) {

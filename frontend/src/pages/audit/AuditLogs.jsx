@@ -3,7 +3,7 @@ import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { History, Shield, RefreshCw, User, AlertTriangle, Package, Boxes, LogIn, LogOut, CheckCircle, Laptop, Store, Building2, ShoppingCart } from 'lucide-react';
 import {
-  Badge, Button, Card, FilterBar, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
+  Badge, BusinessBranchFilter, Button, Card, FilterBar, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
 
@@ -291,6 +291,15 @@ export default function AuditLogs() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [businessId, setBusinessId] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [businesses, setBusinesses] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    api.get('/businesses').then(res => { if (res.data.success) setBusinesses(res.data.businesses || res.data.data || []); }).catch(() => {});
+    api.get('/branches').then(res => { if (res.data.success) setBranches(res.data.branches || res.data.data || []); }).catch(() => {});
+  }, []);
   
   // Inspect Modal State
   const [inspectLog, setInspectLog] = useState(null);
@@ -301,6 +310,8 @@ export default function AuditLogs() {
       setLoadError('');
       const params = {};
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (businessId) params.business_id = businessId;
+      if (branchId) params.branch_id = branchId;
       if (filterDate) {
         params.start_date = filterDate;
         params.end_date = filterDate;
@@ -322,7 +333,7 @@ export default function AuditLogs() {
       fetchAuditLogs();
     }, 200);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterDate]);
+  }, [searchQuery, filterDate, businessId, branchId]);
 
   // Parse logs with rich metadata
   const enrichedLogs = useMemo(() => {
@@ -370,8 +381,8 @@ export default function AuditLogs() {
     }).filter(d => d.changed);
   }, [inspectLog]);
 
-  const hasFilters = Boolean(searchQuery || filterDate || activeCategory !== 'all');
-  const resetFilters = () => { setSearchQuery(''); setFilterDate(''); setActiveCategory('all'); };
+  const hasFilters = Boolean(searchQuery || filterDate || businessId || branchId || activeCategory !== 'all');
+  const resetFilters = () => { setSearchQuery(''); setFilterDate(''); setBusinessId(''); setBranchId(''); setActiveCategory('all'); };
   const firstLoad = loading && logs.length === 0;
 
   return (
@@ -390,6 +401,15 @@ export default function AuditLogs() {
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
         <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by person, email, SKU, action or note…" aria-label="Search the audit log" />
+        <BusinessBranchFilter
+          businesses={businesses}
+          branches={branches}
+          businessId={businessId}
+          branchId={branchId}
+          onBusinessChange={id => { setBusinessId(id); setBranchId(''); }}
+          onBranchChange={setBranchId}
+          businessClassName="md:w-44"
+        />
         <Input type="date" className="md:w-44" aria-label="Date" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
       </FilterBar>
 

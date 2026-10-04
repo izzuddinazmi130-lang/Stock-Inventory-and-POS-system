@@ -6,7 +6,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { History, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, AlertTriangle } from 'lucide-react';
 import {
-  Button, Card, CardHeader, FilterBar, KpiCard, PageHeader, ScopeBadge, SegmentedControl, Select, StatusPill,
+  Button, BusinessBranchFilter, Card, CardHeader, FilterBar, KpiCard, PageHeader, ScopeBadge, SegmentedControl, Select, StatusPill,
   Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
 
@@ -240,19 +240,18 @@ export default function ReportsAnalytics() {
 
       <FilterBar onReset={handleResetFilters} resetVisible={hasActiveFilters}>
         {!isScopedAdmin && (
-          <>
-            <Select wrapperClassName="md:w-48" aria-label="Business" value={businessId} onChange={(e) => { setBusinessId(e.target.value); setBranchId(''); setStoreId(''); }}>
-              <option value="">All businesses</option>
-              {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-            <Select wrapperClassName="md:w-44" aria-label="Branch" value={branchId} onChange={(e) => { setBranchId(e.target.value); setStoreId(''); }} disabled={!businessId && branches.length === 0}>
-              <option value="">All branches</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </>
+          <BusinessBranchFilter
+            businesses={businesses}
+            branches={branches}
+            businessId={businessId}
+            branchId={branchId}
+            onBusinessChange={(id) => { setBusinessId(id); setBranchId(''); setStoreId(''); }}
+            onBranchChange={(id) => { setBranchId(id); setStoreId(''); }}
+            branchClassName="md:w-52"
+          />
         )}
         <Select wrapperClassName="md:w-44" aria-label="Pop-up store" value={storeId} onChange={(e) => setStoreId(e.target.value)} disabled={!storeBranchId || stores.length === 0}>
-          <option value="">All stores</option>
+          <option value="">{!storeBranchId ? 'Select branch first' : stores.length === 0 ? 'No pop-up stores' : 'All pop-up stores'}</option>
           {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
         <Select wrapperClassName="md:w-44" aria-label="Activity type" value={movementType} onChange={(e) => setMovementType(e.target.value)}>

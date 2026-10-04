@@ -7,7 +7,7 @@ import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
 import { PackageMinus, PackageX, PackagePlus, PackageCheck, ArrowRight } from 'lucide-react';
 import {
-  Button, Card, FilterBar, KpiCard, PageHeader, SearchInput, Select, StatusPill, Tabs,
+  Button, BusinessBranchFilter, Card, FilterBar, KpiCard, PageHeader, SearchInput, StatusPill, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
 
@@ -109,16 +109,16 @@ export default function LowStock() {
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
         <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, SKU, size or category…" aria-label="Search low-stock products" />
         {isSuperAdmin && (
-          <>
-            <Select wrapperClassName="md:w-44" aria-label="Business" value={businessId} onChange={e => { setBusinessId(e.target.value); setBranchId(''); }}>
-              <option value="">All businesses</option>
-              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-            <Select wrapperClassName="md:w-44" aria-label="Branch" value={branchId} onChange={e => setBranchId(e.target.value)}>
-              <option value="">All branches</option>
-              {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </>
+          <BusinessBranchFilter
+            businesses={businesses}
+            branches={branchOptions}
+            businessId={businessId}
+            branchId={branchId}
+            onBusinessChange={id => { setBusinessId(id); setBranchId(''); }}
+            onBranchChange={setBranchId}
+            businessClassName="md:w-44"
+            branchClassName="md:w-52"
+          />
         )}
       </FilterBar>
 

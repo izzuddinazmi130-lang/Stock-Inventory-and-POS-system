@@ -4,7 +4,7 @@ import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import {
-  Button, Card, CardHeader, FilterBar, IconButton, Input, KpiCard, Menu, PageHeader, SearchInput, Select, Badge,
+  Button, BusinessBranchFilter, Card, CardHeader, FilterBar, IconButton, Input, KpiCard, Menu, PageHeader, SearchInput, Badge,
   Table, THead, TBody, TH, TR, TD, TableState, Tooltip, useConfirm, useToast,
 } from '../../components/ui';
 import { ReasonBadge, ReportDamageModal, DamageDetailModal, PhotoViewer } from './components/DamageModals';
@@ -354,16 +354,16 @@ export default function DamageProducts() {
           placeholder="Search product, SKU, notes, reporter…"
           aria-label="Search damage records"
         />
-        {isSuperAdmin && (
-          <Select wrapperClassName="md:w-44" aria-label="Business" value={filterBusiness} onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); }}>
-            <option value="">All businesses</option>
-            {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </Select>
-        )}
-        <Select wrapperClassName="md:w-48" aria-label="Branch" value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
-          <option value="">All branches</option>
-          {filteredBranchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </Select>
+        <BusinessBranchFilter
+          showBusiness={isSuperAdmin}
+          businesses={businesses}
+          branches={filteredBranchOptions}
+          businessId={filterBusiness}
+          branchId={filterBranch}
+          onBusinessChange={id => { setFilterBusiness(id); setFilterBranch(''); }}
+          onBranchChange={setFilterBranch}
+          businessClassName="md:w-44"
+        />
         <Input type="date" wrapperClassName="md:w-40" className="md:w-40" aria-label="From date" value={startDate} max={endDate || undefined} onChange={e => setStartDate(e.target.value)} />
         <Input type="date" className="md:w-40" aria-label="To date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} />
       </FilterBar>

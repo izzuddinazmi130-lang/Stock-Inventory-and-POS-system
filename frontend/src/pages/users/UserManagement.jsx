@@ -6,7 +6,7 @@ import { Users, Plus, ShieldCheck, Trash2, Pencil, UserCheck, Check, X, Eye, Pau
 import { useAuth } from '../../context/AuthContext';
 import ResetPasswordModal from './components/ResetPasswordModal';
 import {
-  Modal, FormSection, Field, Input, Select, Button, ButtonBase, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
+  Modal, FormSection, Field, Input, Button, ButtonBase, BusinessBranchFilter, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
   SegmentedControl, StatusPill, BusinessDot, Table, THead, TBody, TH, TR, TD, TableState, useConfirm, useToast,
 } from '../../components/ui';
 import { RoleBadge, UserAccessFields, UserAccessModal, relativeTime } from './components/UserModals';
@@ -344,14 +344,16 @@ export default function UserManagement() {
 
       <FilterBar onReset={resetAll} resetVisible={hasFilters}>
         <SearchInput wrapperClassName="md:w-60" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search name or email…" aria-label="Search users" />
-        <Select wrapperClassName="md:w-44" aria-label="Business" value={filterBusiness} onChange={e => { setFilterBusiness(e.target.value); setFilterBranch(''); updateScopeParams(e.target.value, ''); }}>
-          <option value="">All businesses</option>
-          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </Select>
-        <Select wrapperClassName="md:w-52" aria-label="Branch" value={filterBranch} onChange={e => { setFilterBranch(e.target.value); updateScopeParams(filterBusiness, e.target.value); }}>
-          <option value="">All branches</option>
-          {branchesForFilter.map(b => <option key={b.id} value={b.id}>{b.name} ({b.business_name || 'Branch'})</option>)}
-        </Select>
+        <BusinessBranchFilter
+          businesses={businesses}
+          branches={branchesForFilter}
+          businessId={filterBusiness}
+          branchId={filterBranch}
+          onBusinessChange={id => { setFilterBusiness(id); setFilterBranch(''); updateScopeParams(id, ''); }}
+          onBranchChange={id => { setFilterBranch(id); updateScopeParams(filterBusiness, id); }}
+          businessClassName="md:w-44"
+          branchClassName="md:w-52"
+        />
       </FilterBar>
 
       <Card className="overflow-hidden">
