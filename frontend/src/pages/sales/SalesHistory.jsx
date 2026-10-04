@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
 import { SaleReceipt, ReceiptModal, PAYMENT_LABELS, rm, formatDateTime } from '../../components/pos/Receipt';
-import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard, Store, Building2, MapPin } from 'lucide-react';
+import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard, Store, Building2, MapPin, ChevronRight, Globe, ArrowLeftRight } from 'lucide-react';
 import {
-  Badge, BusinessDot, Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
+  Badge, BusinessDot, Button, ButtonBase, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
   StatusPill, Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
 
@@ -68,8 +69,21 @@ export default function SalesHistory() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [payment, setPayment] = useState('');
-  const [businessId, setBusinessId] = useState('');
-  const [branchId, setBranchId] = useState('');
+  // Head office picks what to look at first (all / a business / a branch); kept in the URL so refresh keeps it
+  const [searchParams, setSearchParams] = useSearchParams();
+  const businessId = isSuperAdmin ? (searchParams.get('business') || '') : '';
+  const branchId = isSuperAdmin ? (searchParams.get('branch') || '') : '';
+  const scopeChosen = !isSuperAdmin || searchParams.has('view');
+  const setScope = ({ business = '', branch = '' } = {}) => {
+    const next = new URLSearchParams();
+    next.set('view', '1');
+    if (business) next.set('business', String(business));
+    if (branch) next.set('branch', String(branch));
+    setSearchParams(next);
+    setLocation('');
+    setPage(1);
+  };
+  const changeScope = () => { setSearchParams(new URLSearchParams()); setLocation(''); setPage(1); };
   const [location, setLocation] = useState(''); // '' all, 'floor' shop floor, or a pop-up store id
   const [byLocation, setByLocation] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -91,8 +105,10 @@ export default function SalesHistory() {
     api.get('/branches').then(res => { if (res.data.success) setBranches(res.data.branches || []); }).catch(() => {});
   }, [isSuperAdmin]);
 
-  const branchOptions = useMemo(
-    () => (businessId ? branches.filter(b => String(b.business_id) === String(businessId)) : branches),
+  const scopeBusiness = businesses.find(b => String(b.id) === String(businessId));
+  const scopeBranch = branches.find(b => String(b.id) === String(branchId));
+  const businessBranches = useMemo(
+    () => branches.filter(b => String(b.business_id) === String(businessId)),
     [branches, businessId]
   );
 
@@ -156,8 +172,8 @@ export default function SalesHistory() {
     : 'All time';
 
   const firstLoad = loading && sales.length === 0;
-  const hasFilters = Boolean(search || payment || businessId || branchId || location || period !== 'today');
-  const resetFilters = () => { setSearchInput(''); setPayment(''); setBusinessId(''); setBranchId(''); setLocation(''); setPeriod('today'); setPage(1); };
+  const hasFilters = Boolean(search || payment || location || period !== 'today');
+  const resetFilters = () => { setSearchInput(''); setPayment(''); setLocation(''); setPeriod('today'); setPage(1); };
 
   // Pop-up stores that had sales in this period (for the Location filter)
   const storeOptions = useMemo(() => {
@@ -173,8 +189,8 @@ export default function SalesHistory() {
   const pickLocation = (l) => {
     const value = l.store_id == null ? 'floor' : String(l.store_id);
     const same = location === value && (!isSuperAdmin || String(branchId) === String(l.branch_id));
+    if (isSuperAdmin && !same && String(branchId) !== String(l.branch_id)) setScope({ business: l.business_id, branch: l.branch_id });
     setLocation(same ? '' : value);
-    if (isSuperAdmin) setBranchId(same ? '' : String(l.branch_id));
     setPage(1);
   };
 
@@ -185,6 +201,17 @@ export default function SalesHistory() {
         description="Every sale from the point of sale, with its receipt. Open a sale to view or reprint the receipt."
         actions={!isSuperAdmin && <Button icon={ScanLine} to="/qr/scan">Open point of sale</Button>}
       />
+
+      {isSuperAdmin && scopeChosen && (
+        <ScopeBar
+          business={scopeBusiness}
+          branch={scopeBranch}
+          businessBranches={businessBranches}
+          branchId={branchId}
+          onBranch={(id) => setScope({ business: businessId, branch: id })}
+          onChange={changeScope}
+        />
+      )}
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
         <SegmentedControl label="Period" value={period} onChange={changeFilter(setPeriod)} tabs={PERIODS} className="max-w-full overflow-x-auto" />
@@ -197,6 +224,17 @@ export default function SalesHistory() {
         )}
       </div>
 
+      {!scopeChosen ? (
+        <ScopePicker
+          businesses={businesses}
+          branches={branches}
+          byLocation={byLocation}
+          summary={summary}
+          loading={firstLoad}
+          rangeLabel={rangeLabel}
+          onPick={setScope}
+        />
+      ) : (<>
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <KpiCard loading={firstLoad} label="Sales" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
         <KpiCard loading={firstLoad} label="Revenue" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Total charged" />
@@ -236,18 +274,6 @@ export default function SalesHistory() {
           <option value="">All payments</option>
           {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </Select>
-        {isSuperAdmin && (
-          <>
-            <Select wrapperClassName="md:w-44" aria-label="Business" value={businessId} onChange={e => { changeFilter(setBusinessId)(e.target.value); setBranchId(''); }}>
-              <option value="">All businesses</option>
-              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-            <Select wrapperClassName="md:w-44" aria-label="Branch" value={branchId} onChange={e => changeFilter(setBranchId)(e.target.value)}>
-              <option value="">All branches</option>
-              {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </Select>
-          </>
-        )}
       </FilterBar>
 
       <Card className="overflow-hidden">
@@ -303,6 +329,7 @@ export default function SalesHistory() {
         </Table>
         <Pagination page={page} totalPages={totalPages} onChange={setPage} prevLabel="Newer" nextLabel="Older" />
       </Card>
+      </>)}
 
       {openSale && (
         <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
@@ -316,6 +343,124 @@ export default function SalesHistory() {
 function formatDay(value) {
   const d = new Date(`${value}T00:00:00`);
   return isNaN(d) ? value : d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Head office: choose what to look at before any receipts are shown
+function ScopePicker({ businesses, branches, byLocation, summary, loading, rangeLabel, onPick }) {
+  const perBranch = {};
+  byLocation.forEach(l => {
+    const t = (perBranch[l.branch_id] = perBranch[l.branch_id] || { revenue: 0, sales: 0 });
+    t.revenue += l.revenue; t.sales += l.sales_count;
+  });
+  const sum = (ids) => ids.reduce((acc, id) => ({ revenue: acc.revenue + (perBranch[id]?.revenue || 0), sales: acc.sales + (perBranch[id]?.sales || 0) }), { revenue: 0, sales: 0 });
+  const Figures = ({ revenue, sales, strong }) => (
+    <div className="text-right flex-shrink-0">
+      <div className={cn('tabular-nums text-ink', strong ? 'text-base font-semibold' : 'text-sm font-semibold')}>{loading ? '…' : rm(revenue)}</div>
+      <div className="text-caption text-ink-muted tabular-nums">{loading ? '' : `${sales} sale${sales === 1 ? '' : 's'}`}</div>
+    </div>
+  );
+
+  return (
+    <section aria-label="Choose what to view">
+      <p className="mb-3 text-sm text-ink-secondary">Choose a business or branch to see its sales. Figures are for <strong className="font-medium text-ink">{rangeLabel}</strong>.</p>
+
+      <ButtonBase
+        onClick={() => onPick({})}
+        className="group mb-4 flex w-full items-center gap-4 rounded-xl border border-line bg-surface p-4 text-left shadow-card transition-[border-color,box-shadow] duration-fast hover:border-accent-line hover:shadow-popover"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-fg"><Globe className="h-5 w-5" aria-hidden="true" /></span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-ink">All businesses</div>
+          <div className="text-caption text-ink-muted">Every branch and pop-up store together</div>
+        </div>
+        <Figures revenue={summary?.revenue || 0} sales={summary?.sales_count || 0} strong />
+        <ChevronRight className="h-4 w-4 text-ink-subtle group-hover:text-accent" aria-hidden="true" />
+      </ButtonBase>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {businesses.map(biz => {
+          const bizBranches = branches.filter(b => String(b.business_id) === String(biz.id));
+          const total = sum(bizBranches.map(b => b.id));
+          return (
+            <Card key={biz.id} className="flex flex-col overflow-hidden">
+              <div className="flex items-center gap-3 border-b border-line-soft px-5 py-4">
+                <BusinessDot business={biz} />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-ink truncate">{biz.name}</div>
+                  <div className="text-caption text-ink-muted">{bizBranches.length} branch{bizBranches.length === 1 ? '' : 'es'}</div>
+                </div>
+                <Figures revenue={total.revenue} sales={total.sales} strong />
+              </div>
+              <ul className="flex-1 divide-y divide-line-soft">
+                {bizBranches.map(br => {
+                  const t = perBranch[br.id] || { revenue: 0, sales: 0 };
+                  return (
+                    <li key={br.id}>
+                      <ButtonBase
+                        onClick={() => onPick({ business: biz.id, branch: br.id })}
+                        className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-colors duration-fast hover:bg-subtle focus-visible:outline-none focus-visible:bg-accent-soft/60"
+                      >
+                        <Building2 className="h-4 w-4 flex-shrink-0 text-ink-muted" aria-hidden="true" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-ink truncate">{br.name}</div>
+                          {br.branch_code && <div className="font-mono text-[11px] text-ink-muted">{br.branch_code}</div>}
+                        </div>
+                        <Figures revenue={t.revenue} sales={t.sales} />
+                        <ChevronRight className="h-4 w-4 text-ink-subtle group-hover:text-accent" aria-hidden="true" />
+                      </ButtonBase>
+                    </li>
+                  );
+                })}
+                {bizBranches.length === 0 && <li className="px-5 py-3 text-caption text-ink-muted">No branches yet</li>}
+              </ul>
+              <div className="border-t border-line-soft bg-subtle/60 px-5 py-2.5">
+                <Button variant="link" size="sm" iconRight={ChevronRight} onClick={() => onPick({ business: biz.id })}>View all of {biz.name}</Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// Head office: what is being viewed, with quick branch switching inside a business and a way back to the chooser
+function ScopeBar({ business, branch, businessBranches, branchId, onBranch, onChange }) {
+  return (
+    <Card className="mb-4 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span className="text-caption font-medium uppercase tracking-wide text-ink-muted">Viewing</span>
+        {!business ? (
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><Globe className="h-4 w-4 text-accent" aria-hidden="true" />All businesses</span>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><BusinessDot business={business} />{business.name}</span>
+            <ChevronRight className="h-3.5 w-3.5 text-ink-subtle" aria-hidden="true" />
+            <span className="font-semibold text-ink">{branch ? branch.name : 'All branches'}</span>
+          </>
+        )}
+      </div>
+      {business && businessBranches.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Switch branch">
+          {[{ id: '', name: 'All branches' }, ...businessBranches].map(b => {
+            const on = String(b.id) === String(branchId || '');
+            return (
+              <ButtonBase
+                key={b.id || 'all'}
+                onClick={() => onBranch(b.id)}
+                aria-pressed={on}
+                className={cn('h-8 rounded-full px-3 text-caption font-medium transition-colors duration-fast',
+                  on ? 'bg-accent text-white' : 'bg-sunken text-ink-secondary hover:bg-line-soft hover:text-ink')}
+              >
+                {b.name}
+              </ButtonBase>
+            );
+          })}
+        </div>
+      )}
+      <Button variant="secondary" size="sm" icon={ArrowLeftRight} onClick={onChange} className="flex-shrink-0">Change</Button>
+    </Card>
+  );
 }
 
 // Takings per place: each branch's shop floor and every pop-up store, for the chosen period
