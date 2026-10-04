@@ -1,4 +1,5 @@
 import React from 'react';
+import { SKU_HINT, normalizeSku, useSkuCheck, SkuStatus } from '../skuField';
 import {
   ArrowDownToLine, ArrowUpFromLine, SlidersHorizontal, ArrowUpDown, Pencil, Save, QrCode, Printer, Building2, Package,
 } from 'lucide-react';
@@ -87,24 +88,48 @@ export function AdjustStockModal({ item, form, setForm, branches, currentQty, ne
 
 // ── Edit product ────────────────────────────────────────────────────────────
 export function EditProductModal({ item, form, setForm, config, error, onDismissError, onClose, onSubmit, saving }) {
+  const skuCheck = useSkuCheck([form.sku || ''], item.id);
+  const skuStatus = skuCheck(form.sku);
+  const skuChanged = normalizeSku(form.sku) !== String(item.item_code || item.sku || '');
+  const skuProblem = skuStatus?.state === 'taken' || skuStatus?.state === 'invalid' ? skuStatus.message : '';
   return (
     <Modal
       size="lg"
       icon={Pencil}
       title="Edit product"
-      description={<>SKU <span className="font-mono text-accent">{item.item_code}</span> can't be changed. Changes apply in every branch that carries this product.</>}
+      description="Changes apply in every branch that carries this product."
       onClose={onClose}
       onSubmit={onSubmit}
       error={error}
       onDismissError={onDismissError}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button type="submit" icon={Save} loading={saving}>Save changes</Button>
+        <Button type="submit" icon={Save} loading={saving} disabled={Boolean(skuProblem)}>Save changes</Button>
       </>}
     >
       <FormSection title="Product">
         <Field label="Product name" required>
           <Input required value={form.item_name} onChange={e => setForm({ ...form, item_name: e.target.value })} />
+        </Field>
+        <Field
+          label="SKU"
+          required
+          error={skuProblem}
+          hint={skuProblem ? undefined : (skuChanged
+            ? `Was ${item.item_code || item.sku}. Labels already printed with the old SKU still scan; print new labels when you can.`
+            : SKU_HINT)}
+        >
+          <Input
+            required
+            value={form.sku}
+            onChange={e => setForm({ ...form, sku: e.target.value })}
+            error={Boolean(skuProblem)}
+            maxLength={50}
+            autoComplete="off"
+            spellCheck={false}
+            className="font-mono"
+          />
+          {skuChanged && <SkuStatus status={skuStatus} />}
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Category" required>

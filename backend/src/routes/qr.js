@@ -31,6 +31,14 @@ function parseQrCode(rawCode) {
   return code;
 }
 
+// Parameters for the exact-match lookup: the code as scanned and the SKU parsed out of an HQ label.
+// Order: sku IN (raw, clean), previous_sku IN (raw, clean), name = raw, then the same pairs for ORDER BY.
+function exactCodeParams(rawCode, cleanCode) {
+  const raw = String(rawCode || '').trim().replace(/^["']|["']$/g, '');
+  const clean = cleanCode || raw;
+  return [raw, clean, raw, clean, raw, raw, clean, raw, clean];
+}
+
 // ─── GET /api/qr/generate/:id  (product id) ──────────────────────────────────
 router.get('/generate/:id', authenticateToken, async (req, res) => {
   try {
@@ -163,19 +171,12 @@ router.get('/lookup', authenticateToken, async (req, res) => {
         JOIN businesses biz ON p.business_id = biz.id
         JOIN branches br ON br.id = ? AND p.business_id = br.business_id
         LEFT JOIN product_branch_stock pbs ON pbs.product_id = p.id AND pbs.branch_id = br.id
-        WHERE (
-          p.sku = ?
-          OR ? LIKE CONCAT('%', p.sku)
-          OR ? LIKE CONCAT('%-', p.sku)
-          OR ? LIKE CONCAT('%', p.sku, '%')
-          OR p.name = ?
-          OR CAST(p.id AS CHAR) = ?
-        )
+        WHERE (p.sku IN (?, ?) OR p.previous_sku IN (?, ?) OR p.name = ?)
         AND p.status != 'discontinued'
-        ORDER BY (p.sku = ?) DESC, LENGTH(p.sku) DESC
+        ORDER BY (p.sku IN (?, ?)) DESC, (p.previous_sku IN (?, ?)) DESC
         LIMIT 1
       `;
-      params = [targetBranch, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode];
+      params = [targetBranch, ...exactCodeParams(rawCode, cleanCode)];
     } else {
       query = `
         SELECT 
@@ -201,19 +202,12 @@ router.get('/lookup', authenticateToken, async (req, res) => {
           NULL AS branch_name
         FROM products p
         JOIN businesses biz ON p.business_id = biz.id
-        WHERE (
-          p.sku = ?
-          OR ? LIKE CONCAT('%', p.sku)
-          OR ? LIKE CONCAT('%-', p.sku)
-          OR ? LIKE CONCAT('%', p.sku, '%')
-          OR p.name = ?
-          OR CAST(p.id AS CHAR) = ?
-        )
+        WHERE (p.sku IN (?, ?) OR p.previous_sku IN (?, ?) OR p.name = ?)
         AND p.status != 'discontinued'
-        ORDER BY (p.sku = ?) DESC, LENGTH(p.sku) DESC
+        ORDER BY (p.sku IN (?, ?)) DESC, (p.previous_sku IN (?, ?)) DESC
         LIMIT 1
       `;
-      params = [cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode];
+      params = exactCodeParams(rawCode, cleanCode);
     }
 
     const [rows] = await pool.query(query, params);
@@ -366,26 +360,19 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       const [pRows] = await connection.query(`
         SELECT p.* FROM products p
         JOIN branches br ON br.id = ? AND p.business_id = br.business_id
-        WHERE (
-          p.id = ?
-          OR p.sku = ?
-          OR ? LIKE CONCAT('%', p.sku)
-          OR ? LIKE CONCAT('%-', p.sku)
-          OR ? LIKE CONCAT('%', p.sku, '%')
-          OR p.name = ?
-        )
+        WHERE (p.id = ? OR p.sku IN (?, ?) OR p.previous_sku IN (?, ?) OR p.name = ?)
         AND p.status != 'discontinued'
-        ORDER BY (p.sku = ?) DESC, LENGTH(p.sku) DESC
+        ORDER BY (p.id = ?) DESC, (p.sku IN (?, ?)) DESC, (p.previous_sku IN (?, ?)) DESC
         LIMIT 1
       `, [
         targetBranch,
-        item.product_id || 0,
-        cleanSku || '',
-        cleanSku || '',
-        cleanSku || '',
-        cleanSku || '',
-        item.name || cleanSku || '',
-        cleanSku || ''
+        parseInt(item.product_id, 10) || 0,
+        String(rawItemCode).trim(), cleanSku || '',
+        String(rawItemCode).trim(), cleanSku || '',
+        item.name || String(rawItemCode).trim(),
+        parseInt(item.product_id, 10) || 0,
+        String(rawItemCode).trim(), cleanSku || '',
+        String(rawItemCode).trim(), cleanSku || '',
       ]);
 
       const product = pRows.length > 0 ? pRows[0] : null;
@@ -674,18 +661,11 @@ router.post('/scan-deduct', authenticateToken, async (req, res) => {
        FROM products p
        JOIN branches br ON br.id = ? AND p.business_id = br.business_id
        LEFT JOIN product_branch_stock pbs ON pbs.product_id = p.id AND pbs.branch_id = br.id
-       WHERE (
-         p.sku = ?
-         OR ? LIKE CONCAT('%', p.sku)
-         OR ? LIKE CONCAT('%-', p.sku)
-         OR ? LIKE CONCAT('%', p.sku, '%')
-         OR p.name = ?
-         OR CAST(p.id AS CHAR) = ?
-       )
+       WHERE (p.sku IN (?, ?) OR p.previous_sku IN (?, ?) OR p.name = ?)
        AND p.status != 'discontinued'
-       ORDER BY (p.sku = ?) DESC, LENGTH(p.sku) DESC
+       ORDER BY (p.sku IN (?, ?)) DESC, (p.previous_sku IN (?, ?)) DESC
        LIMIT 1`,
-      [targetBranch, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode, cleanCode]
+      [targetBranch, ...exactCodeParams(qr_code, cleanCode)]
     );
 
     if (lookupRows.length === 0) {

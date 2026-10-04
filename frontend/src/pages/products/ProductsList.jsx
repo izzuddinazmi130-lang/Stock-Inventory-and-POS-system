@@ -275,6 +275,7 @@ export default function ProductsList() {
     setModalError('');
     setEditForm({
       item_name:        item.item_name || item.name || '',
+      sku:              item.item_code || item.sku || '',
       category:         item.category || '',
       variants:         { ...(item.variants || {}) },
       status:           item.status === 'discontinued' ? 'discontinued' : 'available',
@@ -295,11 +296,13 @@ export default function ProductsList() {
     e.preventDefault();
     setModalError('');
     if (!editForm.item_name.trim()) { setModalError('Product name is required.'); return; }
+    if (!editForm.sku.trim()) { setModalError('SKU is required.'); return; }
     const num = (v) => (v === '' || v == null ? 0 : parseFloat(v) || 0);
     try {
       setSaving(true);
       const res = await api.put(`/products/${selectedItem.id}`, {
         item_name: editForm.item_name.trim(),
+        sku: editForm.sku.trim().replace(/\s+/g, ' '),
         category: editForm.category,
         status: editForm.status,
         variants: editForm.variants,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { SKU_HINT, normalizeSku, skuFormatError, useSkuCheck, SkuStatus } from './skuField';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Layout from '../../components/Layout';
@@ -38,6 +39,7 @@ const ROW_FIELDS = ['quantity', 'minimum_quantity', ...PRICE_FIELDS.map(p => p.k
 
 const EMPTY_FORM = {
   item_name: '',
+  sku: '',
   category: '',
   variants: {},
   size_variants: [],
@@ -132,7 +134,6 @@ export default function AddProductPage() {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [createdProduct, setCreatedProduct] = useState(null);
-  const [previewSku, setPreviewSku] = useState('');
 
   // ── Warn before closing or reloading the tab with a half-filled product
   const hasUnsavedWork = !createdProduct && JSON.stringify(form) !== JSON.stringify(EMPTY_FORM);
@@ -190,18 +191,18 @@ export default function AddProductPage() {
     }
   }, [selectedBiz, isSuperAdmin]);
 
-  // SKU preview for the review step
-  useEffect(() => {
-    const branchId = selectedBranches[0];
-    if (!branchId || !form.category) { setPreviewSku(''); return; }
-    api.get('/products/preview-sku', { params: { branch_id: branchId, category: form.category } })
-      .then(r => { if (r.data.success) setPreviewSku(r.data.sku); })
-      .catch(() => {});
-  }, [selectedBranches, form.category]);
-
   const sizeAttribute = variantAttributes.find(attr => attr.attribute_key === 'size' && attr.input_type === 'select');
   const otherAttributes = variantAttributes.filter(attr => attr !== sizeAttribute);
   const hasSizes = form.size_variants.length > 0;
+
+  // SKUs are typed in (to match other sales platforms) and checked live for clashes with existing products
+  const skuList = hasSizes ? form.size_variants.map(row => row.sku) : [form.sku];
+  const skuCheck = useSkuCheck(skuList);
+  const skuError = (sku, key) => {
+    if (errors[key]) return errors[key];
+    const status = skuCheck(sku);
+    return status?.state === 'taken' || status?.state === 'invalid' ? status.message : '';
+  };
   const selectedBizObj = isSuperAdmin
     ? businesses.find(b => String(b.id) === String(selectedBiz))
     : { id: user?.business_id, name: user?.business_name };
@@ -218,7 +219,7 @@ export default function AddProductPage() {
       const exists = prev.size_variants.some(row => row.size === size);
       if (exists) return { ...prev, size_variants: prev.size_variants.filter(row => row.size !== size) };
       // New size rows start from the "fill all sizes" defaults
-      const row = { size };
+      const row = { size, sku: '' };
       ROW_FIELDS.forEach(k => { row[k] = prev[k]; });
       // Keep sizes in the order the business defined them
       const order = getAttributeOptions(sizeAttribute?.options);
@@ -230,6 +231,7 @@ export default function AddProductPage() {
 
   const updateSizeRow = (size, key, value) => {
     setForm(prev => ({ ...prev, size_variants: prev.size_variants.map(row => (row.size === size ? { ...row, [key]: value } : row)) }));
+    if (errors[`${size}.${key}`]) setErrors(e => ({ ...e, [`${size}.${key}`]: undefined }));
   };
 
   const applyDefaultsToAllSizes = () => {
@@ -254,6 +256,17 @@ export default function AddProductPage() {
       if (!form.item_name.trim()) e.item_name = 'Enter the product name.';
       if (!form.category) e.category = 'Choose a category.';
       if (sizeAttribute && form.size_variants.length === 0) e.sizes = `Pick at least one ${sizeAttribute.label.toLowerCase()}.`;
+      // Every product (or every size) needs its own SKU
+      const rows = hasSizes ? form.size_variants.map(row => ({ key: `${row.size}.sku`, sku: row.sku })) : (sizeAttribute ? [] : [{ key: 'sku', sku: form.sku }]);
+      const seen = {};
+      rows.forEach(({ key, sku }) => {
+        const value = normalizeSku(sku);
+        const problem = skuFormatError(value) || (skuCheck(value)?.state === 'taken' ? skuCheck(value).message : '');
+        if (problem) { e[key] = problem; return; }
+        const lower = value.toLowerCase();
+        if (seen[lower]) { e[key] = 'Same SKU as another size. Each size needs its own SKU.'; e[seen[lower]] = e[seen[lower]] || e[key]; }
+        else seen[lower] = key;
+      });
     }
     if (which === 'pricing') {
       const rows = hasSizes ? form.size_variants : [form];
@@ -292,6 +305,7 @@ export default function AddProductPage() {
     try {
       const payload = {
         item_name:         form.item_name.trim(),
+        sku:               hasSizes ? undefined : normalizeSku(form.sku),
         category:          form.category,
         quantity:          toInt(form.quantity),
         minimum_quantity:  form.minimum_quantity === '' ? 5 : toInt(form.minimum_quantity),
@@ -301,6 +315,7 @@ export default function AddProductPage() {
         price_staff:       toMoney(form.price_staff),
         size_variants:     form.size_variants.map(row => ({
           size: row.size,
+          sku: normalizeSku(row.sku),
           quantity: toInt(row.quantity),
           minimum_quantity: row.minimum_quantity === '' ? 5 : toInt(row.minimum_quantity),
           unit_price: toMoney(row.unit_price),
@@ -323,7 +338,10 @@ export default function AddProductPage() {
         setError(res.data.message || 'Failed to create product.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      const message = err.response?.data?.message || err.message;
+      // A SKU problem is fixed on the details step, where the SKU boxes are
+      if (/^SKU_/.test(err.response?.data?.code || '')) { go('details'); setError(message); }
+      else setError(message);
     } finally {
       setLoading(false);
     }
@@ -480,6 +498,23 @@ export default function AddProductPage() {
               />
             </Field>
 
+            {!sizeAttribute && (
+              <Field label="SKU" required error={skuError(form.sku, 'sku')} hint={skuError(form.sku, 'sku') ? undefined : SKU_HINT}>
+                <Input
+                  value={form.sku}
+                  onChange={e => setField('sku', e.target.value)}
+                  placeholder="e.g. KF-SAFIRA-01"
+                  error={Boolean(skuError(form.sku, 'sku'))}
+                  maxLength={50}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="font-mono"
+                  icon={Hash}
+                />
+                <SkuStatus status={skuCheck(form.sku)} />
+              </Field>
+            )}
+
             <Field label="Category" required error={errors.category}>
               {configLoaded && categories.length === 0 ? (
                 <Alert tone="warning">
@@ -522,7 +557,7 @@ export default function AddProductPage() {
                 label={`${sizeAttribute.label}s you are adding`}
                 required
                 error={errors.sizes}
-                hint="Each size becomes its own product with its own SKU, stock and prices."
+                hint="Each size becomes its own product with its own SKU, stock and prices. You’ll type each size’s SKU below."
               >
                 <div className="flex flex-wrap gap-2">
                   {getAttributeOptions(sizeAttribute.options).map(size => {
@@ -536,6 +571,37 @@ export default function AddProductPage() {
                       >
                         {size}
                       </ButtonBase>
+                    );
+                  })}
+                </div>
+              </Field>
+            )}
+
+            {hasSizes && (
+              <Field label={`SKU for each ${sizeAttribute?.label?.toLowerCase() || 'size'}`} required hint={SKU_HINT}>
+                <div className="space-y-2">
+                  {form.size_variants.map(row => {
+                    const err = skuError(row.sku, `${row.size}.sku`);
+                    return (
+                      <div key={row.size}>
+                        <div className="flex items-center gap-3">
+                          <span className="w-14 flex-shrink-0 rounded-lg bg-sunken py-2 text-center text-sm font-semibold text-ink">{row.size}</span>
+                          <Input
+                            value={row.sku || ''}
+                            onChange={e => updateSizeRow(row.size, 'sku', e.target.value)}
+                            placeholder={`e.g. KF-SAFIRA-${row.size}`}
+                            aria-label={`SKU for size ${row.size}`}
+                            error={Boolean(err)}
+                            maxLength={50}
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="font-mono"
+                          />
+                        </div>
+                        <div className="pl-[4.25rem]">
+                          {err ? <p className="mt-1 text-caption text-danger-fg">{err}</p> : <SkuStatus status={skuCheck(row.sku)} />}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -675,11 +741,11 @@ export default function AddProductPage() {
                 ))}
                 {form.mark_as_new && <Badge tone="violet" icon={Sparkles}>New for {form.new_duration_days} days</Badge>}
               </div>
-              <div className="text-caption text-ink-muted mt-2">
-                SKU: {hasSizes
-                  ? `one per size, generated automatically (${form.size_variants.length} total)`
-                  : <span className="font-mono text-accent">{previewSku || 'generated automatically'}</span>}
-              </div>
+              {!hasSizes && (
+                <div className="text-caption text-ink-muted mt-2">
+                  SKU: <span className="font-mono font-semibold text-ink">{normalizeSku(form.sku)}</span>
+                </div>
+              )}
             </ReviewSection>
 
             <ReviewSection title="Stock & prices" onEdit={() => go('pricing')}>
@@ -688,6 +754,7 @@ export default function AddProductPage() {
                   <THead>
                     <TR>
                       {hasSizes && <TH>Size</TH>}
+                      {hasSizes && <TH>SKU</TH>}
                       <TH numeric>Stock</TH>
                       <TH numeric>Alert at</TH>
                       <TH numeric>Customer</TH>
@@ -700,6 +767,7 @@ export default function AddProductPage() {
                     {(hasSizes ? form.size_variants : [form]).map((row, i) => (
                       <TR key={row.size || i}>
                         {hasSizes && <TD className="font-semibold">{row.size}</TD>}
+                        {hasSizes && <TD className="font-mono text-caption">{normalizeSku(row.sku)}</TD>}
                         <TD numeric>{toInt(row.quantity)}</TD>
                         <TD numeric>{row.minimum_quantity === '' ? 5 : toInt(row.minimum_quantity)}</TD>
                         <TD numeric>{money(row.selling_price)}</TD>

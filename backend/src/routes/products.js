@@ -15,29 +15,39 @@ function assertProductInUserBusiness(user, product) {
   return user.role === 'super_admin' || parseInt(product.business_id, 10) === parseInt(user.business_id, 10);
 }
 
-// Canonical SKU format used by existing products and POS: BRANCH-CATEGORY###.
-async function generateSku(branchCode, categoryPrefix, connection) {
-  const db = connection || pool;
-  const prefix = `${branchCode.toUpperCase()}-${categoryPrefix.toUpperCase().substring(0, 2)}`;
-  const [rows] = await db.query(
-    `SELECT sku FROM products WHERE sku LIKE ?`,
-    [`${prefix}%`]
-  );
-  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const sequencePattern = new RegExp(`^${escapedPrefix}(\\d+)$`, 'i');
-  const usedSequences = rows
-    .map(row => String(row.sku || '').match(sequencePattern))
-    .filter(Boolean)
-    .map(match => Number(match[1]));
-  let seq = usedSequences.length > 0 ? Math.max(...usedSequences) + 1 : 1;
-  let candidate = `${prefix}${String(seq).padStart(3, '0')}`;
+// SKUs are typed in by staff so they match the codes used on other sales platforms.
+// Allowed: letters, numbers, spaces and - _ . / # + ( ), starting with a letter or number, up to 50 characters.
+const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._\/#+()-]{0,49}$/;
 
-  while (true) {
-    const [existing] = await db.query('SELECT id FROM products WHERE sku = ? LIMIT 1', [candidate]);
-    if (existing.length === 0) return candidate;
-    seq += 1;
-    candidate = `${prefix}${String(seq).padStart(3, '0')}`;
-  }
+function normalizeSku(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
+// Returns an error message for an invalid SKU, or '' when it is fine.
+function skuFormatError(sku) {
+  if (!sku) return 'SKU is required.';
+  if (sku.length > 50) return 'SKU can be at most 50 characters.';
+  if (!SKU_PATTERN.test(sku)) return `SKU "${sku}" can only use letters, numbers, spaces and - _ . / # + ( ), and must start with a letter or number.`;
+  return '';
+}
+
+// The product that already uses this SKU (SKUs are unique across the whole system), if any.
+async function findSkuOwner(db, sku, excludeId = 0) {
+  const [rows] = await db.query(
+    `SELECT p.id, p.name, p.business_id, b.name AS business_name
+     FROM products p JOIN businesses b ON b.id = p.business_id
+     WHERE p.sku = ? AND p.id <> ? LIMIT 1`,
+    [sku, parseInt(excludeId, 10) || 0]
+  );
+  return rows[0] || null;
+}
+
+// "already used by …": names the product only when the user may see it
+function skuTakenMessage(user, sku, owner) {
+  const visible = user.role === 'super_admin' || parseInt(owner.business_id, 10) === parseInt(user.business_id, 10);
+  return visible
+    ? `SKU "${sku}" is already used by ${owner.name}${user.role === 'super_admin' ? ` (${owner.business_name})` : ''}. Each SKU must be unique.`
+    : `SKU "${sku}" is already used by another product. Each SKU must be unique.`;
 }
 
 // Generate unique QR token
@@ -209,24 +219,18 @@ router.get('/categories', authenticateToken, async (req, res) => {
   }
 });
 
-// ─── GET /api/products/preview-sku ──────────────────────────────────────────
-router.get('/preview-sku', authenticateToken, async (req, res) => {
+// ─── GET /api/products/check-sku?sku=…&exclude_id=… ─────────────────────────
+// Live check for the product forms: is this SKU valid and still free?
+router.get('/check-sku', authenticateToken, async (req, res) => {
   try {
-    const { branch_id, category } = req.query;
-    if (!branch_id || !category) {
-      return res.status(400).json({ success: false, message: 'branch_id and category are required.' });
-    }
-    if (req.user.role !== 'super_admin' && parseInt(branch_id, 10) !== parseInt(req.user.branch_id, 10)) {
-      return res.status(403).json({ success: false, message: 'Access denied: not your branch.' });
-    }
-    const [branches] = await pool.query('SELECT branch_code FROM branches WHERE id = ?', [branch_id]);
-    if (branches.length === 0) return res.status(404).json({ success: false, message: 'Branch not found.' });
-
-    const branchCode = branches[0].branch_code || `BR${branch_id}`;
-    const catPrefix = category.trim().replace(/[^a-zA-Z0-9]/g, '').substring(0, 2);
-    const sku = await generateSku(branchCode, catPrefix);
-
-    return res.json({ success: true, sku, qr_code: generateQrToken(branchCode, sku) });
+    const sku = normalizeSku(req.query.sku);
+    const formatError = skuFormatError(sku);
+    if (formatError) return res.json({ success: true, sku, valid: false, available: false, message: formatError });
+    const owner = await findSkuOwner(pool, sku, req.query.exclude_id);
+    return res.json({
+      success: true, sku, valid: true, available: !owner,
+      message: owner ? skuTakenMessage(req.user, sku, owner) : '',
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -548,6 +552,36 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Product name and category are required.' });
     }
 
+    // SKUs: one for a plain product, or one per size row
+    const requestedRows = Array.isArray(size_variants) && size_variants.length > 0
+      ? size_variants.filter(row => row && String(row.size || '').trim())
+      : [null];
+    const skus = requestedRows.map(row => normalizeSku(row ? row.sku : req.body.sku));
+    for (let i = 0; i < skus.length; i++) {
+      const formatError = skuFormatError(skus[i]);
+      if (formatError) {
+        connection.release();
+        const where = requestedRows[i] ? `Size ${String(requestedRows[i].size).trim()}: ` : '';
+        return res.status(400).json({ success: false, code: 'SKU_INVALID', message: where + formatError });
+      }
+    }
+    const seen = new Set();
+    for (const sku of skus) {
+      const key = sku.toLowerCase();
+      if (seen.has(key)) {
+        connection.release();
+        return res.status(400).json({ success: false, code: 'SKU_DUPLICATE', message: `SKU "${sku}" is entered more than once. Each size needs its own SKU.` });
+      }
+      seen.add(key);
+    }
+    for (const sku of skus) {
+      const owner = await findSkuOwner(connection, sku);
+      if (owner) {
+        connection.release();
+        return res.status(409).json({ success: false, code: 'SKU_TAKEN', message: skuTakenMessage(req.user, sku, owner) });
+      }
+    }
+
     let targetBranchIds = [];
     if (req.user.role !== 'super_admin') {
       // Branch admin: always their own branch
@@ -574,9 +608,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const createdItems = [];
     const createdProducts = [];
     const createdProductIds = [];
-    const sizeRows = Array.isArray(size_variants) && size_variants.length > 0
-      ? size_variants.filter(row => row && String(row.size || '').trim())
-      : [null];
+    const sizeRows = requestedRows;
 
     // All branches must belong to the same business for a single product, get business_id from first branch
     const [firstBranch] = await connection.query('SELECT business_id, branch_code FROM branches WHERE id = ?', [targetBranchIds[0]]);
@@ -586,7 +618,6 @@ router.post('/', authenticateToken, async (req, res) => {
     }
     const businessId = firstBranch[0].business_id;
     const branchCode = firstBranch[0].branch_code || `BR${targetBranchIds[0]}`;
-    const catPrefix = category.trim().replace(/[^a-zA-Z0-9]/g, '').substring(0, 2);
 
     let newUntil = null;
     if (mark_as_new && new_duration_days) {
@@ -597,8 +628,8 @@ router.post('/', authenticateToken, async (req, res) => {
         }
     }
 
-    for (const sizeRow of sizeRows) {
-      const sku = await generateSku(branchCode, catPrefix, connection);
+    for (const [rowIndex, sizeRow] of sizeRows.entries()) {
+      const sku = skus[rowIndex];
       const rowValue = (value, fallback) => value === undefined || value === '' ? fallback : value;
       const minQty = parseInt(rowValue(sizeRow?.minimum_quantity, minimum_quantity ?? min_quantity ?? 5), 10) || 0;
       const initialQty = parseInt(rowValue(sizeRow?.quantity, quantity), 10) || 0;
@@ -679,6 +710,9 @@ router.post('/', authenticateToken, async (req, res) => {
     await connection.rollback();
     connection.release();
     if (handleScopeError(res, err)) return;
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success: false, code: 'SKU_TAKEN', message: 'That SKU was just taken by another product. Please use a different SKU.' });
+    }
     console.error('Create product error:', err);
     return res.status(500).json({ success: false, message: 'Failed to create product: ' + err.message });
   }
@@ -696,9 +730,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
       status, variants
     } = req.body;
 
-    if (req.body.sku || req.body.item_code) {
+    const wantsSku = req.body.sku !== undefined;
+    const newSku = wantsSku ? normalizeSku(req.body.sku) : '';
+    if (wantsSku) {
+      const formatError = skuFormatError(newSku);
+      if (formatError) {
         connection.release();
-        return res.status(400).json({ success: false, message: 'SKU cannot be modified after creation.' });
+        return res.status(400).json({ success: false, code: 'SKU_INVALID', message: formatError });
+      }
     }
 
     await connection.beginTransaction();
@@ -719,6 +758,21 @@ router.put('/:id', authenticateToken, async (req, res) => {
         await connection.rollback(); connection.release();
         return res.status(403).json({ success: false, message: 'Access denied: this product is not in your branch.' });
       }
+    }
+
+    // SKU change: must stay unique; the old SKU becomes previous_sku so already-printed labels keep scanning
+    const skuChanged = wantsSku && newSku !== item.sku;
+    if (skuChanged) {
+      const owner = await findSkuOwner(connection, newSku, productId);
+      if (owner) {
+        await connection.rollback(); connection.release();
+        return res.status(409).json({ success: false, code: 'SKU_TAKEN', message: skuTakenMessage(req.user, newSku, owner) });
+      }
+      const caseOnly = newSku.toLowerCase() === String(item.sku).toLowerCase();
+      await connection.query(
+        'UPDATE products SET sku = ?, previous_sku = ? WHERE id = ?',
+        [newSku, caseOnly ? item.previous_sku : item.sku, productId]
+      );
     }
 
     const newMin = parseInt(minimum_quantity ?? min_quantity ?? item.min_quantity);
@@ -780,6 +834,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     await connection.rollback();
     connection.release();
     if (handleScopeError(res, err)) return;
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success: false, code: 'SKU_TAKEN', message: 'That SKU was just taken by another product. Please use a different SKU.' });
+    }
     return res.status(500).json({ success: false, message: err.message });
   }
 });
