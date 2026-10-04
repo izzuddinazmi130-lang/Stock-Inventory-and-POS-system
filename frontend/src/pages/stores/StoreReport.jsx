@@ -212,8 +212,8 @@ export default function StoreReport() {
       <PageHeader
         breadcrumbs={[
           ...(isSuperAdmin
-            ? [{ label: 'Pop-up stores', to: '/stores' }, { label: `${store.business_name || 'Business'} · ${store.branch_name || 'Branch'}`, to: `/branches/${store.branch_id}/stores` }]
-            : [{ label: store.business_name || 'Business' }, { label: store.branch_name || 'Branch' }, { label: 'Store events', to: `/branches/${store.branch_id}/stores` }]),
+            ? [{ label: 'Pop-up stores', to: '/stores' }, { label: `${store.business_name || 'Business'} · ${store.branch_name || 'Branch'}` }]
+            : [{ label: 'Stores', to: `/branches/${store.branch_id}/stores` }]),
           { label: store.name },
         ]}
         title={store.name}

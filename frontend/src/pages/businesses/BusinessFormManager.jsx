@@ -452,8 +452,11 @@ export default function BusinessFormManager() {
   return (
     <Layout>
       <PageHeader
-        back={{ to: '/businesses', label: 'Back to businesses' }}
-        breadcrumbs={[{ label: 'Businesses', to: '/businesses' }, { label: businessName || 'Business' }, { label: 'Product form' }]}
+        breadcrumbs={[
+          { label: 'Businesses', to: '/businesses' },
+          { label: businessName || 'Business', to: businessId ? `/businesses/${businessId}/branches` : undefined },
+          { label: 'Product form setup' },
+        ]}
         title="Product form setup"
         description={<>Choose what staff fill in when they add a product{businessName ? <> for <strong className="text-ink-secondary font-medium">{businessName}</strong></> : ''}. Changes apply right away.</>}
       />

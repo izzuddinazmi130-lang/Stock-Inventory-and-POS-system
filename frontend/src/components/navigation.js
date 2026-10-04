@@ -13,7 +13,7 @@ export function navigationFor(user) {
       {
         label: 'Inventory',
         items: [
-          { to: '/products', label: 'Products', icon: Package },
+          { to: '/products', label: 'Products', icon: Package, match: ['/products', '/qr/generate'] },
           { to: '/low-stock', label: 'Low stock', icon: PackageMinus },
           { to: '/damage', label: 'Damage records', icon: AlertTriangle },
         ],
@@ -21,6 +21,7 @@ export function navigationFor(user) {
       {
         label: 'Sales',
         items: [
+          { to: '/qr/scan', label: 'POS overview', icon: ScanLine },
           { to: '/sales', label: 'Sales history', icon: Receipt },
           { to: '/stores', label: 'Pop-up stores', icon: Store },
           { to: '/reports', label: 'Reports', icon: BarChart3 },
@@ -62,6 +63,14 @@ export function isItemActive(item, pathname) {
   if (item.exact) return pathname === item.to;
   const prefixes = item.match || [item.to];
   return prefixes.some(p => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(`${p}?`));
+}
+
+/** The sidebar group and item the current page sits under, e.g. { group: 'Inventory', item: { label: 'Products', … } }. */
+export function sectionFor(user, pathname) {
+  for (const group of navigationFor(user)) {
+    for (const item of group.items) if (isItemActive(item, pathname)) return { group: group.label || '', item };
+  }
+  return { group: '', item: null };
 }
 
 /** Label of the nav item for the current page (shown in the header). */

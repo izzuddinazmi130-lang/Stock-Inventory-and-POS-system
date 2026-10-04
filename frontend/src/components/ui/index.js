@@ -16,7 +16,7 @@ export { Pagination } from './Pagination';
 export { Skeleton, SkeletonText, SkeletonRows, SkeletonCard, SkeletonKpi } from './Skeleton';
 export { default as EmptyState, ErrorState } from './EmptyState';
 export { Tooltip } from './Tooltip';
-export { default as PageHeader } from './PageHeader';
+export { default as PageHeader, Breadcrumbs } from './PageHeader';
 export { default as KpiCard, useCountUp } from './KpiCard';
 export { default as FilterBar } from './FilterBar';
 export { default as ScopeBadge } from './ScopeBadge';

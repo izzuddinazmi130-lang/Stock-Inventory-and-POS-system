@@ -197,19 +197,26 @@ export default function SalesHistory() {
   return (
     <Layout>
       <PageHeader
+        breadcrumbs={isSuperAdmin && scopeChosen ? [
+          { label: 'Sales history', to: '/sales' },
+          ...(!businessId
+            ? [{ label: 'All businesses' }]
+            : branchId
+              ? [{ label: scopeBusiness?.name || 'Business', to: `/sales?view=1&business=${businessId}` }, { label: scopeBranch?.name || 'Branch' }]
+              : [{ label: scopeBusiness?.name || 'Business' }]),
+        ] : undefined}
         title="Sales history"
         description="Every sale from the point of sale, with its receipt. Open a sale to view or reprint the receipt."
-        actions={!isSuperAdmin && <Button icon={ScanLine} to="/qr/scan">Open point of sale</Button>}
+        actions={isSuperAdmin
+          ? (scopeChosen && <Button variant="secondary" icon={ArrowLeftRight} onClick={changeScope}>Change business or branch</Button>)
+          : <Button icon={ScanLine} to="/qr/scan">Open point of sale</Button>}
       />
 
-      {isSuperAdmin && scopeChosen && (
+      {isSuperAdmin && scopeChosen && businessId && businessBranches.length > 1 && (
         <ScopeBar
-          business={scopeBusiness}
-          branch={scopeBranch}
           businessBranches={businessBranches}
           branchId={branchId}
           onBranch={(id) => setScope({ business: businessId, branch: id })}
-          onChange={changeScope}
         />
       )}
 
@@ -425,40 +432,27 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
 }
 
 // Head office: what is being viewed, with quick branch switching inside a business and a way back to the chooser
-function ScopeBar({ business, branch, businessBranches, branchId, onBranch, onChange }) {
+// Quick switch between the branches of the business being viewed
+function ScopeBar({ businessBranches, branchId, onBranch }) {
   return (
-    <Card className="mb-4 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="text-caption font-medium uppercase tracking-wide text-ink-muted">Viewing</span>
-        {!business ? (
-          <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><Globe className="h-4 w-4 text-accent" aria-hidden="true" />All businesses</span>
-        ) : (
-          <>
-            <span className="inline-flex items-center gap-1.5 font-semibold text-ink"><BusinessDot business={business} />{business.name}</span>
-            <ChevronRight className="h-3.5 w-3.5 text-ink-subtle" aria-hidden="true" />
-            <span className="font-semibold text-ink">{branch ? branch.name : 'All branches'}</span>
-          </>
-        )}
+    <Card className="mb-4 flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+      <span className="text-caption font-medium uppercase tracking-wide text-ink-muted">Branch</span>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Switch branch">
+        {[{ id: '', name: 'All branches' }, ...businessBranches].map(b => {
+          const on = String(b.id) === String(branchId || '');
+          return (
+            <ButtonBase
+              key={b.id || 'all'}
+              onClick={() => onBranch(b.id)}
+              aria-pressed={on}
+              className={cn('h-8 rounded-full px-3 text-caption font-medium transition-colors duration-fast',
+                on ? 'bg-accent text-white' : 'bg-sunken text-ink-secondary hover:bg-line-soft hover:text-ink')}
+            >
+              {b.name}
+            </ButtonBase>
+          );
+        })}
       </div>
-      {business && businessBranches.length > 1 && (
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Switch branch">
-          {[{ id: '', name: 'All branches' }, ...businessBranches].map(b => {
-            const on = String(b.id) === String(branchId || '');
-            return (
-              <ButtonBase
-                key={b.id || 'all'}
-                onClick={() => onBranch(b.id)}
-                aria-pressed={on}
-                className={cn('h-8 rounded-full px-3 text-caption font-medium transition-colors duration-fast',
-                  on ? 'bg-accent text-white' : 'bg-sunken text-ink-secondary hover:bg-line-soft hover:text-ink')}
-              >
-                {b.name}
-              </ButtonBase>
-            );
-          })}
-        </div>
-      )}
-      <Button variant="secondary" size="sm" icon={ArrowLeftRight} onClick={onChange} className="flex-shrink-0">Change</Button>
     </Card>
   );
 }

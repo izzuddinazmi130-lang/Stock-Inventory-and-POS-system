@@ -351,7 +351,6 @@ export default function AddProductPage() {
   return (
     <Layout>
       <PageHeader
-        back={{ to: '/products', label: 'Back to products' }}
         breadcrumbs={[{ label: 'Products', to: '/products' }, { label: 'Add product' }]}
         title="Add product"
         description={step === 'done' ? 'Print the QR labels and stick them on the stock.' : 'Create a product in the catalog and give it starting stock.'}

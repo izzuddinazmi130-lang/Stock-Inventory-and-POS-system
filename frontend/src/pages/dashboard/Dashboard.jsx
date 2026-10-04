@@ -159,6 +159,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <PageHeader
+        breadcrumbs={false}
         title={isSuperAdmin ? (selectedBusiness ? `${selectedBusiness.name} overview` : 'Overview') : `${user?.branch_name || 'My branch'} overview`}
         description={isSuperAdmin ? 'Stock, alerts and activity across every business and branch.' : 'Stock, alerts and recent activity in your branch.'}
         meta={isSuperAdmin && selectedBusiness ? (

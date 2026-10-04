@@ -197,6 +197,7 @@ export default function QrGenerator({ embedded = false }) {
       <style>{PRINT_CSS}</style>
 
       <PageHeader
+        breadcrumbs={false}
         title="Print QR labels"
         description="Pick a product, check the label, then print or download it (PNG, JPG or PDF). Stick the label on the item or shelf so it can be scanned at the point of sale."
       />

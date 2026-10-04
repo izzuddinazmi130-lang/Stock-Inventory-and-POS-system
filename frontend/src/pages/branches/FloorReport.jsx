@@ -7,6 +7,7 @@ import {
 } from '../../components/ui';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 function formatDateTime(val) {
   if (!val) return '-';
@@ -29,6 +30,8 @@ function money(value) {
 
 export default function FloorReport() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [branch, setBranch] = useState(null);
   const [movements, setMovements] = useState([]);
   const [summary, setSummary] = useState({
@@ -93,11 +96,15 @@ export default function FloorReport() {
   return (
     <Layout>
       <PageHeader
-        breadcrumbs={[
-          { label: branch?.business_name || 'Dashboard', to: '/dashboard' },
-          { label: branch?.name || 'Branch', to: `/branches/${id}/stores` },
-          { label: 'Shop floor sales' },
-        ]}
+        breadcrumbs={isSuperAdmin
+          ? [
+            { label: 'Businesses', to: '/businesses' },
+            { label: branch?.business_name || 'Business', to: branch ? `/businesses/${branch.business_id}/branches` : undefined },
+            { label: branch?.name || 'Branch', to: `/branches/${id}` },
+            { label: 'Store events', to: `/branches/${id}/stores` },
+            { label: 'Shop floor sales' },
+          ]
+          : [{ label: 'Stores', to: `/branches/${id}/stores` }, { label: 'Shop floor sales' }]}
         title="Shop floor sales"
         description={`Walk-in POS sales at ${branch?.name || 'this branch'} made outside any store event.`}
         actions={<>

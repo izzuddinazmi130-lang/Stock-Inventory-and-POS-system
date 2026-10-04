@@ -80,6 +80,7 @@ export default function PosOverview({ Wrap }) {
   return (
     <Wrap>
       <PageHeader
+        breadcrumbs={false}
         title="Point of sale overview"
         description="Takings and counter activity from every branch, as sales are rung up."
         actions={<Button variant="ghost" icon={RefreshCw} onClick={() => load()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
