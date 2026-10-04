@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft, Banknote, CreditCard, TrendingUp, RefreshCw, ShoppingBag, QrCode, Hash, Receipt } from 'lucide-react';
 import {
-  Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Select, StatusPill,
+  Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Select, Spinner, StatusPill,
   Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { SaleReceipt, ReceiptModal } from '../../components/pos/Receipt';
 
 function formatDateTime(val) {
   if (!val) return '-';
-  const d = new Date(val);
+  // "2026-10-04 09:00:00" → ISO-like, so Safari (iPhone) can read it too
+  const d = new Date(typeof val === 'string' ? val.replace(' ', 'T') : val);
   if (isNaN(d.getTime())) return String(val);
   return d.toLocaleString('en-MY', {
     day: 'numeric',
@@ -34,6 +36,20 @@ export default function FloorReport() {
   const isSuperAdmin = user?.role === 'super_admin';
   const [branch, setBranch] = useState(null);
   const [movements, setMovements] = useState([]);
+  const [truncated, setTruncated] = useState(false);
+  const [openSale, setOpenSale] = useState(null);
+  const [openingId, setOpeningId] = useState(null);
+  const openReceipt = async (saleId) => {
+    try {
+      setOpeningId(saleId);
+      const res = await api.get(`/sales/${saleId}`);
+      if (res.data.success) setOpenSale(res.data.sale);
+    } catch (err) {
+      setMessage({ type: 'danger', text: err.response?.data?.message || 'Could not open that receipt.' });
+    } finally {
+      setOpeningId(null);
+    }
+  };
   const [summary, setSummary] = useState({
     total_cash: 0,
     total_qr: 0,
@@ -72,7 +88,8 @@ export default function FloorReport() {
         setBranch(branchRes.data.branch || branchRes.data.data);
       }
       if (reportRes.data.success) {
-        setMovements(reportRes.data.movements || reportRes.data.data || []);
+        setMovements(reportRes.data.lines || reportRes.data.movements || []);
+        setTruncated(Boolean(reportRes.data.truncated));
         setSummary(reportRes.data.summary || summary);
       }
     } catch (err) {
@@ -142,11 +159,12 @@ export default function FloorReport() {
       </FilterBar>
 
       <Card className="overflow-hidden">
-        <CardHeader icon={Receipt} title="Transactions" description={firstLoad ? 'Loading…' : `${movements.length} ${movements.length === 1 ? 'entry' : 'entries'}`} />
-        <Table minWidth="44rem">
+        <CardHeader icon={Receipt} title="Items sold" description={firstLoad ? 'Loading…' : `${movements.length} ${movements.length === 1 ? 'line' : 'lines'} · click a line to open its receipt`} />
+        <Table minWidth="52rem">
           <THead>
             <TR>
               <TH>When</TH>
+              <TH>Receipt</TH>
               <TH>Item</TH>
               <TH>Payment</TH>
               <TH numeric>Qty</TH>
@@ -156,7 +174,7 @@ export default function FloorReport() {
           </THead>
           <TBody>
             <TableState
-              colSpan={6}
+              colSpan={7}
               loading={firstLoad}
               error={!loading && message && movements.length === 0 ? message.text : null}
               onRetry={fetchReport}
@@ -166,10 +184,14 @@ export default function FloorReport() {
               emptyDescription={hasFilters ? 'Nothing matches these filters.' : 'Sales made at the POS without a store event appear here.'}
             />
             {movements.map((m, i) => {
-              const amount = Number(m.selling_price || 0) * Number(m.quantity || 0);
+              const amount = m.line_total ?? Number(m.selling_price || 0) * Number(m.quantity || 0);
               return (
-                <TR key={m.id} index={i}>
+                <TR key={m.id} index={i} onClick={() => openReceipt(m.sale_id)}>
                   <TD className="text-caption text-ink-muted whitespace-nowrap">{formatDateTime(m.created_at)}</TD>
+                  <TD className="whitespace-nowrap">
+                    <span className="font-mono text-caption font-semibold text-accent">{m.receipt_no}</span>
+                    {openingId === m.sale_id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
+                  </TD>
                   <TD>
                     <div className="font-medium text-ink">{m.item_name || 'Unknown item'}</div>
                     <div className="font-mono text-caption text-ink-muted">{m.item_code || '-'}</div>
@@ -183,7 +205,14 @@ export default function FloorReport() {
             })}
           </TBody>
         </Table>
+        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">Showing 500 lines. The totals above include every matching sale.</p>}
       </Card>
+
+      {openSale && (
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
+          <SaleReceipt sale={openSale} />
+        </ReceiptModal>
+      )}
     </Layout>
   );
 }

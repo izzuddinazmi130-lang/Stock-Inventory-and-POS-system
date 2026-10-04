@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { salesReport } = require('../utils/salesReport');
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
 const { resolveScope, handleScopeError } = require('../middleware/scope');
@@ -353,51 +354,13 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /:id/report - store sales & movement report with payment method breakdown
+// GET /:id/report - takings at this pop-up store, from its receipts (one line per item sold)
 router.get('/:id/report', authenticateToken, async (req, res) => {
   try {
     if (!(await assertStoreAccess(req, res, req.params.id))) return;
     await syncStoreStatuses();
-
-    const [movements] = await pool.query(`
-      SELECT sm.*, 
-        p.sku as item_code, 
-        p.name as item_name, 
-        p.category as category, 
-        sm.payment_method 
-      FROM stock_movements sm 
-      LEFT JOIN products p ON sm.item_id = p.id
-      WHERE sm.store_id = ? 
-      ORDER BY sm.created_at DESC
-    `, [req.params.id]);
-
-    let totalCash = 0;
-    let totalOnline = 0;
-    let totalItemsSold = 0;
-
-    movements.forEach(m => {
-      const val = (m.selling_price || 0) * m.quantity;
-      if (m.movement_type === 'out') {
-        totalItemsSold += m.quantity;
-      }
-      if (m.payment_method === 'cash') {
-        totalCash += val;
-      } else if (m.payment_method === 'qr' || m.payment_method === 'online_banking') {
-        totalOnline += val;
-      }
-    });
-
-    return res.json({ 
-      success: true, 
-      data: movements,
-      movements,
-      summary: {
-        total_cash: totalCash,
-        total_online: totalOnline,
-        total_sales: totalCash + totalOnline,
-        total_items_sold: totalItemsSold
-      }
-    });
+    const report = await salesReport(pool, 's.store_id = ?', [parseInt(req.params.id, 10)], { sort: req.query.sort });
+    return res.json({ success: true, lines: report.lines, movements: report.lines, data: report.lines, summary: report.summary, truncated: report.truncated });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -408,13 +371,12 @@ router.get('/:id/payment-breakdown', authenticateToken, async (req, res) => {
   try {
     if (!(await assertStoreAccess(req, res, req.params.id))) return;
     const [rows] = await pool.query(`
-      SELECT 
-        COALESCE(payment_method, 'cash') as payment_method,
-        COUNT(*) as transaction_count,
-        SUM(quantity) as total_qty,
-        SUM(COALESCE(selling_price, 0) * quantity) as total_amount
-      FROM stock_movements
-      WHERE store_id = ? AND movement_type = 'out'
+      SELECT payment_method,
+        COUNT(*) AS transaction_count,
+        COALESCE(SUM(total_quantity), 0) AS total_qty,
+        COALESCE(SUM(total_amount), 0) AS total_amount
+      FROM sales
+      WHERE store_id = ?
       GROUP BY payment_method
     `, [req.params.id]);
     return res.json({ success: true, breakdown: rows });

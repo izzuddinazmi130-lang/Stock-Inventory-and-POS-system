@@ -1,17 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { RefreshCw, CreditCard, Banknote, MapPin, Calendar, ArrowLeft, Clock, CheckCircle2, Phone, User, Radio, TrendingUp, Receipt } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import { RefreshCw, CreditCard, Banknote, MapPin, Calendar, ArrowLeft, Clock, CheckCircle2, Phone, User, Radio, TrendingUp, Receipt, QrCode } from 'lucide-react';
 import {
-  Alert, Button, Card, CardHeader, ErrorState, KpiCard, PageHeader, Skeleton, SkeletonKpi, StatusPill,
-  Table, THead, TBody, TH, TR, TD, TableState, cn,
+  Alert, Button, Card, CardHeader, ErrorState, KpiCard, PageHeader, Skeleton, SkeletonKpi, Spinner, StatusPill,
+  Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
+import { SaleReceipt, ReceiptModal, rm } from '../../components/pos/Receipt';
+
+// The API sends "2026-10-04 09:00:00". Safari (iPhone) cannot read that form, so make it ISO-like first.
+function toDate(val) {
+  if (!val) return null;
+  const d = new Date(typeof val === 'string' ? val.replace(' ', 'T') : val);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 function formatDateTime(val) {
   if (!val) return '—';
-  const d = new Date(val);
+  const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
   return d.toLocaleString('en-MY', {
     day: 'numeric',
@@ -25,7 +34,7 @@ function formatDateTime(val) {
 
 function formatDateOnly(val) {
   if (!val) return '—';
-  const d = new Date(val);
+  const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
   return d.toLocaleDateString('en-MY', {
     day: 'numeric',
@@ -36,7 +45,7 @@ function formatDateOnly(val) {
 
 function formatTimeOnly(val) {
   if (!val) return '—';
-  const d = new Date(val);
+  const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
   return d.toLocaleTimeString('en-MY', {
     hour: 'numeric',
@@ -48,8 +57,8 @@ function formatTimeOnly(val) {
 function getStorePhase(store) {
   if (!store) return 'before';
   const now = Date.now();
-  const sTime = store.start_date ? new Date(store.start_date).getTime() : 0;
-  const eTime = store.end_date ? new Date(store.end_date).getTime() : 0;
+  const sTime = toDate(store.start_date)?.getTime() || 0;
+  const eTime = toDate(store.end_date)?.getTime() || 0;
 
   if (store.status === 'ended' || (eTime > 0 && now > eTime)) {
     return 'after';
@@ -66,8 +75,8 @@ function getStorePhase(store) {
 function getTimingStatusText(store, phase) {
   if (!store) return '';
   const now = Date.now();
-  const sTime = store.start_date ? new Date(store.start_date).getTime() : 0;
-  const eTime = store.end_date ? new Date(store.end_date).getTime() : 0;
+  const sTime = toDate(store.start_date)?.getTime() || 0;
+  const eTime = toDate(store.end_date)?.getTime() || 0;
 
   if (phase === 'before') {
     const diffMs = sTime - now;
@@ -99,7 +108,7 @@ function getTimingStatusText(store, phase) {
 
   // Phase is 'after'
   if (store.ended_at || eTime > 0) {
-    const closedTime = store.ended_at ? new Date(store.ended_at).getTime() : eTime;
+    const closedTime = toDate(store.ended_at)?.getTime() || eTime;
     const diffMs = now - closedTime;
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     if (days > 0) return `Concluded ${days} day${days > 1 ? 's' : ''} ago`;
@@ -116,15 +125,19 @@ export default function StoreReport() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
   const [store, setStore] = useState(null);
-  const [movements, setMovements] = useState([]);
-  const [summary, setSummary] = useState({ total_cash: 0, total_online: 0, total_sales: 0, total_items_sold: 0 });
+  const { socket } = useSocket() || {};
+  const [lines, setLines] = useState([]);
+  const [truncated, setTruncated] = useState(false);
+  const [summary, setSummary] = useState({ total_cash: 0, total_qr: 0, total_online: 0, total_sales: 0, total_items_sold: 0, total_transactions: 0 });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
+  const [openSale, setOpenSale] = useState(null);
+  const [openingId, setOpeningId] = useState(null);
 
-  const fetchReport = async () => {
+  // silent = refresh in the background (live updates) without the loading state
+  const fetchReport = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      setMessage(null);
+      if (!silent) { setLoading(true); setMessage(null); }
 
       // 1. Fetch store detail
       let storeData = null;
@@ -145,7 +158,8 @@ export default function StoreReport() {
       try {
         const repRes = await api.get(`/stores/${id}/report`);
         if (repRes.data.success) {
-          setMovements(repRes.data.movements || repRes.data.data || []);
+          setLines(repRes.data.lines || repRes.data.movements || []);
+          setTruncated(Boolean(repRes.data.truncated));
           if (repRes.data.summary) setSummary(repRes.data.summary);
         }
       } catch (repErr) {
@@ -159,11 +173,29 @@ export default function StoreReport() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchReport();
   }, [id]);
+
+  useEffect(() => { fetchReport(); }, [fetchReport]);
+
+  // A sale rung up at this store shows up straight away
+  useEffect(() => {
+    if (!socket) return undefined;
+    const onMovement = (payload) => { if (payload?.action === 'stock_out') fetchReport(true); };
+    socket.on('stock_movement', onMovement);
+    return () => socket.off('stock_movement', onMovement);
+  }, [socket, fetchReport]);
+
+  const openReceipt = async (saleId) => {
+    try {
+      setOpeningId(saleId);
+      const res = await api.get(`/sales/${saleId}`);
+      if (res.data.success) setOpenSale(res.data.sale);
+    } catch (err) {
+      setMessage({ type: 'warning', text: err.response?.data?.message || 'Could not open that receipt.' });
+    } finally {
+      setOpeningId(null);
+    }
+  };
 
   const phase = getStorePhase(store);
   const timingText = getTimingStatusText(store, phase);
@@ -191,7 +223,7 @@ export default function StoreReport() {
             description={/access denied/i.test(message?.text || '')
               ? 'This pop-up store belongs to another branch. You can only open your own branch’s stores.'
               : (message?.text || `Store event #${id} may have been removed.`)}
-            onRetry={/access denied/i.test(message?.text || '') ? undefined : fetchReport}
+            onRetry={/access denied/i.test(message?.text || '') ? undefined : () => fetchReport()}
           />
           <div className="flex justify-center pb-8 -mt-6">
             <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My store events'}</Button>
@@ -202,7 +234,7 @@ export default function StoreReport() {
   }
 
   const phaseAlert = {
-    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. Sales will appear here once it starts.</> },
+    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. {lines.length ? 'Sales made before it opens are included below.' : 'Sales will appear here once it starts.'}</> },
     during: { tone: 'success', icon: Radio, title: `Live now · ${timingText}`, body: <>Sales at this event are being recorded until <strong>{formatDateTime(store.end_date)}</strong>. The numbers below update as you sell.</> },
     after: { tone: 'info', icon: CheckCircle2, title: 'Final report', body: <>This event ended <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The numbers below are final.</> },
   }[phase];
@@ -224,7 +256,7 @@ export default function StoreReport() {
         </>}
         actions={<>
           <Button variant="secondary" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'Store events'}</Button>
-          <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={() => fetchReport()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
         </>}
       />
 
@@ -232,10 +264,18 @@ export default function StoreReport() {
 
       {phaseAlert && <Alert tone={phaseAlert.tone} icon={phaseAlert.icon} title={phaseAlert.title} className="mb-6">{phaseAlert.body}</Alert>}
 
-      <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard label="Revenue" value={Number(summary.total_sales) || 0} format={v => `RM ${v.toFixed(2)}`} icon={TrendingUp} tone="accent" meta={`${summary.total_items_sold || movements.length} items sold`} />
-        <KpiCard label="Cash" value={Number(summary.total_cash) || 0} format={v => `RM ${v.toFixed(2)}`} icon={Banknote} tone="neutral" meta="Collected at the booth" />
-        <KpiCard label="QR / online" value={Number(summary.total_online) || 0} format={v => `RM ${v.toFixed(2)}`} icon={CreditCard} tone="neutral" meta="e-Wallet and card" />
+      <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <KpiCard
+          label="Revenue"
+          value={Number(summary.total_sales) || 0}
+          format={rm}
+          icon={TrendingUp}
+          tone="accent"
+          meta={`${summary.total_transactions || 0} ${summary.total_transactions === 1 ? 'receipt' : 'receipts'} · ${summary.total_items_sold || 0} ${summary.total_items_sold === 1 ? 'item' : 'items'} sold`}
+        />
+        <KpiCard label="Cash" value={Number(summary.total_cash) || 0} format={rm} icon={Banknote} tone="neutral" meta="Collected at the booth" />
+        <KpiCard label="QR / e-Wallet" value={Number(summary.total_qr) || 0} format={rm} icon={QrCode} tone="neutral" meta="DuitNow QR and e-wallets" />
+        <KpiCard label="Card / online" value={Number(summary.total_online) || 0} format={rm} icon={CreditCard} tone="neutral" meta="Card and online banking" />
       </div>
 
       <Card className="p-5 mb-6">
@@ -266,48 +306,62 @@ export default function StoreReport() {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader icon={Receipt} title="Sales and stock movements" description={`${movements.length} ${movements.length === 1 ? 'entry' : 'entries'}`} />
-        <Table minWidth="54rem">
+        <CardHeader
+          icon={Receipt}
+          title="Items sold"
+          description={`${lines.length} ${lines.length === 1 ? 'line' : 'lines'} from ${summary.total_transactions || 0} ${summary.total_transactions === 1 ? 'receipt' : 'receipts'} · click a line to open its receipt`}
+        />
+        <Table minWidth="56rem">
           <THead>
             <TR>
+              <TH>Receipt</TH>
               <TH>Item</TH>
-              <TH>Category</TH>
-              <TH>Type</TH>
               <TH numeric>Qty</TH>
+              <TH numeric>Price</TH>
+              <TH numeric>Amount</TH>
               <TH>Payment</TH>
-              <TH>Note</TH>
               <TH className="text-right">When</TH>
             </TR>
           </THead>
           <TBody>
             <TableState
               colSpan={7}
-              empty={!movements || movements.length === 0}
+              empty={lines.length === 0}
               emptyIcon={phase === 'before' ? Clock : phase === 'during' ? Radio : CheckCircle2}
               emptyTitle={phase === 'before' ? 'No sales yet' : phase === 'during' ? 'Waiting for the first sale' : 'No sales were recorded'}
               emptyDescription={phase === 'before'
                 ? `The event opens ${formatDateTime(store.start_date)}.`
                 : phase === 'during'
                 ? 'Sell at the Point of Sale with this event selected and it appears here.'
-                : 'Nothing was sold or moved during this event.'}
+                : 'Nothing was sold during this event.'}
             />
-            {movements.map((m, i) => (
-              <TR key={m.id} index={i}>
-                <TD>
-                  <div className="font-medium text-ink">{m.item_name}</div>
-                  <div className="font-mono text-caption text-ink-muted">{m.item_code}</div>
+            {lines.map((l, i) => (
+              <TR key={l.id} index={i} onClick={() => openReceipt(l.sale_id)}>
+                <TD className="whitespace-nowrap">
+                  <span className="font-mono text-caption font-semibold text-accent">{l.receipt_no}</span>
+                  {openingId === l.sale_id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
                 </TD>
-                <TD className="text-ink-secondary">{m.category || 'General'}</TD>
-                <TD><StatusPill kind="movement" value={m.movement_type} size="sm" /></TD>
-                <TD numeric className={cn('font-semibold', m.movement_type === 'in' && 'text-success-fg')}>{m.quantity}</TD>
-                <TD>{m.payment_method ? <StatusPill kind="payment" value={m.payment_method} size="sm" /> : <span className="text-ink-muted">—</span>}</TD>
-                <TD className="max-w-[14rem] truncate text-ink-secondary">{m.note || 'Store sale'}</TD>
-                <TD className="text-right text-caption text-ink-muted whitespace-nowrap">{formatDateTime(m.created_at)}</TD>
+                <TD className="max-w-[18rem]">
+                  <div className="font-medium text-ink truncate">{l.item_name}</div>
+                  <div className="font-mono text-caption text-ink-muted truncate">{l.item_code}{l.variant_text ? ` · ${l.variant_text}` : ''}</div>
+                </TD>
+                <TD numeric className="font-semibold">{l.quantity}</TD>
+                <TD numeric className="text-ink-secondary">{rm(l.selling_price)}</TD>
+                <TD numeric className="font-semibold">{rm(l.line_total)}</TD>
+                <TD><StatusPill kind="payment" value={l.payment_method} size="sm" /></TD>
+                <TD className="text-right text-caption text-ink-muted whitespace-nowrap">{formatDateTime(l.created_at)}</TD>
               </TR>
             ))}
           </TBody>
         </Table>
+        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">Showing the latest 500 lines. The totals above include every sale.</p>}
       </Card>
+
+      {openSale && (
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
+          <SaleReceipt sale={openSale} />
+        </ReceiptModal>
+      )}
     </Layout>
   );
 }
