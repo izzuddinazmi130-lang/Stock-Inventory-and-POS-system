@@ -244,7 +244,10 @@ export default function ProductsList() {
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
     setModalError('');
-    if (adjustQty < 1) { setModalError('Enter a quantity of at least 1.'); return; }
+    const setCount = adjustForm.adjustment_type === 'adjust';
+    const rawQty = String(adjustForm.quantity ?? '').trim();
+    if (rawQty === '' || !Number.isInteger(Number(rawQty))) { setModalError('Enter a whole number.'); return; }
+    if (adjustQty < (setCount ? 0 : 1)) { setModalError(setCount ? 'The count cannot be negative.' : 'Enter a quantity of at least 1.'); return; }
     if (adjustNewQty != null && adjustNewQty < 0) { setModalError(`Only ${adjustCurrentQty} in stock. You can't remove ${adjustQty}.`); return; }
     try {
       setSaving(true);

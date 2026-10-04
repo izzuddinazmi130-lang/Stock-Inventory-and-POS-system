@@ -3,7 +3,7 @@ import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { History, Shield, RefreshCw, User, AlertTriangle, Package, Boxes, LogIn, LogOut, CheckCircle, Laptop, Store, Building2, ShoppingCart } from 'lucide-react';
 import {
-  Badge, BusinessBranchFilter, Button, Card, FilterBar, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
+  Badge, BusinessBranchFilter, Button, Card, FilterBar, Pagination, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
 
@@ -349,6 +349,13 @@ export default function AuditLogs() {
     return enrichedLogs.filter(l => l.parsed.category === activeCategory);
   }, [enrichedLogs, activeCategory]);
 
+  // Show 50 events at a time: drawing hundreds of rich rows at once made the page slow to open
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
+  useEffect(() => { setPage(1); }, [activeCategory, searchQuery, filterDate, businessId, branchId]);
+  const pageLogs = useMemo(() => filteredLogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredLogs, page]);
+
   // Compute stats
   const stats = useMemo(() => {
     return {
@@ -445,7 +452,7 @@ export default function AuditLogs() {
               emptyDescription="Try another date, tab or search."
               emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
             />
-            {filteredLogs.map((log, i) => {
+            {pageLogs.map((log, i) => {
               const { badgeLabel, tone, ActionIcon, summary, targetLabel, detailsBadges, cleanIp, deviceInfo } = log.parsed;
               const actorName = log.user_name || 'System';
               const actorEmail = log.user_email || log.user_role || 'system';
@@ -489,6 +496,14 @@ export default function AuditLogs() {
             })}
           </TBody>
         </Table>
+        <Pagination
+          page={Math.min(page, totalPages)}
+          totalPages={totalPages}
+          onChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          prevLabel="Newer"
+          nextLabel="Older"
+          summary={filteredLogs.length ? `${filteredLogs.length} ${filteredLogs.length === 1 ? 'event' : 'events'}` : undefined}
+        />
       </Card>
 
       {inspectLog && (

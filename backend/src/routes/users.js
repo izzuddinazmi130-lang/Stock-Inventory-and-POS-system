@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const { isEmail, USER_ROLES } = require('../utils/validate');
 const pool = require('../config/db');
 const crypto = require('crypto');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
@@ -139,6 +140,12 @@ router.post('/', async (req, res) => {
     }
 
     const emailClean = email.toLowerCase().trim();
+    if (!isEmail(emailClean)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address.' });
+    }
+    if (!USER_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role must be Branch Admin or Super Admin.' });
+    }
     if (password.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     }
@@ -259,6 +266,9 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
+    if (role !== undefined && !USER_ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role must be Branch Admin or Super Admin.' });
+    }
     const targetRole = role || users[0].role;
     let effectiveBusiness = business_id || null;
     let effectiveBranch   = branch_id   || null;

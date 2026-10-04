@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
       params.push(end_date);
     }
 
-    const maxLimit = parseInt(limit, 10) || 500;
+    const maxLimit = Math.min(Math.max(parseInt(limit, 10) || 500, 1), 1000);
     query += ` ORDER BY a.created_at DESC LIMIT ?`;
     params.push(maxLimit);
 

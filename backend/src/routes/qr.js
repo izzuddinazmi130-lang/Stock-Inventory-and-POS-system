@@ -348,8 +348,8 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
     let totalQuantity = 0;
 
     for (const item of cartItems) {
-      const qty = parseInt(item.quantity || 1, 10);
-      if (isNaN(qty) || qty <= 0) {
+      const qty = item.quantity === undefined ? 1 : Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
         throw new Error(`Invalid quantity (${item.quantity}) for item.`);
       }
 

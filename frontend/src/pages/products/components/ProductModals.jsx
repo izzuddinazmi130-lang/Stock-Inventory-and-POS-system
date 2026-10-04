@@ -57,7 +57,7 @@ export function AdjustStockModal({ item, form, setForm, branches, currentQty, ne
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label={form.adjustment_type === 'adjust' ? 'Actual count on shelf' : 'Quantity'} required>
-          <Input type="number" min="1" step="1" required inputMode="numeric" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} className="font-mono" suffix="units" />
+          <Input type="number" min={form.adjustment_type === 'adjust' ? 0 : 1} step="1" required inputMode="numeric" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} className="font-mono" suffix="units" />
         </Field>
         {form.adjustment_type === 'out' && (
           <Field label="Payment method" hint="Used in the sales report.">

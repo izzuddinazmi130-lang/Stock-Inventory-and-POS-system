@@ -7,6 +7,22 @@ const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
 const { resolveScope, handleScopeError } = require('../middleware/scope');
 const { emitToBusiness } = require('../utils/realtime');
+const { isBlank, isWholeNumber, isMoney } = require('../utils/validate');
+
+const PRICE_LABELS = { selling_price: 'Customer price', price_dealer: 'Dealer price', price_staff: 'Staff price', cost_price: 'Cost price', unit_price: 'Cost price' };
+
+// Stock counts must be whole numbers ≥ 0 and prices ≥ 0. Blank means "not given". Returns a message or ''.
+function numbersError(values, prefix = '') {
+  for (const key of ['quantity', 'minimum_quantity', 'min_quantity']) {
+    if (!isBlank(values[key]) && !isWholeNumber(values[key], 0)) {
+      return `${prefix}${key === 'quantity' ? 'Stock' : 'Low-stock alert'} must be a whole number, 0 or more.`;
+    }
+  }
+  for (const key of Object.keys(PRICE_LABELS)) {
+    if (!isBlank(values[key]) && !isMoney(values[key])) return `${prefix}${PRICE_LABELS[key]} must be a number, 0 or more.`;
+  }
+  return '';
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -552,6 +568,19 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Product name and category are required.' });
     }
 
+    const baseNumbersError = numbersError(req.body);
+    if (baseNumbersError) {
+      connection.release();
+      return res.status(400).json({ success: false, message: baseNumbersError });
+    }
+    for (const row of (Array.isArray(size_variants) ? size_variants : [])) {
+      const rowError = row && String(row.size || '').trim() ? numbersError(row, `Size ${String(row.size).trim()}: `) : '';
+      if (rowError) {
+        connection.release();
+        return res.status(400).json({ success: false, message: rowError });
+      }
+    }
+
     // SKUs: one for a plain product, or one per size row
     const requestedRows = Array.isArray(size_variants) && size_variants.length > 0
       ? size_variants.filter(row => row && String(row.size || '').trim())
@@ -730,6 +759,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
       status, variants
     } = req.body;
 
+    const editNumbersError = numbersError(req.body);
+    if (editNumbersError) {
+      connection.release();
+      return res.status(400).json({ success: false, message: editNumbersError });
+    }
+
     const wantsSku = req.body.sku !== undefined;
     const newSku = wantsSku ? normalizeSku(req.body.sku) : '';
     if (wantsSku) {
@@ -775,7 +810,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       );
     }
 
-    const newMin = parseInt(minimum_quantity ?? min_quantity ?? item.min_quantity);
+    const newMin = !isBlank(minimum_quantity ?? min_quantity) ? parseInt(minimum_quantity ?? min_quantity, 10) : item.min_quantity;
     // 'out_of_stock' is no longer a stored status (it is derived from each branch's quantity)
     const newStatus = status === 'discontinued' ? 'discontinued' : (status ? 'available' : (item.status === 'discontinued' ? 'discontinued' : 'available'));
 
@@ -790,10 +825,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
         category?.trim() || item.category,
         description !== undefined ? description : item.description,
         newMin,
-        selling_price !== undefined ? parseFloat(selling_price) : item.price_customer,
-        price_dealer !== undefined ? parseFloat(price_dealer) : item.price_dealer,
-        price_staff !== undefined ? parseFloat(price_staff) : item.price_staff,
-        (cost_price || unit_price) !== undefined ? parseFloat(cost_price || unit_price) : item.cost_price,
+        !isBlank(selling_price) ? parseFloat(selling_price) : item.price_customer,
+        !isBlank(price_dealer) ? parseFloat(price_dealer) : item.price_dealer,
+        !isBlank(price_staff) ? parseFloat(price_staff) : item.price_staff,
+        !isBlank(cost_price ?? unit_price) ? parseFloat(cost_price ?? unit_price) : item.cost_price,
         newStatus,
         productId
       ]
@@ -847,9 +882,14 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
   try {
     const { item_id, branch_id, adjustment_type, quantity, note, payment_method, store_id } = req.body;
 
-    if (!item_id || !adjustment_type || !quantity || parseInt(quantity) <= 0) {
+    if (!['in', 'out', 'adjust', 'damage'].includes(adjustment_type)) {
       connection.release();
-      return res.status(400).json({ success: false, message: 'Valid item, adjustment type, and quantity > 0 are required.' });
+      return res.status(400).json({ success: false, message: 'Adjustment type must be in, out, adjust or damage.' });
+    }
+    // "Set count" may record 0 after a stock take; the other types move at least 1 unit
+    if (!item_id || !isWholeNumber(quantity, adjustment_type === 'adjust' ? 0 : 1)) {
+      connection.release();
+      return res.status(400).json({ success: false, message: adjustment_type === 'adjust' ? 'Enter the counted quantity as a whole number, 0 or more.' : 'Choose a product and enter a whole-number quantity of 1 or more.' });
     }
 
     // Determine the branch to adjust: admin → own branch; super_admin → body branch_id

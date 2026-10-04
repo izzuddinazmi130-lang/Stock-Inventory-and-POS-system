@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const { isBlank, isWholeNumber, isMoney } = require('../utils/validate');
 const pool = require('../config/db');
 const { authenticateToken, recordAuditLog } = require('../middleware/auth');
 const { resolveScope, handleScopeError } = require('../middleware/scope');
@@ -189,12 +190,16 @@ router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) 
       reason_details
     } = req.body;
 
-    if (!product_id || !branch_id || !quantity || parseInt(quantity, 10) <= 0 || !reason_category) {
+    if (!product_id || !branch_id || !isWholeNumber(quantity, 1) || !reason_category) {
       connection.release();
       return res.status(400).json({
         success: false,
-        message: 'Product, branch, positive quantity, and damage reason category are required.'
+        message: 'Product, branch, a whole-number quantity of 1 or more, and a reason are required.'
       });
+    }
+    if (!isBlank(cost_per_unit) && !isMoney(cost_per_unit)) {
+      connection.release();
+      return res.status(400).json({ success: false, message: 'Cost per unit must be a number, 0 or more.' });
     }
 
     // Write actions stay branch-restricted: an admin may only report damage for their own branch

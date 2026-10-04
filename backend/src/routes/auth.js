@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { isEmail } = require('../utils/validate');
 const pool = require('../config/db');
 const { authenticateToken, recordAuditLog, JWT_SECRET } = require('../middleware/auth');
 
@@ -221,6 +222,9 @@ router.post('/register', async (req, res) => {
     }
 
     const emailClean = email.toLowerCase().trim();
+    if (!isEmail(emailClean)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address.' });
+    }
 
     // Verify branch belongs to business
     const [branchRows] = await pool.query(

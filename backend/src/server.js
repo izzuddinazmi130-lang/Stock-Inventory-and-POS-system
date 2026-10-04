@@ -104,6 +104,24 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ success: false, message: 'A photo is too large. Each photo can be at most 5 MB.' });
+  }
+  if (err && err.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({ success: false, message: 'Too many photos. Attach up to 5.' });
+  }
+  if (err && err.name === 'MulterError') {
+    return res.status(400).json({ success: false, message: `Upload problem: ${err.message}` });
+  }
+  if (err && /Only JPEG, PNG, and WebP/.test(err.message || '')) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'The request is too large.' });
+  }
+  if (err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, message: 'The request could not be read (invalid JSON).' });
+  }
   console.error('Unhandled server error:', err);
   res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
 });
