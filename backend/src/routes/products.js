@@ -1034,21 +1034,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     const product = products[0];
 
-    // Branch admin: deletion purges the product from EVERY branch, so it is only allowed when the
-    // product belongs to their business and is stocked in no branch other than their own.
+    // Deleting purges the product and its history from EVERY branch: head office (super admin) only.
+    // Branch admins use "Remove from this branch" instead.
     if (req.user.role !== 'super_admin') {
-      const { branchId } = await resolveScope(req, { level: 'branch' });
-      const [stockBranches] = await connection.query('SELECT branch_id FROM product_branch_stock WHERE product_id = ?', [productId]);
-      const inOwnBranch = stockBranches.some(r => r.branch_id === branchId);
-      const inOtherBranch = stockBranches.some(r => r.branch_id !== branchId);
-      if (!assertProductInUserBusiness(req.user, product) || !inOwnBranch) {
-        connection.release();
-        return res.status(403).json({ success: false, message: 'Access denied: this product is not in your branch.' });
-      }
-      if (inOtherBranch) {
-        connection.release();
-        return res.status(403).json({ success: false, message: 'This product is also stocked in other branches. Use “Remove from this branch” to take it out of your branch only; deleting it everywhere needs a Super Admin.' });
-      }
+      connection.release();
+      return res.status(403).json({ success: false, message: 'Only HQ (super admin) can delete a product. Use “Remove from this branch” to take it out of your branch.' });
     }
 
     // 1. Gather all evidence photo records from damage reports for this product so we can delete them from disk

@@ -140,7 +140,8 @@ export function ByBranchTable({
                         onClick: () => onRemoveFromBranch(item, { branch_id: item.branch_id, branch_name: item.branch_name, quantity: item.quantity }, Number(item.branch_count) || 1),
                         hidden: !(Number(item.branch_count) > 1),
                       },
-                      { label: 'Delete product', icon: Trash2, tone: 'danger', onClick: () => onDelete(item.id, item.item_name) },
+                      // Deleting wipes the product from every branch, so only HQ (super admin) can do it
+                      { label: 'Delete product', icon: Trash2, tone: 'danger', onClick: () => onDelete(item.id, item.item_name), hidden: !isSuperAdmin },
                     ]}
                   />
                 </div>
