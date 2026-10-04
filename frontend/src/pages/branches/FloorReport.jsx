@@ -118,14 +118,14 @@ export default function FloorReport() {
             { label: 'Businesses', to: '/businesses' },
             { label: branch?.business_name || 'Business', to: branch ? `/businesses/${branch.business_id}/branches` : undefined },
             { label: branch?.name || 'Branch', to: `/branches/${id}` },
-            { label: 'Store events', to: `/branches/${id}/stores` },
-            { label: 'Shop floor sales' },
+            { label: 'Pop-up stores', to: `/branches/${id}/stores` },
+            { label: 'Branch counter sales' },
           ]
-          : [{ label: 'Stores', to: `/branches/${id}/stores` }, { label: 'Shop floor sales' }]}
-        title="Shop floor sales"
-        description={`Walk-in POS sales at ${branch?.name || 'this branch'} made outside any store event.`}
+          : [{ label: 'Pop-up stores', to: `/branches/${id}/stores` }, { label: 'Branch counter sales' }]}
+        title="Branch counter sales"
+        description={`Sales made at ${branch?.name || 'this branch'} itself, not at a pop-up store.`}
         actions={<>
-          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${id}/stores`}>Store events</Button>
+          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${id}/stores`}>Pop-up stores</Button>
           <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
         </>}
       />
@@ -136,7 +136,7 @@ export default function FloorReport() {
         <KpiCard loading={firstLoad} label="QR / e-Wallet" value={Number(summary.total_qr) || 0} format={money} icon={QrCode} tone="neutral" />
         <KpiCard loading={firstLoad} label="Card / Online" value={Number(summary.total_online) || 0} format={money} icon={CreditCard} tone="neutral" />
         <KpiCard loading={firstLoad} label="Items sold" value={Number(summary.total_items_sold) || 0} icon={ShoppingBag} tone="success" />
-        <KpiCard loading={firstLoad} label="Transactions" value={Number(summary.total_transactions) || 0} icon={Hash} tone="neutral" />
+        <KpiCard loading={firstLoad} label="Receipts" value={Number(summary.total_transactions) || 0} icon={Hash} tone="neutral" />
       </div>
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
@@ -180,8 +180,8 @@ export default function FloorReport() {
               onRetry={fetchReport}
               empty={!loading && !message && movements.length === 0}
               emptyIcon={Receipt}
-              emptyTitle="No shop floor sales"
-              emptyDescription={hasFilters ? 'Nothing matches these filters.' : 'Sales made at the POS without a store event appear here.'}
+              emptyTitle="No branch counter sales"
+              emptyDescription={hasFilters ? 'Nothing matches these filters.' : 'Sales made at the branch (not at a pop-up store) appear here.'}
             />
             {movements.map((m, i) => {
               const amount = m.line_total ?? Number(m.selling_price || 0) * Number(m.quantity || 0);

@@ -263,7 +263,7 @@ router.delete('/:id', authenticateToken, requireRole('super_admin'), async (req,
     if (stores[0].count > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete branch '${existing[0].name}': It has ${stores[0].count} active or upcoming store event(s). Please end or delete those store events first.`
+        message: `Cannot delete branch '${existing[0].name}': It has ${stores[0].count} live or upcoming pop-up store(s). Close or delete them first.`
       });
     }
 

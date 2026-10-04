@@ -47,7 +47,7 @@ export function SaleReceipt({ sale }) {
         <Row label="Receipt" value={sale.receipt_no} bold />
         <Row label="Date" value={formatDateTime(sale.created_at)} />
         {sale.cashier_name && <Row label="Served by" value={sale.cashier_name} />}
-        {sale.price_tier && sale.price_tier !== 'customer' && <Row label="Price list" value={TIER_LABELS[sale.price_tier]} />}
+        {sale.price_tier && sale.price_tier !== 'customer' && <Row label="Price type" value={TIER_LABELS[sale.price_tier]} />}
       </div>
 
       <div className="border-t border-dashed border-line-strong pt-2 space-y-1.5">

@@ -21,8 +21,8 @@ const TABS = [
 const EMPTY = {
   active: ['No pop-up store is live right now', 'Stores show up here while their event is running.'],
   upcoming: ['Nothing coming up', 'Stores that are scheduled to start later show up here.'],
-  ended: ['No ended stores yet', 'Finished events and their final takings show up here.'],
-  all: ['No pop-up stores yet', 'Pop-up stores are created from a branch’s Store events page.'],
+  ended: ['No ended stores yet', 'Pop-up stores that have finished, with their final sales, show up here.'],
+  all: ['No pop-up stores yet', 'Add a pop-up store from a branch’s Pop-up stores page.'],
 };
 
 // "4 Oct" or "1 – 10 Oct" style date range
@@ -103,15 +103,15 @@ export default function PopUpStores() {
     <Layout>
       <PageHeader
         title="Pop-up stores"
-        description="Every pop-up store across the businesses, with its takings. Click a store to open its report."
+        description="Every pop-up store in all businesses, with its sales. Click a store to see its report."
       />
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <KpiCard loading={first} label="Live now" value={counts.active} icon={Radio} tone="success"
           meta={counts.active ? live.map(s => s.name).slice(0, 2).join(', ') + (counts.active > 2 ? ` +${counts.active - 2}` : '') : 'No event running'}
           onClick={() => setParam('tab', 'active')} />
-        <KpiCard loading={first} label="Takings today" value={todayLive} format={v => rm(v)} icon={TrendingUp} tone="accent"
-          meta={`${todaySales} ${todaySales === 1 ? 'sale' : 'sales'} at live stores`} />
+        <KpiCard loading={first} label="Sales today" value={todayLive} format={v => rm(v)} icon={TrendingUp} tone="accent"
+          meta={`${todaySales} ${todaySales === 1 ? 'receipt' : 'receipts'} at live stores`} />
         <KpiCard loading={first} label="Upcoming" value={counts.upcoming} icon={CalendarClock} tone="info"
           meta={nextUp ? `Next: ${nextUp.name}, ${dateRange(nextUp.start_date)}` : 'Nothing scheduled'}
           onClick={() => setParam('tab', 'upcoming')} />
@@ -139,8 +139,8 @@ export default function PopUpStores() {
               <TH>Dates</TH>
               <TH>Status</TH>
               <TH numeric>Today</TH>
-              <TH numeric>Sales</TH>
-              <TH numeric>Takings</TH>
+              <TH numeric>Receipts</TH>
+              <TH numeric>Total sales</TH>
               <TH className="w-10"><span className="sr-only">Open</span></TH>
             </TR>
           </THead>

@@ -49,8 +49,8 @@ export function AdjustStockModal({ item, form, setForm, branches, currentQty, ne
           onChange={v => setForm({ ...form, adjustment_type: v })}
           options={[
             { value: 'in', icon: ArrowDownToLine, activeColor: 'text-success-fg', label: 'Stock in', description: 'New stock arrived.' },
-            { value: 'out', icon: ArrowUpFromLine, activeColor: 'text-info-fg', label: 'Stock out', description: 'Sold or taken out.' },
-            { value: 'adjust', icon: SlidersHorizontal, activeColor: 'text-violet-fg', label: 'Set count', description: 'After a stock take.' },
+            { value: 'out', icon: ArrowUpFromLine, activeColor: 'text-info-fg', label: 'Stock out', description: 'Taken out, not through the POS.' },
+            { value: 'adjust', icon: SlidersHorizontal, activeColor: 'text-violet-fg', label: 'Set exact count', description: 'After counting the shelf.' },
           ]}
         />
       </Field>
@@ -173,7 +173,7 @@ export function EditProductModal({ item, form, setForm, config, error, onDismiss
         )}
       </FormSection>
 
-      <FormSection title="Prices" description="Which price is charged depends on the price list chosen at the POS.">
+      <FormSection title="Prices" description="The cashier picks Customer, Dealer or Staff price when selling.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Customer price" hint="Normal walk-in price.">
             <MoneyInput value={form.selling_price} onChange={e => setForm({ ...form, selling_price: e.target.value })} />
@@ -266,7 +266,7 @@ export function AddToBranchModal({
       size="lg"
       icon={Building2}
       title="Add to branch / Restock"
-      description="Put products that already exist in the business catalog into a branch, or top up ones the branch already carries."
+      description="Add products this business already has to a branch, or add more stock to products the branch already has."
       onClose={onClose}
       onSubmit={onSubmit}
       footer={<>
@@ -338,7 +338,7 @@ export function AddToBranchModal({
             placeholder="Search by product name or SKU…"
             value={catalogSearch}
             onChange={e => setCatalogSearch(e.target.value)}
-            aria-label="Search the catalog"
+            aria-label="Search products"
           />
           <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', count ? 'text-accent' : 'text-ink-muted')}>{count} selected</span>
         </div>

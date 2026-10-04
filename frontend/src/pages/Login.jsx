@@ -270,7 +270,7 @@ export default function Login() {
                           </Select>
                         </div>
                       </Field>
-                      <Field label="Site / branch" labelClassName={label} required hideRequiredMark error={fieldErrors.branch_id}>
+                      <Field label="Branch" labelClassName={label} required hideRequiredMark error={fieldErrors.branch_id}>
                         <Select name="branch_id" className={control} value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0}>
                           <option value="">{formData.business_id ? 'Select…' : 'Business first'}</option>
                           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

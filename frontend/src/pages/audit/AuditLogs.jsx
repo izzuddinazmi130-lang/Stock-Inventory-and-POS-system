@@ -240,7 +240,7 @@ function parseAuditRecord(log) {
     targetLabel = newData?.receipt_no ? `Receipt ${newData.receipt_no}` : '';
     if (sale && newData?.grand_total !== undefined) detailsBadges.push({ label: 'Total', value: `RM ${parseFloat(newData.grand_total).toFixed(2)}` });
     if (sale && newData?.payment_method) detailsBadges.push({ label: 'Paid', value: newData.payment_method.replace('_', ' ') });
-    if (sale && newData?.price_tier && newData.price_tier !== 'customer') detailsBadges.push({ label: 'Price list', value: newData.price_tier });
+    if (sale && newData?.price_tier && newData.price_tier !== 'customer') detailsBadges.push({ label: 'Price type', value: newData.price_tier });
   } else if (action.includes('STORE')) {
     category = 'stores';
     badgeLabel = action.replace(/_/g, ' ');
@@ -322,7 +322,7 @@ export default function AuditLogs() {
       }
     } catch (err) {
       console.error('Audit fetch error:', err);
-      setLoadError(err.response?.data?.message || 'Could not load the audit log.');
+      setLoadError(err.response?.data?.message || 'Could not load the activity log.');
     } finally {
       setLoading(false);
     }
@@ -395,19 +395,19 @@ export default function AuditLogs() {
   return (
     <Layout>
       <PageHeader
-        title="Audit log"
+        title="Activity log"
         description="A permanent record of sign-ins, stock changes, damage reports and admin actions."
         actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchAuditLogs} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
       />
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Events" value={stats.total} icon={History} tone="accent" meta="In the current view" />
+        <KpiCard loading={firstLoad} label="Activities" value={stats.total} icon={History} tone="accent" meta="In the current view" />
         <KpiCard loading={firstLoad} label="Stock and damage" value={stats.inventory + stats.damage} icon={Boxes} tone="warning" meta={`${stats.damage} damage · ${stats.inventory} stock`} />
         <KpiCard loading={firstLoad} label="Sign-ins and sign-outs" value={stats.auth} icon={Shield} tone="success" meta="Account sessions" />
       </div>
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
-        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by person, email, SKU, action or note…" aria-label="Search the audit log" />
+        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by person, email, SKU, action or note…" aria-label="Search the activity log" />
         <BusinessBranchFilter
           businesses={businesses}
           branches={branches}
@@ -448,7 +448,7 @@ export default function AuditLogs() {
               onRetry={fetchAuditLogs}
               empty={!loading && !loadError && filteredLogs.length === 0}
               emptyIcon={History}
-              emptyTitle="No matching events"
+              emptyTitle="No matching activity"
               emptyDescription="Try another date, tab or search."
               emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
             />
@@ -502,7 +502,7 @@ export default function AuditLogs() {
           onChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           prevLabel="Newer"
           nextLabel="Older"
-          summary={filteredLogs.length ? `${filteredLogs.length} ${filteredLogs.length === 1 ? 'event' : 'events'}` : undefined}
+          summary={filteredLogs.length ? `${filteredLogs.length} ${filteredLogs.length === 1 ? 'activity' : 'activities'}` : undefined}
         />
       </Card>
 

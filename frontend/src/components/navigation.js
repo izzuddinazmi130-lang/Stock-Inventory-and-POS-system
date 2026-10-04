@@ -16,23 +16,23 @@ export function navigationFor(user) {
           { to: '/products', label: 'Products', icon: Package, match: ['/products', '/qr/generate'] },
           { to: '/low-stock', label: 'Low stock', icon: PackageMinus },
           { to: '/damage', label: 'Damage records', icon: AlertTriangle },
+          { to: '/reports', label: 'Stock reports', icon: BarChart3 },
         ],
       },
       {
         label: 'Sales',
         items: [
-          { to: '/qr/scan', label: 'POS overview', icon: ScanLine },
+          { to: '/qr/scan', label: 'Daily sales', icon: ScanLine },
           { to: '/sales', label: 'Sales history', icon: Receipt },
           { to: '/stores', label: 'Pop-up stores', icon: Store },
-          { to: '/reports', label: 'Reports', icon: BarChart3 },
         ],
       },
       {
-        label: 'Organisation',
+        label: 'Manage',
         items: [
           { to: '/businesses', label: 'Businesses', icon: Building2, match: ['/businesses', '/branches'] },
-          { to: '/users', label: 'Users & roles', icon: Users },
-          { to: '/audit', label: 'Audit log', icon: History },
+          { to: '/users', label: 'Users', icon: Users },
+          { to: '/audit', label: 'Activity log', icon: History },
         ],
       },
     ];
@@ -44,7 +44,7 @@ export function navigationFor(user) {
       items: [
         { to: '/qr/scan', label: 'Point of sale', icon: ScanLine, match: ['/qr'] },
         { to: '/sales', label: 'Sales history', icon: Receipt },
-        { to: `/branches/${user.branch_id}/stores`, label: 'Stores', icon: Store, match: ['/branches', '/stores'] },
+        { to: `/branches/${user.branch_id}/stores`, label: 'Pop-up stores', icon: Store, match: ['/branches', '/stores'] },
       ],
     },
     {
@@ -53,9 +53,9 @@ export function navigationFor(user) {
         { to: '/products', label: 'Products', icon: Package },
         { to: '/low-stock', label: 'Low stock', icon: PackageMinus },
         { to: '/damage', label: 'Damage records', icon: AlertTriangle },
+        { to: '/reports', label: 'Stock reports', icon: BarChart3 },
       ],
     },
-    { label: 'Insights', items: [{ to: '/reports', label: 'Reports', icon: BarChart3 }] },
   ];
 }
 

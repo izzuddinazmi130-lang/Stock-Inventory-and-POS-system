@@ -53,7 +53,7 @@ export default function PosOverview({ Wrap }) {
       const res = await api.get('/sales/overview', { params: { date: day } });
       if (id === reqId.current && res.data.success) setData(res.data);
     } catch (err) {
-      if (id === reqId.current) setError(err.response?.data?.message || 'Could not load counter activity.');
+      if (id === reqId.current) setError(err.response?.data?.message || 'Could not load the sales for this day.');
     } finally {
       if (id === reqId.current) setLoading(false);
     }
@@ -81,13 +81,13 @@ export default function PosOverview({ Wrap }) {
     <Wrap>
       <PageHeader
         breadcrumbs={false}
-        title="Point of sale overview"
-        description="Takings and counter activity from every branch, as sales are rung up."
+        title="Daily sales"
+        description="Sales from every branch for one day. It updates by itself as each sale is made."
         actions={<Button variant="ghost" icon={RefreshCw} onClick={() => load()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
       />
 
-      <Alert tone="info" icon={ShieldAlert} title="Sales are rung up by branch admins" className="mb-6">
-        Scanning, checkout and receiving stock happen on each branch’s POS. Here head office watches the counters live.
+      <Alert tone="info" icon={ShieldAlert} title="Sales are made by branch admins" className="mb-6">
+        Selling and receiving stock happen on each branch’s Point of sale. This page shows their sales as they happen.
       </Alert>
 
       {/* Day picker */}
@@ -120,7 +120,7 @@ export default function PosOverview({ Wrap }) {
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard
           loading={firstLoad}
-          label="Takings"
+          label="Total sales"
           value={totals?.revenue ?? 0}
           format={money}
           icon={Wallet}
@@ -132,20 +132,20 @@ export default function PosOverview({ Wrap }) {
                 {Math.abs(delta).toFixed(0)}% vs day before
               </span>}
         />
-        <KpiCard loading={firstLoad} label="Receipts" value={totals?.sales_count ?? 0} icon={Receipt} tone="info" meta={prev ? `${prev.sales_count} the day before` : ''} />
-        <KpiCard loading={firstLoad} label="Average sale" value={totals?.average ?? 0} format={money} icon={TrendingUp} tone="success" meta="Per receipt" />
-        <KpiCard loading={firstLoad} label="Items sold" value={totals?.units ?? 0} icon={ShoppingBag} tone="neutral" meta="Units across all receipts" />
+        <KpiCard loading={firstLoad} label="Receipts" value={totals?.sales_count ?? 0} icon={Receipt} tone="info" meta={prev ? `Day before: ${prev.sales_count}` : ''} />
+        <KpiCard loading={firstLoad} label="Average per receipt" value={totals?.average ?? 0} format={money} icon={TrendingUp} tone="success" meta="Total sales ÷ receipts" />
+        <KpiCard loading={firstLoad} label="Items sold" value={totals?.units ?? 0} icon={ShoppingBag} tone="neutral" meta="Across all receipts" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
         <Card className="xl:col-span-2">
-          <CardHeader title="Sales by hour" description={`${dayLabel} · takings per hour across all branches`} />
+          <CardHeader title="Sales by hour" description={`${dayLabel} · sales per hour, all branches`} />
           <div className="p-5">
             {firstLoad ? <div className="skeleton h-48" /> : <HourlyChart hours={data?.by_hour || []} />}
           </div>
         </Card>
         <Card>
-          <CardHeader title="Payment mix" description="How customers paid" />
+          <CardHeader title="How customers paid" description="Cash, QR or card" />
           <div className="p-5">
             {firstLoad ? <div className="skeleton h-40" /> : <PaymentMix totals={totals} />}
           </div>
@@ -154,15 +154,15 @@ export default function PosOverview({ Wrap }) {
 
       {/* Branch counters */}
       <Card className="mb-6">
-        <CardHeader title="Branch counters" description={`Sales at each branch, ${dayLabel.toLowerCase() === 'today' ? 'today' : `on ${dayLabel}`}`} actions={<Button variant="ghost" size="sm" iconRight={ChevronRight} to="/sales">Sales history</Button>} />
+        <CardHeader title="Sales by branch" description={`Sales at each branch, ${dayLabel.toLowerCase() === 'today' ? 'today' : `on ${dayLabel}`}`} actions={<Button variant="ghost" size="sm" iconRight={ChevronRight} to="/sales">Sales history</Button>} />
         <Table minWidth="44rem">
           <THead>
             <TR>
               <TH>Branch</TH>
               <TH numeric>Receipts</TH>
               <TH numeric>Items</TH>
-              <TH>Share of takings</TH>
-              <TH numeric>Takings</TH>
+              <TH>Share of sales</TH>
+              <TH numeric>Total sales</TH>
               <TH numeric>Last sale</TH>
             </TR>
           </THead>
@@ -240,7 +240,7 @@ export default function PosOverview({ Wrap }) {
 
         {/* Best sellers */}
         <Card className="xl:col-span-2">
-          <CardHeader title="Best sellers" description={`Most units sold ${isToday ? 'today' : `on ${dayLabel}`}`} />
+          <CardHeader title="Best sellers" description={`Most items sold ${isToday ? 'today' : `on ${dayLabel}`}`} />
           {firstLoad ? (
             <div className="p-5 space-y-3">{[0, 1, 2].map(i => <div key={i} className="skeleton h-10" />)}</div>
           ) : (data?.top_products || []).length === 0 ? (
@@ -304,7 +304,7 @@ function HourlyChart({ hours }) {
             <div className="h-px flex-1 -translate-y-1/2 bg-line-soft" />
           </div>
         ))}
-        <div className="absolute inset-y-0 left-16 right-0 flex items-end gap-[2px]" role="img" aria-label={`Takings per hour; busiest ${peak ? hourLabel(peak.hour) : ''}`}>
+        <div className="absolute inset-y-0 left-16 right-0 flex items-end gap-[2px]" role="img" aria-label={`Sales per hour; busiest ${peak ? hourLabel(peak.hour) : ''}`}>
           {shown.map(h => {
             const pct = (h.revenue / niceMax) * 100;
             const isHover = hover === h.hour;

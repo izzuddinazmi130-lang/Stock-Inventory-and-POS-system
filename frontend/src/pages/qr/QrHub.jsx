@@ -30,7 +30,7 @@ export default function QrHub() {
         onChange={setTab}
         className="mb-6"
         tabs={[
-          { value: 'scan', label: isSuperAdmin ? 'POS overview' : 'Point of sale', icon: ScanLine },
+          { value: 'scan', label: isSuperAdmin ? 'Daily sales' : 'Point of sale', icon: ScanLine },
           { value: 'generate', label: 'Print QR labels', icon: QrCode },
         ]}
       />

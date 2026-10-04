@@ -219,14 +219,14 @@ export default function StoreReport() {
       <Layout>
         <Card>
           <ErrorState
-            title={/access denied/i.test(message?.text || '') ? 'You don’t have access to this store' : 'Store event not found'}
+            title={/access denied/i.test(message?.text || '') ? 'You don’t have access to this store' : 'Pop-up store not found'}
             description={/access denied/i.test(message?.text || '')
               ? 'This pop-up store belongs to another branch. You can only open your own branch’s stores.'
-              : (message?.text || `Store event #${id} may have been removed.`)}
+              : (message?.text || `Pop-up store #${id} may have been deleted.`)}
             onRetry={/access denied/i.test(message?.text || '') ? undefined : () => fetchReport()}
           />
           <div className="flex justify-center pb-8 -mt-6">
-            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My store events'}</Button>
+            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My pop-up stores'}</Button>
           </div>
         </Card>
       </Layout>
@@ -234,9 +234,9 @@ export default function StoreReport() {
   }
 
   const phaseAlert = {
-    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. {lines.length ? 'Sales made before it opens are included below.' : 'Sales will appear here once it starts.'}</> },
-    during: { tone: 'success', icon: Radio, title: `Live now · ${timingText}`, body: <>Sales at this event are being recorded until <strong>{formatDateTime(store.end_date)}</strong>. The numbers below update as you sell.</> },
-    after: { tone: 'info', icon: CheckCircle2, title: 'Final report', body: <>This event ended <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The numbers below are final.</> },
+    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. {lines.length ? 'Sales made before it opened are included below.' : 'Sales will appear here once it starts.'}</> },
+    during: { tone: 'success', icon: Radio, title: `Live now · ${timingText}`, body: <>Sales at this store are being recorded until <strong>{formatDateTime(store.end_date)}</strong>. The numbers below update as you sell.</> },
+    after: { tone: 'info', icon: CheckCircle2, title: 'Final report', body: <>This store closed <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The numbers below are final.</> },
   }[phase];
 
   return (
@@ -245,7 +245,7 @@ export default function StoreReport() {
         breadcrumbs={[
           ...(isSuperAdmin
             ? [{ label: 'Pop-up stores', to: '/stores' }, { label: `${store.business_name || 'Business'} · ${store.branch_name || 'Branch'}` }]
-            : [{ label: 'Stores', to: `/branches/${store.branch_id}/stores` }]),
+            : [{ label: 'Pop-up stores', to: `/branches/${store.branch_id}/stores` }]),
           { label: store.name },
         ]}
         title={store.name}
@@ -255,7 +255,7 @@ export default function StoreReport() {
           <span className="inline-flex items-center gap-1.5 text-caption text-ink-muted tabular-nums"><Calendar className="w-3.5 h-3.5" aria-hidden="true" />{formatDateTime(store.start_date)} → {formatDateTime(store.end_date)}</span>
         </>}
         actions={<>
-          <Button variant="secondary" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'Store events'}</Button>
+          <Button variant="secondary" icon={ArrowLeft} to={backTo}>'Pop-up stores'</Button>
           <Button variant="ghost" icon={RefreshCw} onClick={() => fetchReport()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
         </>}
       />
@@ -266,7 +266,7 @@ export default function StoreReport() {
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard
-          label="Revenue"
+          label="Total sales"
           value={Number(summary.total_sales) || 0}
           format={rm}
           icon={TrendingUp}
@@ -279,7 +279,7 @@ export default function StoreReport() {
       </div>
 
       <Card className="p-5 mb-6">
-        <h2 className="text-sm font-semibold text-ink mb-4">Schedule and contact</h2>
+        <h2 className="text-sm font-semibold text-ink mb-4">Dates and contact</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <div>
             <dt className="text-caption text-ink-muted">Starts</dt>
@@ -332,8 +332,8 @@ export default function StoreReport() {
               emptyDescription={phase === 'before'
                 ? `The event opens ${formatDateTime(store.start_date)}.`
                 : phase === 'during'
-                ? 'Sell at the Point of Sale with this event selected and it appears here.'
-                : 'Nothing was sold during this event.'}
+                ? 'Choose this store at the Point of sale when selling, and sales appear here.'
+                : 'Nothing was sold at this store.'}
             />
             {lines.map((l, i) => (
               <TR key={l.id} index={i} onClick={() => openReceipt(l.sale_id)}>

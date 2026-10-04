@@ -115,7 +115,7 @@ export default function BranchDetail() {
       const res = await api.get('/products/catalog', { params: { business_id: branch.business_id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to load the business product catalog.' });
+      setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
     } finally {
       setCatalogLoading(false);
     }
@@ -230,8 +230,8 @@ export default function BranchDetail() {
             triggerSize="md"
             items={[
               { label: 'Edit branch', icon: Pencil, onClick: () => { setMessage(null); setShowEditModal(true); }, hidden: !isSuperAdmin },
-              { label: 'Reports', icon: BarChart3, to: `/reports?business_id=${branch.business_id}&branch_id=${id}` },
-              { label: 'Store events', icon: Store, to: `/branches/${id}/stores` },
+              { label: 'Stock reports', icon: BarChart3, to: `/reports?business_id=${branch.business_id}&branch_id=${id}` },
+              { label: 'Pop-up stores', icon: Store, to: `/branches/${id}/stores` },
               { divider: true },
               { label: 'Refresh', icon: RefreshCw, onClick: fetchData },
             ]}
@@ -260,7 +260,7 @@ export default function BranchDetail() {
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard label="Products" value={Number(stats.totalItems) || 0} icon={Package} tone="accent" meta="Stocked in this branch" />
-        <KpiCard label="Units on hand" value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta="All products" />
+        <KpiCard label="Items in stock" value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta="All products" />
         <KpiCard label="Low stock" value={Number(stats.lowStockCount) || 0} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} />
       </div>
 

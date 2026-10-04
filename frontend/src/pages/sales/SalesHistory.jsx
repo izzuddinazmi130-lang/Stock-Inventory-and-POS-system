@@ -14,7 +14,7 @@ import {
 
 // Where a sale was rung up: the branch counter ("Shop floor") or a pop-up store
 function locationLabel(row) {
-  if (row.store_id == null) return 'Shop floor';
+  if (row.store_id == null) return 'Branch counter';
   return row.store_name || `Pop-up store #${row.store_id} (deleted)`;
 }
 
@@ -243,10 +243,10 @@ export default function SalesHistory() {
         />
       ) : (<>
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <KpiCard loading={firstLoad} label="Sales" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
-        <KpiCard loading={firstLoad} label="Revenue" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Total charged" />
-        <KpiCard loading={firstLoad} label="Average sale" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Per receipt" />
-        <KpiCard loading={firstLoad} label="Units sold" value={summary ? summary.units : 0} icon={Package} tone="neutral" meta="All items" />
+        <KpiCard loading={firstLoad} label="Receipts" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
+        <KpiCard loading={firstLoad} label="Total sales" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Money taken" />
+        <KpiCard loading={firstLoad} label="Average per receipt" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Total sales ÷ receipts" />
+        <KpiCard loading={firstLoad} label="Items sold" value={summary ? summary.units : 0} icon={Package} tone="neutral" meta="Across all receipts" />
       </div>
       {summary && summary.revenue > 0 && <PaymentSplit byPayment={summary.by_payment} total={summary.revenue} />}
 
@@ -270,7 +270,7 @@ export default function SalesHistory() {
         />
         <Select wrapperClassName="md:w-48" aria-label="Location" value={location} onChange={e => changeFilter(setLocation)(e.target.value)}>
           <option value="">All locations</option>
-          <option value="floor">Shop floor (branch counter)</option>
+          <option value="floor">Branch counter</option>
           {storeOptions.length > 0 && (
             <optgroup label="Pop-up stores">
               {storeOptions.map(o => <option key={o.id} value={o.id}>{o.label}{isSuperAdmin && o.branch ? ` · ${o.branch}` : ''}</option>)}
@@ -284,7 +284,7 @@ export default function SalesHistory() {
       </FilterBar>
 
       <Card className="overflow-hidden">
-        <CardHeader title="Receipts" description={firstLoad ? 'Loading…' : `${summary?.sales_count ?? sales.length} ${(summary?.sales_count ?? sales.length) === 1 ? 'sale' : 'sales'}`} />
+        <CardHeader title="Receipts" description={firstLoad ? 'Loading…' : `${summary?.sales_count ?? sales.length} ${(summary?.sales_count ?? sales.length) === 1 ? 'receipt' : 'receipts'}`} />
         <Table minWidth={isSuperAdmin ? '62rem' : '56rem'}>
           <THead>
             <TR>
@@ -363,7 +363,7 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
   const Figures = ({ revenue, sales, strong }) => (
     <div className="text-right flex-shrink-0">
       <div className={cn('tabular-nums text-ink', strong ? 'text-base font-semibold' : 'text-sm font-semibold')}>{loading ? '…' : rm(revenue)}</div>
-      <div className="text-caption text-ink-muted tabular-nums">{loading ? '' : `${sales} sale${sales === 1 ? '' : 's'}`}</div>
+      <div className="text-caption text-ink-muted tabular-nums">{loading ? '' : `${sales} receipt${sales === 1 ? '' : 's'}`}</div>
     </div>
   );
 
@@ -476,7 +476,7 @@ function LocationBreakdown({ rows, isSuperAdmin, rangeLabel, active, onPick }) {
             <TH numeric>Receipts</TH>
             <TH numeric>Items</TH>
             <TH>Share</TH>
-            <TH numeric>Takings</TH>
+            <TH numeric>Total sales</TH>
             <TH numeric>Last sale</TH>
           </TR>
         </THead>
@@ -541,7 +541,7 @@ function PaymentSplit({ byPayment, total }) {
   ];
   return (
     <Card className="px-4 py-3 mb-4">
-      <div className="flex h-2 rounded-full overflow-hidden bg-sunken" role="img" aria-label="Revenue by payment method">
+      <div className="flex h-2 rounded-full overflow-hidden bg-sunken" role="img" aria-label="Sales by payment method">
         {parts.map(p => byPayment[p.key] > 0 && (
           <div key={p.key} className={`${p.color} transition-[width] duration-slow ease-out`} style={{ width: `${(byPayment[p.key] / total) * 100}%` }} />
         ))}

@@ -18,7 +18,7 @@ export default function CatalogPicker({ products, loading, search, onSearch, sel
           placeholder="Search by product name or SKU…"
           value={search}
           onChange={e => onSearch(e.target.value)}
-          aria-label="Search the catalog"
+          aria-label="Search products"
         />
         <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', count ? 'text-accent' : 'text-ink-muted')}>{count} selected</span>
       </div>

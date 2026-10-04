@@ -520,7 +520,7 @@ export default function AddProductPage() {
                 <Alert tone="warning">
                   This business has no categories yet.{' '}
                   {isSuperAdmin
-                    ? <Link to={`/businesses/${selectedBiz}/forms`} className="font-semibold underline">Set them up in Product Form Setup</Link>
+                    ? <Link to={`/businesses/${selectedBiz}/forms`} className="font-semibold underline">Set them up in Product form</Link>
                     : 'Ask HQ to add categories for your business.'}
                 </Alert>
               ) : (
@@ -647,7 +647,7 @@ export default function AddProductPage() {
                 <section>
                   <h3 className="text-sm font-semibold text-ink mb-3">Stock</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="Starting stock" hint="Units on hand right now. 0 is fine." error={errors.quantity}>
+                    <Field label="Starting stock" hint="How many you have now. 0 is fine." error={errors.quantity}>
                       <div className="flex items-center gap-2">
                         <IconButton icon={Minus} label="One less" variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', Math.max(0, toInt(form.quantity) - 1))} />
                         <Input type="number" min="0" step="1" inputMode="numeric" placeholder="0" value={form.quantity} onChange={e => setField('quantity', e.target.value)} className="text-center font-mono font-semibold" error={errors.quantity} />

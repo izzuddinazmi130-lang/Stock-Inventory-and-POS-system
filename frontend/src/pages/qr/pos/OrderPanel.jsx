@@ -29,7 +29,7 @@ function cashSuggestions(total) {
   return out.slice(0, 3).map(v => v / 100);
 }
 
-/** Right side of the POS: the order, price list, payment, cash/change, note, total and the big Charge button. */
+/** Right side of the POS: the order, price type, payment, cash/change, note, total and the big Charge button. */
 export default function OrderPanel({
   isSale, cart, totalUnits, onClear, errorMessage, onDismissError, lastAddedId, unitPrice, updateQuantity, removeItem,
   priceTier, setPriceTier, stores, storeId, setStoreId, paymentMethod, setPaymentMethod,
@@ -104,15 +104,15 @@ export default function OrderPanel({
         {isSale && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-caption font-medium text-ink-muted">Price list</span>
-              <SegmentedControl size="lg" label="Price list" value={priceTier} onChange={setPriceTier} tabs={PRICE_TIERS} />
+              <span className="text-caption font-medium text-ink-muted">Price type</span>
+              <SegmentedControl size="lg" label="Price type" value={priceTier} onChange={setPriceTier} tabs={PRICE_TIERS} />
             </div>
 
             {stores.length > 0 && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-caption font-medium text-ink-muted flex items-center gap-1"><Store className="w-3.5 h-3.5" aria-hidden="true" /> Selling at</span>
                 <Select size="sm" wrapperClassName="max-w-[14rem] flex-1" value={storeId} onChange={e => setStoreId(e.target.value)} aria-label="Selling at">
-                  <option value="">Main shop floor</option>
+                  <option value="">Branch counter</option>
                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}{s.status === 'upcoming' ? ' (upcoming)' : ''}</option>)}
                 </Select>
               </div>

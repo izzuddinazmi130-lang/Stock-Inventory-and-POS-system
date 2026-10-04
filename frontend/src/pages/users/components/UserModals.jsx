@@ -113,7 +113,7 @@ export function UserAccessModal({ user, allBranches, onClose, onEdit }) {
               <p className="text-caption text-ink-secondary mt-0.5 flex items-center gap-1.5">
                 <BusinessDot business={{ id: user.business_id, name: user.business_name }} size="sm" />{user.business_name || 'No business'}
               </p>
-              <p className="text-caption text-success-fg mt-2">Can manage stock, the POS, store events and damage records for this branch.</p>
+              <p className="text-caption text-success-fg mt-2">Can manage stock, the POS, pop-up stores and damage records for this branch.</p>
             </div>
             {allBranches.filter(br => String(br.id) !== String(user.branch_id)).length > 0 && (
               <div>

@@ -182,7 +182,7 @@ export default function StoreList() {
       if (brRes.data.success) setBranch(brRes.data.branch || brRes.data.data);
       if (stRes.data.success) setStores(stRes.data.stores || stRes.data.data || []);
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Could not load the store events.');
+      setLoadError(err.response?.data?.message || 'Could not load the pop-up stores.');
     } finally {
       setLoading(false);
     }
@@ -243,7 +243,7 @@ export default function StoreList() {
         });
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to create store event' });
+        setMessage({ type: 'danger', text: res.data.message || 'Could not create the pop-up store' });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
@@ -281,7 +281,7 @@ export default function StoreList() {
         setShowEditModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to update store event' });
+        setMessage({ type: 'danger', text: res.data.message || 'Could not save the pop-up store' });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
@@ -292,9 +292,9 @@ export default function StoreList() {
 
   const handleClose = async (storeId, storeName) => {
     const ok = await confirm({
-      title: `End ${storeName} now?`,
-      message: 'The event stops being live straight away, before its scheduled end time.',
-      confirmLabel: 'End event',
+      title: `Close ${storeName} now?`,
+      message: 'The store closes straight away, before its planned end time.',
+      confirmLabel: 'Close store',
     });
     if (!ok) return;
     try {
@@ -319,7 +319,7 @@ export default function StoreList() {
 
     const ok = await confirm({
       title: `Delete ${s.name}?`,
-      message: 'This permanently removes the store event. It cannot be undone.',
+      message: 'This permanently deletes the pop-up store. It cannot be undone.',
       confirmLabel: 'Delete event',
       tone: 'danger',
     });
@@ -372,33 +372,33 @@ export default function StoreList() {
             { label: 'Businesses', to: '/businesses' },
             { label: branch?.business_name || 'Business', to: `/businesses/${branch?.business_id}/branches` },
             { label: branch?.name || 'Branch', to: `/branches/${id}` },
-            { label: 'Store events' },
+            { label: 'Pop-up stores' },
           ]
           : [{ label: 'Stores' }]}
-        title="Store events"
+        title="Pop-up stores"
         description={`Pop-ups, bazaars and booths run by ${branch?.name || 'this branch'}. Each event has its own sales report.`}
         actions={<>
-          <Button variant="secondary" icon={FileBarChart} to={`/branches/${id}/floor-report`}>Shop floor sales</Button>
-          <Button icon={Plus} onClick={openAdd}>Add store event</Button>
+          <Button variant="secondary" icon={FileBarChart} to={`/branches/${id}/floor-report`}>Branch counter sales</Button>
+          <Button icon={Plus} onClick={openAdd}>Add pop-up store</Button>
         </>}
       />
 
-      <Tabs value={filterTab} onChange={setFilterTab} tabs={phaseTabs} label="Filter events" className="mb-4" />
+      <Tabs value={filterTab} onChange={setFilterTab} tabs={phaseTabs} label="Filter pop-up stores" className="mb-4" />
 
       {!loading && !loadError && stores.length === 0 ? (
         <Card>
           <EmptyState
             icon={Store}
-            title="No store events yet"
-            description="Create your first booth, bazaar or pop-up to track its sales separately."
-            action={<Button icon={Plus} onClick={openAdd}>Add store event</Button>}
+            title="No pop-up stores yet"
+            description="Add a booth, bazaar or pop-up store to see its sales separately."
+            action={<Button icon={Plus} onClick={openAdd}>Add pop-up store</Button>}
           />
         </Card>
       ) : (
         <Card className="overflow-hidden">
           <CardHeader
             title="Schedule"
-            description={loading && stores.length === 0 ? 'Loading…' : `${filteredStores.length} ${filteredStores.length === 1 ? 'event' : 'events'}`}
+            description={loading && stores.length === 0 ? 'Loading…' : `${filteredStores.length} ${filteredStores.length === 1 ? 'store' : 'stores'}`}
           />
           <Table minWidth="54rem">
             <THead>
@@ -418,8 +418,8 @@ export default function StoreList() {
                 onRetry={fetchData}
                 empty={!loading && !loadError && stores.length > 0 && filteredStores.length === 0}
                 emptyIcon={Store}
-                emptyTitle="No events in this group"
-                emptyAction={<Button variant="secondary" size="sm" onClick={() => setFilterTab('all')}>Show all events</Button>}
+                emptyTitle="No pop-up stores here"
+                emptyAction={<Button variant="secondary" size="sm" onClick={() => setFilterTab('all')}>Show all</Button>}
               />
               {filteredStores.map((s, i) => {
                 const phase = getStorePhase(s);
@@ -467,8 +467,8 @@ export default function StoreList() {
                         <Menu
                           label={`More actions for ${s.name}`}
                           items={[
-                            { label: 'Edit event', icon: Pencil, onClick: () => openEditModal(s) },
-                            { label: 'End event now', icon: CircleStop, onClick: () => handleClose(s.id, s.name), hidden: !live },
+                            { label: 'Edit', icon: Pencil, onClick: () => openEditModal(s) },
+                            { label: 'Close store now', icon: CircleStop, onClick: () => handleClose(s.id, s.name), hidden: !live },
                             { divider: true },
                             { label: live ? 'Delete (end it first)' : 'Delete event', icon: Trash2, tone: 'danger', disabled: live, onClick: () => handleDelete(s) },
                           ]}
@@ -487,7 +487,7 @@ export default function StoreList() {
       {showAddModal && (
         <Modal
           icon={Store}
-          title="Add a store event"
+          title="Add a pop-up store"
           description={`A pop-up, bazaar or booth run by ${branch?.name || 'this branch'}. Sales made during it are reported separately.`}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddSubmit}
@@ -495,7 +495,7 @@ export default function StoreList() {
           onDismissError={() => setMessage(null)}
           footer={<>
             <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create event</Button>
+            <Button type="submit" loading={saving}>Create pop-up store</Button>
           </>}
         >
           <StoreFields form={addForm} setForm={setAddForm} />
@@ -506,7 +506,7 @@ export default function StoreList() {
       {showEditModal && (
         <Modal
           icon={Pencil}
-          title={`Edit ${editForm.name || 'store event'}`}
+          title={`Edit ${editForm.name || 'pop-up store'}`}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
@@ -543,7 +543,7 @@ function StoreFields({ form, setForm, showStatus = false }) {
   return (
     <>
       <FormSection title="Event">
-        <Field label="Event name" required>
+        <Field label="Store name" required>
           <Input required placeholder="e.g. Ramadan Bazaar 2026" value={form.name} onChange={set('name')} />
         </Field>
         <Field label="Venue" optional>
@@ -551,7 +551,7 @@ function StoreFields({ form, setForm, showStatus = false }) {
         </Field>
       </FormSection>
 
-      <FormSection title="Schedule" description="The event goes live and ends automatically at these times.">
+      <FormSection title="Schedule" description="The store opens and closes by itself at these times.">
         <div className="grid grid-cols-[4rem_1fr_7.5rem] gap-2 items-center">
           <span className="text-sm font-medium text-ink">Starts<span className="text-danger-fg">*</span></span>
           <Input type="date" required value={form.start_date}
@@ -571,7 +571,7 @@ function StoreFields({ form, setForm, showStatus = false }) {
         ) : null}
 
         {showStatus && (
-          <Field label="Status" hint="Leave on Automatic unless you need to open or close the event early.">
+          <Field label="Status" hint="Leave on Automatic unless you need to open or close the store early.">
             <Select value={form.status} onChange={set('status')}>
               <option value="auto">Automatic (follows the schedule above)</option>
               <option value="upcoming">Upcoming</option>
@@ -585,7 +585,7 @@ function StoreFields({ form, setForm, showStatus = false }) {
       <FormSection title="Person in charge">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Name" optional>
-            <Input placeholder="Event lead" value={form.person_in_charge} onChange={set('person_in_charge')} />
+            <Input placeholder="Who runs the store" value={form.person_in_charge} onChange={set('person_in_charge')} />
           </Field>
           <Field label="Phone" optional>
             <Input type="tel" placeholder="+60 12-345 6789" value={form.contact_phone} onChange={set('contact_phone')} />

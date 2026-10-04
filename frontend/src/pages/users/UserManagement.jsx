@@ -324,8 +324,8 @@ export default function UserManagement() {
   return (
     <Layout>
       <PageHeader
-        title="Users & roles"
-        description="Who can sign in, what they can reach, and pending account requests."
+        title="Users"
+        description="Who can sign in, what they can see, and new account requests."
         actions={<Button icon={Plus} onClick={openAddModal}>Add user</Button>}
       />
 

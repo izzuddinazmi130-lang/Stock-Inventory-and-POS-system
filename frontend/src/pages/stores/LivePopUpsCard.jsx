@@ -6,7 +6,7 @@ import { useSocket } from '../../context/SocketContext';
 import { rm } from '../../components/pos/Receipt';
 import { Badge, Button, Card, CardHeader, EmptyState, Skeleton, cn, focusRing } from '../../components/ui';
 
-/** Overview card (head office): pop-up stores running right now, today's takings, one click to each report. */
+/** Overview card (head office): pop-up stores running right now, today's sales, one click to each report. */
 export default function LivePopUpsCard({ businessId }) {
   const { socket } = useSocket() || {};
   const [live, setLive] = useState(null);
@@ -50,7 +50,7 @@ export default function LivePopUpsCard({ businessId }) {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold tabular-nums text-ink">{rm(s.today_revenue)}</p>
-                    <p className="text-[11px] text-ink-muted tabular-nums">{s.today_sales} {s.today_sales === 1 ? 'sale' : 'sales'} today</p>
+                    <p className="text-[11px] text-ink-muted tabular-nums">{s.today_sales} {s.today_sales === 1 ? 'receipt' : 'receipts'} today</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-ink-subtle flex-shrink-0" aria-hidden="true" />
                 </Link>

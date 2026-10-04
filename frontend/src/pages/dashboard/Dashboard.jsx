@@ -172,7 +172,7 @@ export default function Dashboard() {
         ) : null}
         actions={<>
           <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
-          <Button variant="secondary" icon={ScanLine} to="/qr/scan">{isSuperAdmin ? 'POS overview' : 'Open point of sale'}</Button>
+          <Button variant="secondary" icon={ScanLine} to="/qr/scan">{isSuperAdmin ? 'Daily sales' : 'Open point of sale'}</Button>
         </>}
       />
 
@@ -202,7 +202,7 @@ export default function Dashboard() {
         <Card className="overflow-hidden">
           <CardHeader
             icon={History}
-            title="Recent stock movements"
+            title="Recent stock changes"
             description="Latest sales, restocks, adjustments and damage."
             actions={<Button variant="ghost" size="sm" iconRight={ArrowRight} to="/reports/movement">View all</Button>}
           />
@@ -221,7 +221,7 @@ export default function Dashboard() {
                 loading={firstLoad}
                 empty={!loading && recentMovements.length === 0}
                 emptyIcon={History}
-                emptyTitle="No stock movements yet"
+                emptyTitle="No stock changes yet"
                 emptyDescription="Sales, restocks and adjustments will appear here."
               />
               {recentMovements.map((mov, i) => (

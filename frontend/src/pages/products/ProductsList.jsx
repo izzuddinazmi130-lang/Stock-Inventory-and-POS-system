@@ -439,7 +439,7 @@ export default function ProductsList() {
       if (catRes.data.success) setCatalogProducts(catRes.data.products || []);
       if (brRes.data.success) setBranches(brRes.data.branches || brRes.data.data || []);
     } catch (err) {
-      notifyError('Could not load the business catalog.');
+      notifyError('Could not load this business’s products.');
     } finally {
       setCatalogLoading(false);
     }

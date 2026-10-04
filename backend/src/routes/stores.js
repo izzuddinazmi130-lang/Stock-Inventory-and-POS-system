@@ -154,10 +154,10 @@ router.post('/', authenticateToken, async (req, res) => {
     } = req.body;
 
     if (!branch_id || !name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Branch selection and Store/Event Name are required' });
+      return res.status(400).json({ success: false, message: 'Choose a branch and enter the store name' });
     }
     if (!start_date || !end_date) {
-      return res.status(400).json({ success: false, message: 'Start Date and End Date are required for store events' });
+      return res.status(400).json({ success: false, message: 'Start and end dates are required for a pop-up store' });
     }
 
     if (req.user.role === 'admin' && req.user.branch_id !== parseInt(branch_id)) {
@@ -214,7 +214,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Store event '${name.trim()}' scheduled successfully! Status: ${initialStatus.toUpperCase()}`,
+      message: `Pop-up store '${name.trim()}' created (${initialStatus === 'active' ? 'live now' : initialStatus}).`,
       data: { id: result.insertId, status: initialStatus }
     });
   } catch (err) {
@@ -236,7 +236,7 @@ router.put('/:id/close', authenticateToken, async (req, res) => {
     
     await recordAuditLog(req.user.id, req.user.role, 'CLOSE_STORE', 'stores', req.params.id, { status: stores[0].status }, { status: 'ended' }, req);
 
-    return res.json({ success: true, message: `Store event '${stores[0].name}' closed and marked as ended.` });
+    return res.json({ success: true, message: `Pop-up store '${stores[0].name}' is now closed.` });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -314,7 +314,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     await recordAuditLog(req.user.id, req.user.role, 'UPDATE_STORE', 'stores', req.params.id, existing[0], { name, status: newStatus }, req);
 
-    return res.json({ success: true, message: 'Store event details updated successfully!', status: newStatus });
+    return res.json({ success: true, message: 'Pop-up store saved.', status: newStatus });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -340,7 +340,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (existing[0].status === 'active') {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete store event '${existing[0].name}': It is currently active/in progress. Please end the event first.`
+        message: `Cannot delete pop-up store '${existing[0].name}' while it is live. Close it first.`
       });
     }
 
@@ -348,7 +348,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     
     await recordAuditLog(req.user.id, req.user.role, 'DELETE_STORE', 'stores', storeId, existing[0], null, req);
 
-    return res.json({ success: true, message: `Store event '${existing[0].name}' deleted successfully.` });
+    return res.json({ success: true, message: `Pop-up store '${existing[0].name}' deleted.` });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

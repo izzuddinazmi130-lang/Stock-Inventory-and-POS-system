@@ -80,7 +80,7 @@ export default function BranchList() {
       const res = await api.get('/products/catalog', { params: { business_id: id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to load the business product catalog.' });
+      setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
     } finally {
       setCatalogLoading(false);
     }
@@ -171,7 +171,7 @@ export default function BranchList() {
   const handleDelete = async (b) => {
     const ok = await confirm({
       title: `Delete ${b.name}?`,
-      message: 'This removes the branch. Branches with sales history or active store events cannot be deleted.',
+      message: 'This deletes the branch. A branch that has sales or a live pop-up store cannot be deleted.',
       confirmLabel: 'Delete branch',
       tone: 'danger',
     });
@@ -277,8 +277,8 @@ export default function BranchList() {
                         label={`Actions for ${b.name}`}
                         items={[
                           { label: 'Edit branch', icon: Pencil, onClick: () => openEditModal(b) },
-                          { label: 'Reports', icon: BarChart3, to: `/reports?business_id=${b.business_id}&branch_id=${b.id}` },
-                          { label: 'Store events', icon: Store, to: `/branches/${b.id}/stores` },
+                          { label: 'Stock reports', icon: BarChart3, to: `/reports?business_id=${b.business_id}&branch_id=${b.id}` },
+                          { label: 'Pop-up stores', icon: Store, to: `/branches/${b.id}/stores` },
                           { divider: true },
                           { label: 'Delete branch', icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
                         ]}

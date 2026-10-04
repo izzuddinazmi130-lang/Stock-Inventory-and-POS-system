@@ -220,8 +220,8 @@ export default function ReportsAnalytics() {
   return (
     <Layout>
       <PageHeader
-        title="Reports"
-        description="Stock movements and write-offs over time, for any business, branch or pop-up store."
+        title="Stock reports"
+        description="Every stock change over time: stock added, sold or taken out, counted and damaged."
         meta={isScopedAdmin ? <ScopeBadge /> : null}
         actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
       />
@@ -232,9 +232,9 @@ export default function ReportsAnalytics() {
       </div>
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Transactions" value={Number(summary.total_transactions) || 0} icon={Activity} tone="accent" meta="Movement records" />
-        <KpiCard loading={firstLoad} label="Stock added" value={Number(summary.stock_in_qty) || 0} format={v => `+${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowDownToLine} tone="success" meta="Units in" />
-        <KpiCard loading={firstLoad} label="Stock out" value={Number(summary.stock_out_qty) || 0} format={v => `−${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowUpFromLine} tone="info" meta="Units sold or taken out" />
+        <KpiCard loading={firstLoad} label="Stock changes" value={Number(summary.total_transactions) || 0} icon={Activity} tone="accent" meta="Records in this view" />
+        <KpiCard loading={firstLoad} label="Stock added" value={Number(summary.stock_in_qty) || 0} format={v => `+${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowDownToLine} tone="success" meta="Items added" />
+        <KpiCard loading={firstLoad} label="Stock out" value={Number(summary.stock_out_qty) || 0} format={v => `−${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowUpFromLine} tone="info" meta="Items sold or taken out" />
         <KpiCard loading={firstLoad} label="Damaged" value={Number(summary.damaged_qty) || 0} icon={AlertTriangle} tone="danger" meta={`${summary.damaged_count || 0} damage ${Number(summary.damaged_count) === 1 ? 'record' : 'records'}`} />
       </div>
 
@@ -266,7 +266,7 @@ export default function ReportsAnalytics() {
       <Card className="overflow-hidden">
         <CardHeader
           icon={History}
-          title="Movement log"
+          title="Stock history"
           description={firstLoad ? 'Loading…' : `${movements.length} ${movements.length === 1 ? 'entry' : 'entries'}`}
         />
         <Table minWidth="60rem">
