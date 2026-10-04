@@ -22,6 +22,7 @@ import BranchDetail from './pages/branches/BranchDetail';
 import StoreList from './pages/branches/StoreList';
 import FloorReport from './pages/branches/FloorReport';
 import StoreReport from './pages/stores/StoreReport';
+import PopUpStores from './pages/stores/PopUpStores';
 import AddProductPage from './pages/products/AddProductPage';
 import DamageProducts from './pages/products/DamageProducts';
 import LowStock from './pages/products/LowStock';
@@ -161,6 +162,7 @@ export default function App() {
             <Route path="/branches/:id" element={<ProtectedRoute allowedRoles={['super_admin']}><BranchDetail /></ProtectedRoute>} />
             <Route path="/branches/:id/stores" element={<ProtectedRoute><StoreList /></ProtectedRoute>} />
             <Route path="/branches/:id/floor-report" element={<ProtectedRoute><FloorReport /></ProtectedRoute>} />
+            <Route path="/stores" element={<ProtectedRoute allowedRoles={['super_admin']}><PopUpStores /></ProtectedRoute>} />
             <Route path="/stores/:id/report" element={<ProtectedRoute><StoreReport /></ProtectedRoute>} />
             <Route path="/damage" element={<ProtectedRoute><DamageProducts /></ProtectedRoute>} />
             <Route path="/low-stock" element={<ProtectedRoute><LowStock /></ProtectedRoute>} />

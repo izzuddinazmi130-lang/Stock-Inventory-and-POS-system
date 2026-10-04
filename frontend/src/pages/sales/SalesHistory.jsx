@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -498,7 +498,18 @@ function LocationBreakdown({ rows, isSuperAdmin, rangeLabel, active, onPick }) {
                       {popUp ? <Store className="h-4 w-4" aria-hidden="true" /> : <Building2 className="h-4 w-4" aria-hidden="true" />}
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate font-medium text-ink">{locationLabel(r)}</div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="truncate font-medium text-ink">{locationLabel(r)}</span>
+                        {popUp && r.store_name && (
+                          <Link
+                            to={`/stores/${r.store_id}/report`}
+                            onClick={e => e.stopPropagation()}
+                            className="flex-shrink-0 rounded text-caption font-medium text-accent-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          >
+                            Store report
+                          </Link>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 truncate text-caption text-ink-muted">
                         {isSuperAdmin && <BusinessDot business={{ id: r.business_id, name: r.business_name }} size="sm" />}
                         {isSuperAdmin ? `${r.business_name} · ${r.branch_name}` : (popUp ? (r.store_venue || 'Pop-up store') : r.branch_name)}

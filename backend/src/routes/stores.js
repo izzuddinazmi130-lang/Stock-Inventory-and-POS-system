@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const { authenticateToken, requireRole, recordAuditLog } = require('../middleware/auth');
+const { resolveScope, handleScopeError } = require('../middleware/scope');
 
 // Helper to normalize date/time input to 'YYYY-MM-DD HH:mm:ss'
 function normalizeDateTime(val, isEnd = false) {
@@ -62,6 +63,57 @@ async function assertStoreAccess(req, res, storeId) {
   }
   return true;
 }
+
+// GET / - every pop-up store in scope with its takings (from sales), live ones first.
+// Branch admin: own branch only. Super admin: optional ?business_id / ?branch_id.
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
+    await syncStoreStatuses();
+
+    const where = ['1=1'];
+    const params = [];
+    if (businessId) { where.push('br.business_id = ?'); params.push(businessId); }
+    if (branchId) { where.push('st.branch_id = ?'); params.push(branchId); }
+
+    const [stores] = await pool.query(
+      `SELECT st.id, st.name, st.venue, st.status, st.start_date, st.end_date, st.ended_at, st.person_in_charge,
+              st.branch_id, br.name AS branch_name, br.business_id, b.name AS business_name,
+              COUNT(s.id) AS sales_count,
+              COALESCE(SUM(s.total_amount), 0) AS revenue,
+              COALESCE(SUM(s.total_quantity), 0) AS units,
+              COALESCE(SUM(CASE WHEN DATE(s.created_at) = CURDATE() THEN s.total_amount END), 0) AS today_revenue,
+              COALESCE(SUM(DATE(s.created_at) = CURDATE()), 0) AS today_sales,
+              MAX(s.created_at) AS last_sale_at
+       FROM stores st
+       JOIN branches br ON br.id = st.branch_id
+       JOIN businesses b ON b.id = br.business_id
+       LEFT JOIN sales s ON s.store_id = st.id
+       WHERE ${where.join(' AND ')}
+       GROUP BY st.id
+       ORDER BY FIELD(st.status, 'active', 'upcoming', 'ended'),
+                CASE WHEN st.status = 'upcoming' THEN st.start_date END ASC,
+                st.start_date DESC, st.id DESC`,
+      params
+    );
+
+    return res.json({
+      success: true,
+      stores: stores.map(s => ({
+        ...s,
+        sales_count: Number(s.sales_count) || 0,
+        revenue: parseFloat(s.revenue) || 0,
+        units: Number(s.units) || 0,
+        today_revenue: parseFloat(s.today_revenue) || 0,
+        today_sales: Number(s.today_sales) || 0,
+      })),
+    });
+  } catch (err) {
+    if (handleScopeError(res, err)) return;
+    console.error('Store list error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to load pop-up stores: ' + err.message });
+  }
+});
 
 // GET /:id - get store detail
 router.get('/:id', authenticateToken, async (req, res) => {

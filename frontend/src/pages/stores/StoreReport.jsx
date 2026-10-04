@@ -169,7 +169,7 @@ export default function StoreReport() {
   const timingText = getTimingStatusText(store, phase);
 
   const PHASE_TO_STATUS = { during: 'active', before: 'upcoming', after: 'ended' };
-  const backTo = store ? `/branches/${store.branch_id}/stores` : (isSuperAdmin ? '/businesses' : `/branches/${user?.branch_id}/stores`);
+  const backTo = isSuperAdmin ? '/stores' : (store ? `/branches/${store.branch_id}/stores` : `/branches/${user?.branch_id}/stores`);
 
   if (loading && !store) {
     return (
@@ -192,7 +192,7 @@ export default function StoreReport() {
             onRetry={fetchReport}
           />
           <div className="flex justify-center pb-8 -mt-6">
-            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Businesses' : 'My store events'}</Button>
+            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My store events'}</Button>
           </div>
         </Card>
       </Layout>
@@ -209,9 +209,9 @@ export default function StoreReport() {
     <Layout>
       <PageHeader
         breadcrumbs={[
-          ...(isSuperAdmin ? [{ label: 'Businesses', to: '/businesses' }, { label: store.business_name || 'Business', to: `/businesses/${store.business_id}/branches` }] : [{ label: store.business_name || 'Business' }]),
-          { label: store.branch_name || 'Branch', to: isSuperAdmin ? `/branches/${store.branch_id}` : undefined },
-          { label: 'Store events', to: `/branches/${store.branch_id}/stores` },
+          ...(isSuperAdmin
+            ? [{ label: 'Pop-up stores', to: '/stores' }, { label: `${store.business_name || 'Business'} · ${store.branch_name || 'Branch'}`, to: `/branches/${store.branch_id}/stores` }]
+            : [{ label: store.business_name || 'Business' }, { label: store.branch_name || 'Branch' }, { label: 'Store events', to: `/branches/${store.branch_id}/stores` }]),
           { label: store.name },
         ]}
         title={store.name}
@@ -221,7 +221,7 @@ export default function StoreReport() {
           <span className="inline-flex items-center gap-1.5 text-caption text-ink-muted tabular-nums"><Calendar className="w-3.5 h-3.5" aria-hidden="true" />{formatDateTime(store.start_date)} → {formatDateTime(store.end_date)}</span>
         </>}
         actions={<>
-          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${store.branch_id}/stores`}>Store events</Button>
+          <Button variant="secondary" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'Store events'}</Button>
           <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
         </>}
       />

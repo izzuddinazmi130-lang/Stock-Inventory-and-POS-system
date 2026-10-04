@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useBusiness } from '../../context/BusinessContext';
 import Layout from '../../components/Layout';
+import LivePopUpsCard from '../stores/LivePopUpsCard';
 import api from '../../services/api';
 import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store, Sparkles, ScanLine, ArrowRight, PackageCheck, X } from 'lucide-react';
 import {
@@ -277,6 +278,8 @@ export default function Dashboard() {
               )}
             </div>
           </Card>
+
+          {isSuperAdmin && <LivePopUpsCard businessId={selectedBusiness?.id} />}
 
           {isSuperAdmin && pendingCount > 0 && (
             <Card className="animate-fade-in">

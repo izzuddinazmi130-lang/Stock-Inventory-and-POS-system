@@ -22,13 +22,14 @@ export function navigationFor(user) {
         label: 'Sales',
         items: [
           { to: '/sales', label: 'Sales history', icon: Receipt },
+          { to: '/stores', label: 'Pop-up stores', icon: Store },
           { to: '/reports', label: 'Reports', icon: BarChart3 },
         ],
       },
       {
         label: 'Organisation',
         items: [
-          { to: '/businesses', label: 'Businesses', icon: Building2, match: ['/businesses', '/branches', '/stores'] },
+          { to: '/businesses', label: 'Businesses', icon: Building2, match: ['/businesses', '/branches'] },
           { to: '/users', label: 'Users & roles', icon: Users },
           { to: '/audit', label: 'Audit log', icon: History },
         ],
