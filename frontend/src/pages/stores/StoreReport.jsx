@@ -187,9 +187,11 @@ export default function StoreReport() {
       <Layout>
         <Card>
           <ErrorState
-            title="Store event not found"
-            description={message?.text || `Store event #${id} may have been removed, or you don't have access to it.`}
-            onRetry={fetchReport}
+            title={/access denied/i.test(message?.text || '') ? 'You don’t have access to this store' : 'Store event not found'}
+            description={/access denied/i.test(message?.text || '')
+              ? 'This pop-up store belongs to another branch. You can only open your own branch’s stores.'
+              : (message?.text || `Store event #${id} may have been removed.`)}
+            onRetry={/access denied/i.test(message?.text || '') ? undefined : fetchReport}
           />
           <div className="flex justify-center pb-8 -mt-6">
             <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My store events'}</Button>

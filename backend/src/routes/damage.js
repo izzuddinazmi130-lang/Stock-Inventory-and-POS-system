@@ -172,6 +172,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // --- POST /api/damage-reports -------------------------------------------------
 router.post('/', authenticateToken, upload.array('photos', 5), async (req, res) => {
+  // A rejected or failed report must not leave its uploaded photos behind on disk
+  res.on('finish', () => {
+    if (res.statusCode >= 400 && Array.isArray(req.files)) {
+      req.files.forEach(file => fs.unlink(file.path, () => {}));
+    }
+  });
   const connection = await pool.getConnection();
   try {
     const {

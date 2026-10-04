@@ -329,10 +329,17 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
 
     // A store event must belong to the operator's own branch
     if (store_id) {
-      const [storeRows] = await connection.query('SELECT id FROM stores WHERE id = ? AND branch_id = ?', [store_id, targetBranch]);
+      const [storeRows] = await connection.query(
+        `SELECT id, name, (status = 'ended' OR (end_date IS NOT NULL AND end_date < NOW())) AS is_over
+         FROM stores WHERE id = ? AND branch_id = ?`, [store_id, targetBranch]);
       if (storeRows.length === 0) {
         connection.release();
         return res.status(403).json({ success: false, message: 'That store does not belong to your branch.' });
+      }
+      // No sales at a store whose event has ended or was closed early
+      if (Number(storeRows[0].is_over)) {
+        connection.release();
+        return res.status(400).json({ success: false, code: 'STORE_ENDED', message: `${storeRows[0].name} has ended. Choose another location before ringing up the sale.` });
       }
     }
 

@@ -49,6 +49,7 @@ export default function ProductFinder({
             className={cn('h-12 px-3 sm:px-4', cameraOpen && 'bg-ink hover:bg-ink-hover')}
             onClick={() => setCameraOpen(o => !o)}
             aria-pressed={cameraOpen}
+            aria-label={cameraOpen ? 'Close camera scanner' : 'Scan with camera'}
           >
             <span className="hidden sm:inline">Camera</span>
           </Button>

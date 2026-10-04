@@ -804,10 +804,16 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Branch ID is required for stock adjustment.' });
     }
     if (store_id) {
-      const [storeRows] = await connection.query('SELECT id FROM stores WHERE id = ? AND branch_id = ?', [store_id, targetBranch]);
+      const [storeRows] = await connection.query(
+        `SELECT id, name, (status = 'ended' OR (end_date IS NOT NULL AND end_date < NOW())) AS is_over
+         FROM stores WHERE id = ? AND branch_id = ?`, [store_id, targetBranch]);
       if (storeRows.length === 0) {
         connection.release();
         return res.status(403).json({ success: false, message: 'That store does not belong to this branch.' });
+      }
+      if (adjustment_type === 'out' && Number(storeRows[0].is_over)) {
+        connection.release();
+        return res.status(400).json({ success: false, code: 'STORE_ENDED', message: `${storeRows[0].name} has ended, so stock can no longer be sold there.` });
       }
     }
 
