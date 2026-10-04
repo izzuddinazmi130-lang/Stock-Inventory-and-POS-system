@@ -5,11 +5,26 @@ import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
 import { SaleReceipt, ReceiptModal, PAYMENT_LABELS, rm, formatDateTime } from '../../components/pos/Receipt';
-import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard } from 'lucide-react';
+import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard, Store, Building2, MapPin } from 'lucide-react';
 import {
-  Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
-  StatusPill, Table, THead, TBody, TH, TR, TD, TableState,
+  Badge, BusinessDot, Button, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
+  StatusPill, Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
+
+// Where a sale was rung up: the branch counter ("Shop floor") or a pop-up store
+function locationLabel(row) {
+  if (row.store_id == null) return 'Shop floor';
+  return row.store_name || `Pop-up store #${row.store_id} (deleted)`;
+}
+
+function LocationBadge({ row }) {
+  const popUp = row.store_id != null;
+  return (
+    <Badge size="sm" tone={popUp ? 'accent' : 'neutral'} icon={popUp ? Store : Building2} className="max-w-full">
+      <span className="truncate">{locationLabel(row)}</span>
+    </Badge>
+  );
+}
 
 
 // Local YYYY-MM-DD (not UTC, so "today" is the shop's today)
@@ -55,6 +70,8 @@ export default function SalesHistory() {
   const [payment, setPayment] = useState('');
   const [businessId, setBusinessId] = useState('');
   const [branchId, setBranchId] = useState('');
+  const [location, setLocation] = useState(''); // '' all, 'floor' shop floor, or a pop-up store id
+  const [byLocation, setByLocation] = useState([]);
   const [branches, setBranches] = useState([]);
   const [page, setPage] = useState(1);
 
@@ -96,9 +113,11 @@ export default function SalesHistory() {
       if (payment) params.payment_method = payment;
       if (isSuperAdmin && businessId) params.business_id = businessId;
       if (isSuperAdmin && branchId) params.branch_id = branchId;
+      if (location) params.store_id = location;
       const res = await api.get('/sales', { params });
       if (res.data.success) {
         setSales(res.data.sales || []);
+        setByLocation(res.data.by_location || []);
         setSummary(res.data.summary);
         setTotalPages(res.data.total_pages || 1);
       }
@@ -107,8 +126,7 @@ export default function SalesHistory() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, range.from, range.to, search, payment, businessId, branchId, isSuperAdmin]);
+  }, [page, range.from, range.to, search, payment, businessId, branchId, location, isSuperAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -138,8 +156,27 @@ export default function SalesHistory() {
     : 'All time';
 
   const firstLoad = loading && sales.length === 0;
-  const hasFilters = Boolean(search || payment || businessId || branchId || period !== 'today');
-  const resetFilters = () => { setSearchInput(''); setPayment(''); setBusinessId(''); setBranchId(''); setPeriod('today'); setPage(1); };
+  const hasFilters = Boolean(search || payment || businessId || branchId || location || period !== 'today');
+  const resetFilters = () => { setSearchInput(''); setPayment(''); setBusinessId(''); setBranchId(''); setLocation(''); setPeriod('today'); setPage(1); };
+
+  // Pop-up stores that had sales in this period (for the Location filter)
+  const storeOptions = useMemo(() => {
+    const seen = new Map();
+    byLocation.filter(l => l.store_id != null).forEach(l => {
+      if (!seen.has(l.store_id)) seen.set(l.store_id, { id: l.store_id, label: locationLabel(l), branch: l.branch_name });
+    });
+    if (location && location !== 'floor' && !seen.has(Number(location))) seen.set(Number(location), { id: Number(location), label: 'Selected pop-up store', branch: '' });
+    return [...seen.values()];
+  }, [byLocation, location]);
+
+  // Clicking a location row filters the receipts to it (and to its branch, for head office)
+  const pickLocation = (l) => {
+    const value = l.store_id == null ? 'floor' : String(l.store_id);
+    const same = location === value && (!isSuperAdmin || String(branchId) === String(l.branch_id));
+    setLocation(same ? '' : value);
+    if (isSuperAdmin) setBranchId(same ? '' : String(l.branch_id));
+    setPage(1);
+  };
 
   return (
     <Layout>
@@ -168,6 +205,16 @@ export default function SalesHistory() {
       </div>
       {summary && summary.revenue > 0 && <PaymentSplit byPayment={summary.by_payment} total={summary.revenue} />}
 
+      {byLocation.length > 0 && (
+        <LocationBreakdown
+          rows={byLocation}
+          isSuperAdmin={isSuperAdmin}
+          rangeLabel={rangeLabel}
+          active={location ? { store: location, branch: branchId } : null}
+          onPick={pickLocation}
+        />
+      )}
+
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
         <SearchInput
           wrapperClassName="md:flex-1 md:min-w-[16rem]"
@@ -176,6 +223,15 @@ export default function SalesHistory() {
           placeholder="Search by receipt number, product, SKU or note…"
           aria-label="Search sales"
         />
+        <Select wrapperClassName="md:w-48" aria-label="Location" value={location} onChange={e => changeFilter(setLocation)(e.target.value)}>
+          <option value="">All locations</option>
+          <option value="floor">Shop floor (branch counter)</option>
+          {storeOptions.length > 0 && (
+            <optgroup label="Pop-up stores">
+              {storeOptions.map(o => <option key={o.id} value={o.id}>{o.label}{isSuperAdmin && o.branch ? ` · ${o.branch}` : ''}</option>)}
+            </optgroup>
+          )}
+        </Select>
         <Select wrapperClassName="md:w-44" aria-label="Payment method" value={payment} onChange={e => changeFilter(setPayment)(e.target.value)}>
           <option value="">All payments</option>
           {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -196,21 +252,21 @@ export default function SalesHistory() {
 
       <Card className="overflow-hidden">
         <CardHeader title="Receipts" description={firstLoad ? 'Loading…' : `${summary?.sales_count ?? sales.length} ${(summary?.sales_count ?? sales.length) === 1 ? 'sale' : 'sales'}`} />
-        <Table minWidth={isSuperAdmin ? '60rem' : '52rem'}>
+        <Table minWidth={isSuperAdmin ? '62rem' : '56rem'}>
           <THead>
             <TR>
               <TH>Receipt</TH>
               <TH>When</TH>
               <TH>Items</TH>
               <TH>Payment</TH>
-              {isSuperAdmin && <TH>Branch</TH>}
+              <TH>Location</TH>
               <TH>Served by</TH>
               <TH numeric>Total</TH>
             </TR>
           </THead>
           <TBody>
             <TableState
-              colSpan={isSuperAdmin ? 7 : 6}
+              colSpan={7}
               loading={firstLoad}
               error={!loading && error && sales.length === 0 ? error : null}
               onRetry={load}
@@ -229,12 +285,15 @@ export default function SalesHistory() {
                     {openingId === s.id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
                   </TD>
                   <TD className="whitespace-nowrap text-ink-secondary">{formatDateTime(s.created_at)}</TD>
-                  <TD className="max-w-xs">
+                  <TD className="max-w-[13rem] 2xl:max-w-xs">
                     <p className="truncate text-ink">{preview[0] || '—'}</p>
                     {preview.length > 1 && <p className="text-caption text-ink-muted">+ {preview.length - 1} more</p>}
                   </TD>
                   <TD><StatusPill kind="payment" value={s.payment_method} size="sm" /></TD>
-                  {isSuperAdmin && <TD className="whitespace-nowrap text-ink-secondary">{s.branch_name}</TD>}
+                  <TD className="max-w-[14rem]">
+                    <LocationBadge row={s} />
+                    {isSuperAdmin && <p className="mt-1 truncate text-caption text-ink-muted">{s.branch_name}</p>}
+                  </TD>
                   <TD className="whitespace-nowrap text-ink-secondary">{s.cashier_name || '—'}</TD>
                   <TD numeric className="font-semibold">{rm(s.total_amount)}</TD>
                 </TR>
@@ -257,6 +316,70 @@ export default function SalesHistory() {
 function formatDay(value) {
   const d = new Date(`${value}T00:00:00`);
   return isNaN(d) ? value : d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Takings per place: each branch's shop floor and every pop-up store, for the chosen period
+function LocationBreakdown({ rows, isSuperAdmin, rangeLabel, active, onPick }) {
+  const total = rows.reduce((sum, r) => sum + r.revenue, 0);
+  const isActive = (r) => active
+    && active.store === (r.store_id == null ? 'floor' : String(r.store_id))
+    && (!isSuperAdmin || String(active.branch) === String(r.branch_id));
+  return (
+    <Card className="mb-4 overflow-hidden">
+      <CardHeader
+        title={<span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" aria-hidden="true" /> Sales by location</span>}
+        description={`Where the money came from · ${rangeLabel} · click a location to see only its receipts`}
+      />
+      <Table minWidth="44rem">
+        <THead>
+          <TR>
+            <TH>Location</TH>
+            <TH numeric>Receipts</TH>
+            <TH numeric>Items</TH>
+            <TH>Share</TH>
+            <TH numeric>Takings</TH>
+            <TH numeric>Last sale</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map((r, i) => {
+            const share = total ? (r.revenue / total) * 100 : 0;
+            const popUp = r.store_id != null;
+            return (
+              <TR key={`${r.branch_id}-${r.store_id ?? 'floor'}`} index={i} onClick={() => onPick(r)} selected={isActive(r)}>
+                <TD>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={cn('flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg', popUp ? 'bg-accent-soft text-accent-fg' : 'bg-sunken text-ink-secondary')}>
+                      {popUp ? <Store className="h-4 w-4" aria-hidden="true" /> : <Building2 className="h-4 w-4" aria-hidden="true" />}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-ink">{locationLabel(r)}</div>
+                      <div className="flex items-center gap-1.5 truncate text-caption text-ink-muted">
+                        {isSuperAdmin && <BusinessDot business={{ id: r.business_id, name: r.business_name }} size="sm" />}
+                        {isSuperAdmin ? `${r.business_name} · ${r.branch_name}` : (popUp ? (r.store_venue || 'Pop-up store') : r.branch_name)}
+                      </div>
+                    </div>
+                  </div>
+                </TD>
+                <TD numeric>{r.sales_count}</TD>
+                <TD numeric>{r.units}</TD>
+                <TD>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-sunken">
+                      <div className="h-full rounded-full bg-accent transition-[width] duration-slow ease-out" style={{ width: `${share}%` }} />
+                    </div>
+                    <span className="text-caption text-ink-muted tabular-nums">{share.toFixed(0)}%</span>
+                  </div>
+                </TD>
+                <TD numeric className="font-semibold">{rm(r.revenue)}</TD>
+                <TD numeric className="whitespace-nowrap text-ink-secondary">{formatDateTime(r.last_sale_at)}</TD>
+              </TR>
+            );
+          })}
+        </TBody>
+      </Table>
+    </Card>
+  );
 }
 
 // One bar showing how the money came in

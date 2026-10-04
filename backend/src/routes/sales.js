@@ -9,7 +9,9 @@ const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 // ─── GET /api/sales ──────────────────────────────────────────────────────────
 // Sales history. Branch admin: own branch only. Super admin: optional ?business_id / ?branch_id.
-// Filters: from, to (YYYY-MM-DD, inclusive), payment_method, store_id, search (receipt no, product name or SKU).
+// Filters: from, to (YYYY-MM-DD, inclusive), payment_method, search (receipt no, product name or SKU) and
+// store_id: a pop-up store's id, or "floor" for sales rung up at the branch counter (no store).
+// by_location breaks the takings down per branch + location (shop floor / each store), ignoring store_id.
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { businessId, branchId } = await resolveScope(req, { level: 'branch' });
@@ -24,12 +26,16 @@ router.get('/', authenticateToken, async (req, res) => {
     if (isDate(from)) { where.push('s.created_at >= ?'); params.push(`${from} 00:00:00`); }
     if (isDate(to)) { where.push('s.created_at < DATE_ADD(?, INTERVAL 1 DAY)'); params.push(`${to} 00:00:00`); }
     if (['cash', 'qr', 'online_banking'].includes(payment_method)) { where.push('s.payment_method = ?'); params.push(payment_method); }
-    if (store_id) { where.push('s.store_id = ?'); params.push(parseInt(store_id, 10) || 0); }
     if (search && search.trim()) {
       const term = `%${search.trim()}%`;
       where.push('(s.receipt_no LIKE ? OR s.note LIKE ? OR EXISTS (SELECT 1 FROM sale_items si WHERE si.sale_id = s.id AND (si.name LIKE ? OR si.sku LIKE ?)))');
       params.push(term, term, term, term);
     }
+    // Everything except the location filter: used for the per-location breakdown
+    const allLocationsSql = where.join(' AND ');
+    const allLocationsParams = [...params];
+    if (store_id === 'floor') where.push('s.store_id IS NULL');
+    else if (store_id) { where.push('s.store_id = ?'); params.push(parseInt(store_id, 10) || 0); }
     const whereSql = where.join(' AND ');
 
     const [[summary]] = await pool.query(
@@ -61,9 +67,31 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
+    const [locations] = await pool.query(
+      `SELECT s.branch_id, br.name AS branch_name, br.branch_code, br.business_id, b.name AS business_name,
+              s.store_id, st.name AS store_name,
+              st.venue AS store_venue, st.status AS store_status,
+              COUNT(*) AS sales_count, COALESCE(SUM(s.total_amount), 0) AS revenue,
+              COALESCE(SUM(s.total_quantity), 0) AS units, MAX(s.created_at) AS last_sale_at
+       FROM sales s
+       JOIN branches br ON br.id = s.branch_id
+       JOIN businesses b ON b.id = br.business_id
+       LEFT JOIN stores st ON st.id = s.store_id
+       WHERE ${allLocationsSql}
+       GROUP BY s.branch_id, s.store_id
+       ORDER BY revenue DESC`,
+      allLocationsParams
+    );
+
     const total = Number(summary.sales_count) || 0;
     return res.json({
       success: true,
+      by_location: locations.map(l => ({
+        ...l,
+        sales_count: Number(l.sales_count) || 0,
+        revenue: parseFloat(l.revenue) || 0,
+        units: Number(l.units) || 0,
+      })),
       sales: rows.map(r => ({ ...normalizeSale(r), items_preview: preview[r.id] || [] })),
       summary: {
         sales_count: total,
