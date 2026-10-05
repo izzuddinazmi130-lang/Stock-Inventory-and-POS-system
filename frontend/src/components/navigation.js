@@ -22,7 +22,6 @@ export function navigationFor(user) {
       {
         label: 'Sales',
         items: [
-          { to: '/qr/scan', label: 'Daily sales', icon: ScanLine },
           { to: '/sales', label: 'Sales history', icon: Receipt },
           { to: '/stores', label: 'Pop-up stores', icon: Store },
         ],

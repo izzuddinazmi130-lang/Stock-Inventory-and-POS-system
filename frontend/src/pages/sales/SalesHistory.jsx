@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useSocket } from '../../context/SocketContext';
 import { SaleReceipt, ReceiptModal, PAYMENT_LABELS, rm, formatDateTime } from '../../components/pos/Receipt';
+import DayInsights, { DayDelta } from './DayInsights';
 import { Receipt, ScanLine, TrendingUp, Package, ShoppingBag, Banknote, QrCode, CreditCard, Store, Building2, MapPin, ChevronRight, Globe, ArrowLeftRight } from 'lucide-react';
 import {
   Badge, BusinessDot, Button, ButtonBase, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
@@ -99,6 +100,11 @@ export default function SalesHistory() {
   const [openingId, setOpeningId] = useState(null);
 
   const range = period === 'custom' ? { from: customFrom, to: customTo } : periodRange(period);
+  // One whole day with no narrowing filters: also show sales by hour, best sellers, branches and the day before
+  const singleDay = (period === 'today' || period === 'yesterday') && !location && !payment && !search;
+  const [dayData, setDayData] = useState(null);
+  const onDayData = useCallback((d) => setDayData(d), []);
+  const compare = singleDay ? dayData : null;
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -243,12 +249,24 @@ export default function SalesHistory() {
         />
       ) : (<>
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <KpiCard loading={firstLoad} label="Receipts" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={rangeLabel} />
-        <KpiCard loading={firstLoad} label="Total sales" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta="Money taken" />
+        <KpiCard loading={firstLoad} label="Total sales" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta={(compare && <DayDelta data={compare} />) || 'Money taken'} />
+        <KpiCard loading={firstLoad} label="Receipts" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={compare?.previous ? `Day before: ${compare.previous.sales_count}` : rangeLabel} />
         <KpiCard loading={firstLoad} label="Average per receipt" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Total sales ÷ receipts" />
         <KpiCard loading={firstLoad} label="Items sold" value={summary ? summary.units : 0} icon={Package} tone="neutral" meta="Across all receipts" />
       </div>
       {summary && summary.revenue > 0 && <PaymentSplit byPayment={summary.by_payment} total={summary.revenue} />}
+
+      {singleDay && range.from && (
+        <DayInsights
+          day={range.from}
+          isToday={period === 'today'}
+          dayLabel={period === 'today' ? 'Today' : 'Yesterday'}
+          businessId={isSuperAdmin ? businessId : ''}
+          branchId={isSuperAdmin ? branchId : ''}
+          showBranches={isSuperAdmin && !branchId}
+          onData={onDayData}
+        />
+      )}
 
       {byLocation.length > 0 && (
         <LocationBreakdown

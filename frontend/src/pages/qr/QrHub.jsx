@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { QrCode, ScanLine } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
@@ -20,20 +20,23 @@ export default function QrHub() {
     ? (isSuperAdmin ? { section: 'Inventory', items: [{ label: 'Products', to: '/products' }, { label: 'Print QR labels' }] } : { items: [{ label: 'Print QR labels' }] })
     : { items: undefined };
 
+  // Head office has no till: /qr/scan goes to Sales history, and QR labels stand alone
+  if (isSuperAdmin && tab === 'scan') return <Navigate to="/sales" replace />;
+
   return (
     <Layout>
       <Breadcrumbs section={crumbs.section} items={crumbs.items} className="mb-3" />
-      <SegmentedControl
+      {!isSuperAdmin && <SegmentedControl
         label="Point of sale or QR labels"
         size="lg"
         value={tab}
         onChange={setTab}
         className="mb-6"
         tabs={[
-          { value: 'scan', label: isSuperAdmin ? 'Daily sales' : 'Point of sale', icon: ScanLine },
+          { value: 'scan', label: 'Point of sale', icon: ScanLine },
           { value: 'generate', label: 'Print QR labels', icon: QrCode },
         ]}
-      />
+      />}
       {tab === 'scan' ? <QrScanner embedded /> : <QrGenerator embedded />}
     </Layout>
   );

@@ -172,7 +172,7 @@ export default function Dashboard() {
         ) : null}
         actions={<>
           <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
-          <Button variant="secondary" icon={ScanLine} to="/qr/scan">{isSuperAdmin ? 'Daily sales' : 'Open point of sale'}</Button>
+          <Button variant="secondary" icon={ScanLine} to={isSuperAdmin ? '/sales' : '/qr/scan'}>{isSuperAdmin ? 'Sales history' : 'Open point of sale'}</Button>
         </>}
       />
 

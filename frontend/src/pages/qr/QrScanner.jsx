@@ -4,12 +4,11 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Html5Qrcode } from 'html5-qrcode';
 import { CheckCircle2, ShoppingCart, PackagePlus, ArrowDownToLine, History, Volume2, VolumeX } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { SaleReceipt, ReceiptModal } from '../../components/pos/Receipt';
 import { Alert, Button, IconButton, SegmentedControl, useConfirm } from '../../components/ui';
 import ProductFinder from './pos/ProductFinder';
 import OrderPanel from './pos/OrderPanel';
-import PosOverview from './pos/PosOverview';
 
 const MAX_TILES = 60;
 
@@ -36,7 +35,8 @@ const toCartProduct = (p) => ({
 export default function QrScanner({ embedded = false }) {
   const { user } = useAuth();
   const Wrap = embedded ? React.Fragment : Layout;
-  if (user?.role === 'super_admin') return <PosOverview Wrap={Wrap} />;
+  // Head office does not sell; its sales view is Sales history
+  if (user?.role === 'super_admin') return <Navigate to="/sales" replace />;
   return <PosTerminal Wrap={Wrap} user={user} />;
 }
 

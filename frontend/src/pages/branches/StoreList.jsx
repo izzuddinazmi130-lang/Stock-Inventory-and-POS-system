@@ -374,7 +374,7 @@ export default function StoreList() {
             { label: branch?.name || 'Branch', to: `/branches/${id}` },
             { label: 'Pop-up stores' },
           ]
-          : [{ label: 'Stores' }]}
+          : [{ label: 'Pop-up stores' }]}
         title="Pop-up stores"
         description={`Pop-ups, bazaars and booths run by ${branch?.name || 'this branch'}. Each event has its own sales report.`}
         actions={<>
