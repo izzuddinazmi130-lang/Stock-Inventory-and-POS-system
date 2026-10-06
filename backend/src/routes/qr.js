@@ -302,6 +302,10 @@ router.post('/pos-transaction', authenticateToken, async (req, res) => {
       connection.release();
       return res.status(403).json({ success: false, message: 'You are not assigned to a branch.' });
     }
+    if (Number(req.user.branch_active) === 0) {
+      connection.release();
+      return res.status(403).json({ success: false, code: 'BRANCH_INACTIVE', message: 'Your branch is set to inactive, so it cannot sell or receive stock. Ask HQ to reactivate it.' });
+    }
 
     // Support single item payload or multi-item cart array
     let cartItems = [];
@@ -652,6 +656,9 @@ router.post('/scan-deduct', authenticateToken, async (req, res) => {
     const targetBranch = req.user.branch_id ? parseInt(req.user.branch_id, 10) : null;
     if (!targetBranch) {
       return res.status(403).json({ success: false, message: 'You are not assigned to a branch.' });
+    }
+    if (Number(req.user.branch_active) === 0) {
+      return res.status(403).json({ success: false, code: 'BRANCH_INACTIVE', message: 'Your branch is set to inactive, so it cannot sell. Ask HQ to reactivate it.' });
     }
 
     const cleanCode = parseQrCode(qr_code);

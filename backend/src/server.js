@@ -42,10 +42,12 @@ io.use(async (socket, next) => {
     if (!token) return next(new Error('Authentication required'));
     const decoded = jwt.verify(token, JWT_SECRET);
     const [users] = await pool.query(
-      'SELECT id, role, business_id, branch_id, is_active FROM users WHERE id = ?',
+      'SELECT id, role, business_id, branch_id, is_active, status, deleted_at FROM users WHERE id = ?',
       [decoded.id]
     );
-    if (users.length === 0 || !users[0].is_active) return next(new Error('Account is inactive or does not exist'));
+    // Same rule as the API: only active, non-deleted accounts (is_active is 2 for declined/deleted)
+    const u = users[0];
+    if (!u || u.deleted_at || u.status !== 'active' || Number(u.is_active) !== 1) return next(new Error('Account is inactive or does not exist'));
     socket.user = users[0];
     next();
   } catch (err) {

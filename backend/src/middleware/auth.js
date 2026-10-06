@@ -22,9 +22,9 @@ const authenticateToken = async (req, res, next) => {
     
     // Verify user in database
     const [users] = await pool.query(`
-      SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active, u.must_change_password,
+      SELECT u.id, u.email, u.username, u.full_name, u.role, u.is_active, u.status, u.deleted_at, u.must_change_password,
              u.business_id, u.branch_id,
-             b.name AS branch_name,
+             b.name AS branch_name, b.is_active AS branch_active,
              biz.name AS business_name
       FROM users u
       LEFT JOIN branches b ON u.branch_id = b.id
@@ -32,8 +32,11 @@ const authenticateToken = async (req, res, next) => {
       WHERE u.id = ?
     `, [decoded.id]);
     
-    if (users.length === 0 || !users[0].is_active) {
-      return res.status(403).json({ success: false, message: 'Account is inactive or does not exist' });
+    // is_active is 2 for declined/deleted accounts (truthy), so check the account status explicitly
+    const account = users[0];
+    if (!account || account.deleted_at || account.status !== 'active' || Number(account.is_active) !== 1) {
+      res.clearCookie('token');
+      return res.status(401).json({ success: false, code: 'ACCOUNT_INACTIVE', message: 'Your account is no longer active. Please contact HQ.' });
     }
 
     req.user = users[0];

@@ -228,11 +228,11 @@ router.post('/register', async (req, res) => {
 
     // Verify branch belongs to business
     const [branchRows] = await pool.query(
-      'SELECT id FROM branches WHERE id = ? AND business_id = ?',
+      'SELECT id FROM branches WHERE id = ? AND business_id = ? AND is_active = 1',
       [branch_id, business_id]
     );
     if (branchRows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid business/branch combination.' });
+      return res.status(400).json({ success: false, message: 'Choose an open branch of that business.' });
     }
 
     // Check duplicate email
