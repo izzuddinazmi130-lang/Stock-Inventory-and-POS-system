@@ -5,7 +5,7 @@ import {
 import Layout from '../../components/Layout';
 import {
   Button, IconButton, Input, Select, Textarea, SearchInput, MoneyInput, Checkbox, Field, FormSection, ChoiceCards, Alert,
-  Card, CardHeader, CardBody, CardFooter, Badge, StatusPill, BusinessDot, Tabs, SegmentedControl, Table, THead, TBody, TH, TR, TD,
+  Card, CardHeader, CardBody, Badge, StatusPill, BusinessDot, Tabs, SegmentedControl, Table, THead, TBody, TH, TR, TD,
   TableState, Pagination, Skeleton, SkeletonKpi, EmptyState, ErrorState, Tooltip, PageHeader, KpiCard, FilterBar, ScopeBadge,
   Menu, Modal, Drawer, useConfirm, useToast,
 } from '../../components/ui';

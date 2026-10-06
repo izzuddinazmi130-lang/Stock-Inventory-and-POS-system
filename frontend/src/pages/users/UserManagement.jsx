@@ -6,7 +6,7 @@ import { Users, Plus, ShieldCheck, Trash2, Pencil, UserCheck, Check, X, Eye, Pau
 import { useAuth } from '../../context/AuthContext';
 import ResetPasswordModal from './components/ResetPasswordModal';
 import {
-  Modal, FormSection, Field, Input, Button, ButtonBase, BusinessBranchFilter, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
+  Alert, Modal, FormSection, Field, Input, Button, ButtonBase, BusinessBranchFilter, Card, CardHeader, FilterBar, KpiCard, Menu, PageHeader, SearchInput,
   SegmentedControl, StatusPill, BusinessDot, Table, THead, TBody, TH, TR, TD, TableState, useConfirm, useToast,
 } from '../../components/ui';
 import { RoleBadge, UserAccessFields, UserAccessModal, relativeTime } from './components/UserModals';
@@ -22,14 +22,12 @@ const STATUS_TABS = [
 export default function UserManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') === 'pending' ? 'pending' : 'users';
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const activeTab = initialTab;
 
   const [users, setUsers] = useState([]);
   const [userStats, setUserStats] = useState({ total: 0, superadmins: 0, admins: 0, byBusiness: [] });
   // /users?tab=pending (e.g. "Review requests" on the dashboard) opens straight on pending accounts
   const [statusFilter, setStatusFilter] = useState(initialTab === 'pending' ? 'pending' : 'all');
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [stats, setStats] = useState({ total: 0, active: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   // `message` only carries errors shown inside the add/edit form; page messages are toasts
@@ -106,18 +104,13 @@ export default function UserManagement() {
       if (filterBranch) params.branch_id = filterBranch;
       if (searchQuery.trim()) params.search = searchQuery.trim();
 
-      const [resUsers, resPending, resStats] = await Promise.all([
+      const [resUsers, resStats] = await Promise.all([
         api.get('/users', { params }),
-        api.get('/users/pending'),
         api.get('/users/stats')
       ]);
 
       if (resUsers.data.success) {
         setUsers(resUsers.data.users || []);
-        setStats(resUsers.data.stats || { total: 0, active: 0, pending: 0 });
-      }
-      if (resPending.data.success) {
-        setPendingUsers(resPending.data.pendingUsers || []);
       }
       if (resStats?.data?.success) {
         setUserStats(resStats.data.stats);
@@ -143,27 +136,17 @@ export default function UserManagement() {
     setSearchParams(activeTab === 'pending' ? { tab: 'pending' } : {});
   };
 
-  const openAddModal = () => {
+  const openAddModal = (role = 'admin') => {
     setAddForm({
       full_name: '',
       email: '',
       password: '',
-      role: 'admin',
+      role,
       business_id: filterBusiness || '',
       branch_id: filterBranch || ''
     });
     setMessage(null);
     setShowAddModal(true);
-  };
-
-  // Sync tab change to search params
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    const newParams = {};
-    if (tab === 'pending') newParams.tab = 'pending';
-    if (filterBusiness) newParams.business_id = filterBusiness;
-    if (filterBranch) newParams.branch_id = filterBranch;
-    setSearchParams(newParams);
   };
 
   // For Add Form Branches
@@ -326,8 +309,20 @@ export default function UserManagement() {
       <PageHeader
         title="Users"
         description="Who can sign in, what they can see, and new account requests."
-        actions={<Button icon={Plus} onClick={openAddModal}>Add user</Button>}
+        actions={<Button icon={Plus} onClick={() => openAddModal()}>Add user</Button>}
       />
+
+      {/* With one super admin, nobody can reset that account's password from the app */}
+      {userStats.active_superadmins === 1 && (
+        <Alert
+          tone="warning"
+          className="mb-6"
+          title="There is only one super admin"
+          action={<Button variant="secondary" size="sm" onClick={() => openAddModal('super_admin')}>Add a second super admin</Button>}
+        >
+          If this person forgets their password, no one can reset it from the app. Add a second super admin you trust so you can reset each other’s passwords.
+        </Alert>
+      )}
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <KpiCard loading={firstLoad} label="Users" value={Number(userStats.total) || 0} icon={Users} tone="accent" meta="All accounts" />

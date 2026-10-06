@@ -61,12 +61,12 @@ function parseAuditRecord(log) {
     if (log.old_values) {
       oldData = typeof log.old_values === 'string' ? JSON.parse(log.old_values) : log.old_values;
     }
-  } catch (e) {}
+  } catch {}
   try {
     if (log.new_values) {
       newData = typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values;
     }
-  } catch (e) {}
+  } catch {}
 
   const action = (log.action || '').toUpperCase();
   const rawEntity = (log.entity_type || '').toLowerCase();

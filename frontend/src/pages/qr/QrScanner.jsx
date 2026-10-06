@@ -165,7 +165,7 @@ function PosTerminal({ Wrap, user }) {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + duration);
-    } catch (e) {}
+    } catch {}
   };
 
   // ── Cart
@@ -296,8 +296,8 @@ function PosTerminal({ Wrap, user }) {
   // ── Camera
   const stopCamera = async () => {
     if (html5QrCodeRef.current && cameraActiveRef.current) {
-      try { await html5QrCodeRef.current.stop(); } catch (e) {}
-      try { html5QrCodeRef.current.clear(); } catch (e) {}
+      try { await html5QrCodeRef.current.stop(); } catch {}
+      try { html5QrCodeRef.current.clear(); } catch {}
     }
     cameraActiveRef.current = false;
     html5QrCodeRef.current = null;
@@ -330,7 +330,7 @@ function PosTerminal({ Wrap, user }) {
         cameraActiveRef.current = true;
         if (cancelled) { stopCamera(); return; }
         setCameraStatus('Point the camera at a product QR code');
-      } catch (err) {
+      } catch {
         if (!cancelled) setCameraStatus('Camera not available. Check the browser camera permission.');
       }
     })();
@@ -344,7 +344,7 @@ function PosTerminal({ Wrap, user }) {
       const reader = new Html5Qrcode('pos-file-sandbox');
       const decoded = await reader.scanFile(file, false);
       handleScannedCode(decoded);
-    } catch (err) {
+    } catch {
       setErrorMessage('No QR code found in that image.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';

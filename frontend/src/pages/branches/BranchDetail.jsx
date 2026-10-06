@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Package, Boxes, PackageMinus, ArrowUpDown, RefreshCw, QrCode, Users, Store, Pencil, Plus, Phone, Clock, MapPin,
   Layers, BarChart3, Building2,
@@ -114,7 +114,7 @@ export default function BranchDetail() {
       setCatalogLoading(true);
       const res = await api.get('/products/catalog', { params: { business_id: branch.business_id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
-    } catch (err) {
+    } catch {
       setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
     } finally {
       setCatalogLoading(false);

@@ -139,7 +139,6 @@ export default function StoreList() {
   const [filterTab, setFilterTab] = useState('all');
 
   // Detail Inspect Modal
-  const [selectedStore, setSelectedStore] = useState(null);
 
   // Add Form
   const [showAddModal, setShowAddModal] = useState(false);

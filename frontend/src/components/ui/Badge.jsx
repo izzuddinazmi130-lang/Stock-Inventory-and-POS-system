@@ -71,8 +71,8 @@ const STATUS = {
     ended: { tone: 'neutral', label: 'Ended', icon: CircleSlash },
   },
   product: {
-    available: { tone: 'success', label: 'Selling', icon: Tag },
-    discontinued: { tone: 'neutral', label: 'Discontinued', icon: CircleSlash },
+    available: { tone: 'success', label: 'For sale', icon: Tag },
+    discontinued: { tone: 'neutral', label: 'Hidden', icon: CircleSlash },
   },
   payment: {
     cash: { tone: 'neutral', label: 'Cash', icon: Banknote },

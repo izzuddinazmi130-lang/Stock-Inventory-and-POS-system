@@ -79,7 +79,7 @@ export default function BranchList() {
       setCatalogLoading(true);
       const res = await api.get('/products/catalog', { params: { business_id: id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
-    } catch (err) {
+    } catch {
       setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
     } finally {
       setCatalogLoading(false);

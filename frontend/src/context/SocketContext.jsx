@@ -19,7 +19,10 @@ export const SocketProvider = ({ children }) => {
 
     const socketUrl = window.location.origin.includes('5173') ? 'http://localhost:5000' : window.location.origin;
     const newSocket = io(socketUrl, {
-      withCredentials: true
+      withCredentials: true,
+      // Go straight to WebSocket: the HTTP long-polling handshake left stray "400 session unknown"
+      // errors when a page was left mid-handshake or the server restarted. Polling stays as a fallback.
+      transports: ['websocket', 'polling'],
     });
 
     // The server authenticates the socket with the auth cookie and joins it to the

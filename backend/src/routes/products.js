@@ -880,7 +880,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 router.post('/adjust-stock', authenticateToken, async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    const { item_id, branch_id, adjustment_type, quantity, note, payment_method, store_id } = req.body;
+    const { item_id, branch_id, adjustment_type, quantity, note, store_id } = req.body;
 
     if (!['in', 'out', 'adjust', 'damage'].includes(adjustment_type)) {
       connection.release();
@@ -962,7 +962,7 @@ router.post('/adjust-stock', authenticateToken, async (req, res) => {
       `INSERT INTO stock_movements
          (branch_id, store_id, item_id, movement_type, quantity, qty_before, qty_after, unit_price, selling_price, payment_method, note, performed_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [targetBranch, store_id || null, item_id, typeCode, adjQty, curQty, newQty, product.cost_price, product.price_customer, typeCode === 'out' ? (payment_method || 'cash') : null, note || `Stock ${adjustment_type.toUpperCase()} adjustment`, req.user.id]
+      [targetBranch, store_id || null, item_id, typeCode, adjQty, curQty, newQty, product.cost_price, product.price_customer, null /* manual adjustments are not sales: sales come from the POS with a receipt */, note || `Stock ${adjustment_type.toUpperCase()} adjustment`, req.user.id]
     );
 
     await connection.commit();

@@ -25,6 +25,7 @@ router.get('/stats', async (req, res) => {
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN u.role = 'super_admin' THEN 1 ELSE 0 END) as superadmins,
+        SUM(CASE WHEN u.role = 'super_admin' AND u.status = 'active' THEN 1 ELSE 0 END) as active_superadmins,
         SUM(CASE WHEN u.role = 'admin' THEN 1 ELSE 0 END) as admins,
         b.name as business_name,
         COUNT(CASE WHEN u.role = 'admin' THEN 1 END) as admin_count
@@ -36,10 +37,11 @@ router.get('/stats', async (req, res) => {
     
     const total = rows.reduce((s,r) => s + parseInt(r.total||0), 0);
     const superadmins = rows.reduce((s,r) => s + parseInt(r.superadmins||0), 0);
+    const activeSuperadmins = rows.reduce((s,r) => s + parseInt(r.active_superadmins||0), 0);
     const admins = rows.reduce((s,r) => s + parseInt(r.admins||0), 0);
     const byBusiness = rows.map(r => ({ name: r.business_name || 'Unassigned', count: parseInt(r.admin_count||0) })).filter(b => b.count > 0);
 
-    return res.json({ success: true, stats: { total, superadmins, admins, byBusiness } });
+    return res.json({ success: true, stats: { total, superadmins, active_superadmins: activeSuperadmins, admins, byBusiness } });
   } catch (err) {
     console.error('Fetch users stats error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch user stats' });

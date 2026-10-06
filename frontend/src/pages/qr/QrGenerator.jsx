@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { QrCode, Printer, Package, Building2, Ruler, Download, ChevronDown, FileImage, FileText, Image as ImageIcon } from 'lucide-react';
+import { QrCode, Package, Building2, Ruler, Download, ChevronDown, FileImage, FileText, Image as ImageIcon } from 'lucide-react';
 import { Alert, Button, ButtonBase, Card, CardHeader, Checkbox, EmptyState, Menu, PageHeader, QuantityStepper, SearchInput, Skeleton, cn, useToast } from '../../components/ui';
 import { labelImage, labelsPdf, saveBlob } from './labelExport';
 

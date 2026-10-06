@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { Plus, RefreshCw, Building2, Layers, PackagePlus } from 'lucide-react';
@@ -125,12 +126,25 @@ export default function ProductsList() {
     try {
       const res = await api.get('/products/categories');
       if (res.data.success) setCategories(res.data.categories);
-    } catch (err) {}
+    } catch {}
   };
 
   useEffect(() => {
     fetchItems();
   }, [search, selectedCategory, selectedStockStatus, selectedProductStatus, selectedSort, filterBusiness, filterBranch]);
+
+  // Live: stock changed somewhere (a sale, restock, damage, another admin) → refresh with the current filters
+  const { socket } = useSocket() || {};
+  const fetchRef = useRef(fetchItems);
+  fetchRef.current = fetchItems;
+  useEffect(() => {
+    if (!socket) return undefined;
+    let timer;
+    const refresh = () => { clearTimeout(timer); timer = setTimeout(() => fetchRef.current(), 400); };
+    socket.on('inventory_updated', refresh);
+    socket.on('product_deleted', refresh);
+    return () => { clearTimeout(timer); socket.off('inventory_updated', refresh); socket.off('product_deleted', refresh); };
+  }, [socket]);
 
   useEffect(() => {
     fetchCategories();
@@ -438,7 +452,7 @@ export default function ProductsList() {
       ]);
       if (catRes.data.success) setCatalogProducts(catRes.data.products || []);
       if (brRes.data.success) setBranches(brRes.data.branches || brRes.data.data || []);
-    } catch (err) {
+    } catch {
       notifyError('Could not load this business’s products.');
     } finally {
       setCatalogLoading(false);
@@ -546,8 +560,8 @@ export default function ProductsList() {
           <option value="out_of_stock">Out of stock</option>
         </Select>
         <Select wrapperClassName="md:w-36" aria-label="Product status" value={selectedProductStatus} onChange={e => setSelectedProductStatus(e.target.value)}>
-          <option value="active">Selling</option>
-          <option value="discontinued">Discontinued</option>
+          <option value="active">For sale</option>
+          <option value="discontinued">Hidden</option>
           <option value="All">Any status</option>
         </Select>
         <Select wrapperClassName="md:w-44" aria-label="Sort by" value={selectedSort} onChange={e => setSelectedSort(e.target.value)}>

@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null);
       }
-    } catch (err) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         if (meRes.data.success && meRes.data.user) {
           setUser(meRes.data.user);
         }
-      } catch (e) {}
+      } catch {}
     }
     return res.data;
   };

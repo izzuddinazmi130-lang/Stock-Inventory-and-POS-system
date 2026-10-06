@@ -59,16 +59,12 @@ export function AdjustStockModal({ item, form, setForm, branches, currentQty, ne
         <Field label={form.adjustment_type === 'adjust' ? 'Actual count on shelf' : 'Quantity'} required>
           <Input type="number" min={form.adjustment_type === 'adjust' ? 0 : 1} step="1" required inputMode="numeric" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} className="font-mono" suffix="units" />
         </Field>
-        {form.adjustment_type === 'out' && (
-          <Field label="Payment method" hint="Used in the sales report.">
-            <Select value={form.payment_method || 'cash'} onChange={e => setForm({ ...form, payment_method: e.target.value })}>
-              <option value="cash">Cash</option>
-              <option value="qr">QR / e-Wallet</option>
-              <option value="online_banking">Online Banking</option>
-            </Select>
-          </Field>
-        )}
       </div>
+      {form.adjustment_type === 'out' && (
+        <Alert tone="info">
+          Use this for stock taken out for other reasons (samples, returns to supplier, transfers). To record a sale, use the <strong>Point of sale</strong> so it gets a receipt and counts in Sales history.
+        </Alert>
+      )}
 
       {currentQty != null && (
         <div className={cn('p-3 rounded-lg border text-sm flex items-center justify-between transition-colors', newQty < 0 ? 'bg-danger-soft border-danger-line text-danger-fg' : 'bg-subtle border-line text-ink-secondary')}>
@@ -142,10 +138,15 @@ export function EditProductModal({ item, form, setForm, config, error, onDismiss
               {config.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </Select>
           </Field>
-          <Field label="Status" hint={form.status === 'discontinued' ? 'Hidden from the POS and the product list.' : 'Out of stock / low stock is worked out from each branch’s quantity.'}>
+          <Field
+            label="Status"
+            hint={form.status === 'discontinued'
+              ? 'Hidden from the POS and the product list. Its stock and history are kept. To remove it completely, use Delete product.'
+              : 'Shown at the POS. Low / out of stock is worked out from each branch’s quantity.'}
+          >
             <Select value={form.status || 'available'} onChange={e => setForm({ ...form, status: e.target.value })}>
-              <option value="available">Selling</option>
-              <option value="discontinued">Discontinued</option>
+              <option value="available">For sale</option>
+              <option value="discontinued">Hidden (not for sale)</option>
             </Select>
           </Field>
         </div>
