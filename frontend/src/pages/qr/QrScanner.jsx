@@ -336,8 +336,15 @@ function PosTerminal({ Wrap, user }) {
         cameraActiveRef.current = true;
         if (cancelled) { stopCamera(); return; }
         setCameraStatus('Point the camera at a product QR code');
-        // Camera names are only readable once permission is granted
-        Html5Qrcode.getCameras().then(devices => { if (!cancelled && devices?.length) setCameras(devices); }).catch(() => {});
+        // If the phone takes the camera away (another app, a call), say so instead of showing a frozen picture
+        const track = document.querySelector('#pos-camera-viewport video')?.srcObject?.getVideoTracks?.()[0];
+        track?.addEventListener('ended', () => { if (!cancelled) setCameraStatus('The camera stopped. Tap Close, then the camera button to start it again.'); });
+        // Camera names (readable now that permission is granted). Read the list only — Html5Qrcode.getCameras()
+        // opens a second camera (the front one on phones), and iPhones then shut down the back camera that is scanning.
+        navigator.mediaDevices.enumerateDevices().then(list => {
+          const devices = list.filter(d => d.kind === 'videoinput' && d.deviceId).map(d => ({ id: d.deviceId, label: d.label }));
+          if (!cancelled && devices.length) setCameras(devices);
+        }).catch(() => {});
       } catch (err) {
         if (cancelled) return;
         const text = String(err?.name || err?.message || err);
