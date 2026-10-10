@@ -88,6 +88,10 @@ export default function ProductsList() {
   }, [queryBusinessId, queryBranchId]);
 
   // Fetch items
+  const prevQtyRef = useRef(new Map());
+  const flashTimer = useRef(null);
+  const [changedKeys, setChangedKeys] = useState(new Set());
+
   const fetchItems = async () => {
     try {
       setLoading(true);
@@ -105,6 +109,13 @@ export default function ProductsList() {
       });
       if (res.data.success) {
         const fetched = res.data.items || [];
+        // Rows whose stock changed since the last load (a sale or restock elsewhere) glow briefly
+        const prev = prevQtyRef.current;
+        const changed = new Set(fetched
+          .filter(i => prev.has(`${i.id}-${i.branch_id}`) && prev.get(`${i.id}-${i.branch_id}`) !== Number(i.quantity))
+          .map(i => `${i.id}-${i.branch_id}`));
+        prevQtyRef.current = new Map(fetched.map(i => [`${i.id}-${i.branch_id}`, Number(i.quantity)]));
+        if (changed.size) { setChangedKeys(changed); clearTimeout(flashTimer.current); flashTimer.current = setTimeout(() => setChangedKeys(new Set()), 1800); }
         setItems(fetched);
         if (queryProductId && fetched.length > 0) {
           const match = fetched.find(i => String(i.id) === String(queryProductId));
@@ -602,6 +613,7 @@ export default function ProductsList() {
             onToggle={toggleExpandProduct}
             hasFilters={hasAnyFilter}
             onClearFilters={clearFilters}
+            onShowHidden={() => setSelectedProductStatus('All')}
             onAdjust={openAdjustModal}
             onQr={openQrModal}
             onEdit={openEditModal}
@@ -616,8 +628,10 @@ export default function ProductsList() {
             onRetry={fetchItems}
             isSuperAdmin={isSuperAdmin}
             highlightId={queryProductId}
+            changedKeys={changedKeys}
             hasFilters={hasAnyFilter}
             onClearFilters={clearFilters}
+            onShowHidden={() => setSelectedProductStatus('All')}
             onAdjust={openAdjustModal}
             onQr={openQrModal}
             onEdit={openEditModal}

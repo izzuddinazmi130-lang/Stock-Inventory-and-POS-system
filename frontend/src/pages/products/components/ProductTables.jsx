@@ -65,18 +65,28 @@ function PriceCell({ item }) {
   );
 }
 
-function EmptyAction({ hasFilters, onClearFilters }) {
-  return hasFilters
-    ? <Button variant="secondary" size="sm" icon={RotateCcw} onClick={onClearFilters}>Clear filters</Button>
-    : <Button size="sm" icon={Plus} to="/products/add">Add product</Button>;
+function EmptyAction({ hasFilters, onClearFilters, onShowHidden }) {
+  if (hasFilters) return <Button variant="secondary" size="sm" icon={RotateCcw} onClick={onClearFilters}>Clear filters</Button>;
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      <Button size="sm" icon={Plus} to="/products/add">Add product</Button>
+      {onShowHidden && <Button variant="secondary" size="sm" onClick={onShowHidden}>Show hidden products</Button>}
+    </div>
+  );
 }
+
+// Empty list wording: with no filters, "no products for sale" (hidden products are not listed by default)
+const emptyCopy = (hasFilters) => hasFilters
+  ? { title: 'No products match these filters', description: 'Try another search or clear the filters.' }
+  : { title: 'No products for sale', description: 'Add a product to start tracking stock. Hidden products are not listed here.' };
 
 /** One row per product per branch (default view). */
 export function ByBranchTable({
-  items, loading, error, onRetry, isSuperAdmin, highlightId, hasFilters, onClearFilters,
+  items, loading, error, onRetry, isSuperAdmin, highlightId, changedKeys, hasFilters, onClearFilters, onShowHidden,
   onAdjust, onQr, onEdit, onDelete, onRemoveFromBranch,
 }) {
   const cols = isSuperAdmin ? 6 : 5;
+  const copy = emptyCopy(hasFilters);
   return (
     <Table minWidth="60rem">
       <THead>
@@ -97,15 +107,15 @@ export function ByBranchTable({
           onRetry={onRetry}
           empty={!loading && !error && items.length === 0}
           emptyIcon={Package}
-          emptyTitle={hasFilters ? 'No products match these filters' : 'No products yet'}
-          emptyDescription={hasFilters ? 'Try another search or clear the filters.' : 'Add your first product to start tracking stock.'}
-          emptyAction={<EmptyAction hasFilters={hasFilters} onClearFilters={onClearFilters} />}
+          emptyTitle={copy.title}
+          emptyDescription={copy.description}
+          emptyAction={<EmptyAction hasFilters={hasFilters} onClearFilters={onClearFilters} onShowHidden={onShowHidden} />}
         />
         {items.map((item, i) => {
           const level = stockLevel(item);
           const min = parseInt(item.minimum_quantity ?? item.min_quantity ?? 0, 10) || 0;
           return (
-            <TR key={`${item.id}-${item.branch_id}`} index={i} selected={String(item.id) === String(highlightId)}>
+            <TR key={`${item.id}-${item.branch_id}`} index={i} selected={String(item.id) === String(highlightId)} highlight={changedKeys?.has(`${item.id}-${item.branch_id}`)}>
               <TD className="max-w-[18rem]"><ProductCell item={item} onQr={() => onQr(item)} showBusiness={isSuperAdmin} /></TD>
               <TD><VariantCell item={item} /></TD>
               {isSuperAdmin && (
@@ -156,7 +166,7 @@ export function ByBranchTable({
 
 /** One row per product with the combined stock; expand to see each branch (super admin). */
 export function CombinedTable({
-  products, loading, error, onRetry, expandedIds, onToggle, hasFilters, onClearFilters,
+  products, loading, error, onRetry, expandedIds, onToggle, hasFilters, onClearFilters, onShowHidden,
   onAdjust, onQr, onEdit, onDelete, onRemoveFromBranch,
 }) {
   return (
@@ -180,8 +190,9 @@ export function CombinedTable({
           onRetry={onRetry}
           empty={!loading && !error && products.length === 0}
           emptyIcon={Package}
-          emptyTitle={hasFilters ? 'No products match these filters' : 'No products yet'}
-          emptyAction={<EmptyAction hasFilters={hasFilters} onClearFilters={onClearFilters} />}
+          emptyTitle={emptyCopy(hasFilters).title}
+          emptyDescription={emptyCopy(hasFilters).description}
+          emptyAction={<EmptyAction hasFilters={hasFilters} onClearFilters={onClearFilters} onShowHidden={onShowHidden} />}
         />
         {products.map((prod, i) => {
           const expanded = expandedIds.has(prod.id);
@@ -227,10 +238,10 @@ export function CombinedTable({
                   <td colSpan={7} className="bg-subtle px-6 py-4 border-b border-line-soft">
                     <p className="text-table-head uppercase text-ink-muted mb-2">Stock by branch</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {prod.branches.map(br => {
+                      {prod.branches.map((br, bi) => {
                         const level = br.is_critical ? 'out' : br.is_low ? 'low' : 'ok';
                         return (
-                          <div key={br.branch_id} className="bg-surface border border-line rounded-lg p-3 flex items-center justify-between gap-3">
+                          <div key={br.branch_id} className="bg-surface border border-line rounded-lg p-3 flex items-center justify-between gap-3 animate-slide-up" style={{ animationDelay: `${Math.min(bi, 8) * 35}ms` }}>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-ink truncate">{br.branch_name}</p>
                               <p className="text-caption text-ink-muted tabular-nums">

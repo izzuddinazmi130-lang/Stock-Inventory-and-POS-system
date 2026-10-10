@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Sidebar, { NavList } from './Sidebar';
 import BrandMark from './BrandMark';
+import TopProgress from './TopProgress';
 import { Drawer } from './ui/Modal';
 import { BusinessProvider } from '../context/BusinessContext';
 
@@ -24,6 +25,8 @@ function Frame({ children }) {
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => { setNavOpen(false); }, [pathname]);
+  // A new page starts at the top (otherwise it opens where the previous page was scrolled to)
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
   const toggle = () => {
     setCollapsed(c => {
@@ -34,6 +37,7 @@ function Frame({ children }) {
 
   return (
     <div className="min-h-screen flex bg-page">
+      <TopProgress />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-surface focus:shadow-popover focus:text-sm">
         Skip to content
       </a>
@@ -41,8 +45,8 @@ function Frame({ children }) {
       <div className="flex-1 min-w-0 flex flex-col">
         <Header onOpenNav={() => setNavOpen(true)} />
         <main id="main" className="flex-1 w-full">
-          {/* Route change: quick fade + rise (opacity/transform only, so nothing shifts) */}
-          <div key={pathname} className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8 animate-slide-up">
+          {/* Route change: the page's sections fade and rise one after another (see .page-enter in index.css) */}
+          <div key={pathname} className="page-enter mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
             {children}
           </div>
         </main>

@@ -5,7 +5,7 @@ import { useBusiness } from '../../context/BusinessContext';
 import Layout from '../../components/Layout';
 import LivePopUpsCard from '../stores/LivePopUpsCard';
 import api from '../../services/api';
-import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store, Sparkles, ScanLine, ArrowRight, PackageCheck, X } from 'lucide-react';
+import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store, Sparkles, ScanLine, ArrowRight, PackageCheck, X, Receipt } from 'lucide-react';
 import {
   Button, ButtonBase, Card, CardHeader, KpiCard, PageHeader, StatusPill, Badge, BusinessDot, EmptyState, ErrorState,
   Table, THead, TBody, TH, TR, TD, TableState, Skeleton, cn,
@@ -172,7 +172,7 @@ export default function Dashboard() {
         ) : null}
         actions={<>
           <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
-          <Button variant="secondary" icon={ScanLine} to={isSuperAdmin ? '/sales' : '/qr/scan'}>{isSuperAdmin ? 'Sales history' : 'Open point of sale'}</Button>
+          <Button variant="secondary" icon={isSuperAdmin ? Receipt : ScanLine} to={isSuperAdmin ? '/sales' : '/qr/scan'}>{isSuperAdmin ? 'Sales history' : 'Open point of sale'}</Button>
         </>}
       />
 

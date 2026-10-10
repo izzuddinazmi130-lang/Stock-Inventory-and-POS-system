@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
@@ -97,6 +97,10 @@ export default function SalesHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openSale, setOpenSale] = useState(null);
+  const liveRef = useRef(false);
+  const shownIdsRef = useRef([]);
+  const freshTimer = useRef(null);
+  const [freshIds, setFreshIds] = useState(new Set());
   const [openingId, setOpeningId] = useState(null);
 
   const range = period === 'custom' ? { from: customFrom, to: customTo } : periodRange(period);
@@ -138,7 +142,16 @@ export default function SalesHistory() {
       if (location) params.store_id = location;
       const res = await api.get('/sales', { params });
       if (res.data.success) {
-        setSales(res.data.sales || []);
+        const list = res.data.sales || [];
+        // A sale that arrived live glows briefly (not on filter or page changes)
+        if (liveRef.current) {
+          const seen = new Set(shownIdsRef.current);
+          const fresh = new Set(list.filter(x => !seen.has(x.id)).map(x => x.id));
+          if (fresh.size) { setFreshIds(fresh); clearTimeout(freshTimer.current); freshTimer.current = setTimeout(() => setFreshIds(new Set()), 1800); }
+        }
+        liveRef.current = false;
+        shownIdsRef.current = list.map(x => x.id);
+        setSales(list);
         setByLocation(res.data.by_location || []);
         setSummary(res.data.summary);
         setTotalPages(res.data.total_pages || 1);
@@ -155,7 +168,7 @@ export default function SalesHistory() {
   // New sales appear on their own
   useEffect(() => {
     if (!socket) return;
-    const onMovement = (payload) => { if (payload?.action === 'stock_out') load(); };
+    const onMovement = (payload) => { if (payload?.action === 'stock_out') { liveRef.current = true; load(); } };
     socket.on('stock_movement', onMovement);
     return () => socket.off('stock_movement', onMovement);
   }, [socket, load]);
@@ -330,7 +343,7 @@ export default function SalesHistory() {
             {sales.map((s, i) => {
               const preview = s.items_preview || [];
               return (
-                <TR key={s.id} index={i} onClick={() => openReceipt(s.id)}>
+                <TR key={s.id} index={i} onClick={() => openReceipt(s.id)} highlight={freshIds.has(s.id)}>
                   <TD className="whitespace-nowrap">
                     <span className="font-mono text-caption font-semibold text-accent">{s.receipt_no}</span>
                     {openingId === s.id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
