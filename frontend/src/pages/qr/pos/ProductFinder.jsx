@@ -61,11 +61,12 @@ export default function ProductFinder({
           <div className="rounded-lg overflow-hidden border border-line bg-ink animate-fade-in">
             <div id="pos-camera-viewport" className="w-full min-h-[240px]" />
             <div className="flex items-center justify-between gap-2 px-3 py-2 text-caption text-white/80">
-              <span className="truncate" aria-live="polite">{cameraStatus}</span>
+              <span className="min-w-0 leading-snug" aria-live="polite">{cameraStatus}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {cameras.length > 1 && (
                   <Select size="sm" value={selectedCamId} onChange={e => setSelectedCamId(e.target.value)} aria-label="Camera" className="max-w-[10rem] bg-ink-hover border-ink-secondary text-white">
-                    {cameras.map(c => <option key={c.id} value={c.id}>{c.label || 'Camera'}</option>)}
+                    <option value="">Back camera (auto)</option>
+                    {cameras.map((c, i) => <option key={c.id} value={c.id}>{c.label || `Camera ${i + 1}`}</option>)}
                   </Select>
                 )}
                 <Button size="sm" variant="secondary" onClick={() => setCameraOpen(false)}>Close</Button>

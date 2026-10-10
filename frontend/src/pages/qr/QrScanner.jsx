@@ -303,13 +303,7 @@ function PosTerminal({ Wrap, user }) {
     html5QrCodeRef.current = null;
   };
 
-  useEffect(() => {
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices?.length) { setCameras(devices); setSelectedCamId(devices[devices.length - 1].id); }
-    }).catch(() => {});
-    return () => { stopCamera(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => () => { stopCamera(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Start the camera once its viewport is on screen; restart when the chosen camera changes
   useEffect(() => {
@@ -318,20 +312,41 @@ function PosTerminal({ Wrap, user }) {
     (async () => {
       await stopCamera();
       if (cancelled) return;
+      // Phones only allow the camera on secure (https) pages
+      if (!window.isSecureContext) {
+        setCameraStatus('The camera only works on a secure (https) page. Open the https address of this system, or use “Scan from photo”.');
+        return;
+      }
       setCameraStatus('Starting camera…');
-      try {
+      const config = { fps: 12, qrbox: (w, h) => { const size = Math.max(160, Math.min(260, Math.floor(Math.min(w, h) * 0.7))); return { width: size, height: size }; } };
+      const onScan = (decodedText) => scanHandlerRef.current?.(decodedText);
+      const start = async (source) => {
         html5QrCodeRef.current = new Html5Qrcode('pos-camera-viewport');
-        await html5QrCodeRef.current.start(
-          selectedCamId ? { deviceId: { exact: selectedCamId } } : { facingMode: 'environment' },
-          { fps: 12, qrbox: { width: 220, height: 220 } },
-          (decodedText) => scanHandlerRef.current?.(decodedText),
-          () => {}
-        );
+        await html5QrCodeRef.current.start(source, config, onScan, () => {});
+      };
+      try {
+        // Default: the back camera, asked for by facing mode (device lists put the front or ultra-wide camera last on many phones)
+        try {
+          await start(selectedCamId ? { deviceId: { exact: selectedCamId } } : { facingMode: 'environment' });
+        } catch (firstErr) {
+          if (!selectedCamId || /NotAllowed|Permission/i.test(String(firstErr))) throw firstErr;
+          await stopCamera();
+          await start({ facingMode: 'environment' }); // the chosen camera is gone: fall back to the back camera
+        }
         cameraActiveRef.current = true;
         if (cancelled) { stopCamera(); return; }
         setCameraStatus('Point the camera at a product QR code');
-      } catch {
-        if (!cancelled) setCameraStatus('Camera not available. Check the browser camera permission.');
+        // Camera names are only readable once permission is granted
+        Html5Qrcode.getCameras().then(devices => { if (!cancelled && devices?.length) setCameras(devices); }).catch(() => {});
+      } catch (err) {
+        if (cancelled) return;
+        const text = String(err?.name || err?.message || err);
+        setCameraStatus(
+          /NotAllowed|Permission|denied/i.test(text) ? 'Camera access is blocked. Allow the camera for this site in the browser settings, then tap the camera button again.'
+          : /NotReadable|TrackStart|in use|Could not start/i.test(text) ? 'The camera is being used by another app. Close that app and try again.'
+          : /NotFound|Overconstrained|no camera|Requested device not found/i.test(text) ? 'No camera was found on this device. Use “Scan from photo” or type the code.'
+          : 'The camera could not start. Try again, or use “Scan from photo”.'
+        );
       }
     })();
     return () => { cancelled = true; };
