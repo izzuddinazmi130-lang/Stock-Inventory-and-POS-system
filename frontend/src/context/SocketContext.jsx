@@ -17,7 +17,8 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    const socketUrl = window.location.origin.includes('5173') ? 'http://localhost:5000' : window.location.origin;
+    // Same address as the page: in development Vite forwards /socket.io to the API, so this also works on a phone
+    const socketUrl = window.location.origin;
     const newSocket = io(socketUrl, {
       withCredentials: true,
       // Go straight to WebSocket: the HTTP long-polling handshake left stray "400 session unknown"
