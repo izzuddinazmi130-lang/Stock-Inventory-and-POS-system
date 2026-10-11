@@ -81,8 +81,7 @@ Stock-Inventory-and-POS-system/
 │   │   ├── middleware/     # Authentication, roles, branch/business scoping
 │   │   ├── routes/         # REST API: auth, users, businesses, branches, stores,
 │   │   │                   #   products, qr (POS), sales, damage, reports, audit
-│   │   ├── utils/          # Receipt numbers, SKUs, real-time events
-│   │   ├── migrations/     # Database upgrade scripts
+│   │   ├── utils/          # Receipt numbers, sales reports, validation, real-time events
 │   │   ├── scripts/        # Maintenance scripts (e.g. password reset)
 │   │   └── server.js       # Express + Socket.IO entry point
 │   ├── uploads/            # Damage report photos (not committed)
@@ -96,7 +95,7 @@ Stock-Inventory-and-POS-system/
 │   │   └── services/       # API client
 │   └── DESIGN.md           # Design system: colours, components, layout rules
 └── database/
-    └── hq_inventory_system.sql   # Database structure
+    └── hq_inventory_system.sql   # The whole database structure in one file
 ```
 
 ---
@@ -185,32 +184,33 @@ Open **http://localhost:5173**.
 | `backend/` | `npm run dev` | Start the API and restart it automatically when code changes |
 | `backend/` | `npm start` | Start the API (production) |
 | `backend/` | `node src/scripts/reset-password.js <email>` | Emergency password reset: prints a temporary password; the user must change it at the next sign-in |
-| `frontend/` | `npm run dev` | Start the development server |
+| `frontend/` | `npm run dev` | Start the development server (http://localhost:5173) |
+| `frontend/` | `npm run dev:phone` | Start the https server for phones and tablets (needed for camera scanning) |
 | `frontend/` | `npm run build` | Build the production files into `frontend/dist` |
 | `frontend/` | `npm run lint` | Check the code with ESLint |
 
 ---
 
-## Upgrading an existing database
+## Database file
 
-The scripts in `backend/src/migrations/` bring an older database up to date. **Export a backup first** (phpMyAdmin → Export). Then run the numbered scripts you haven't applied yet, oldest first:
-```bash
-cd backend
-node src/migrations/run_013.js
-node src/migrations/run_015.js
-```
-The `.sql` migrations can be run from phpMyAdmin's **SQL** tab. A fresh install from `database/hq_inventory_system.sql` doesn't need them.
+`database/hq_inventory_system.sql` holds the complete database structure (tables only, no data) in one file, including every past upgrade. Import it into an empty database for a fresh install. An existing database that is already running this version needs nothing.
+
+To back up your data, use phpMyAdmin → **Export**.
 
 ---
 
 ## Using the app on a phone or tablet
 
-The interface is fully responsive. To open it from another device on the same Wi-Fi:
+The interface is fully responsive. Phones only allow the camera (POS QR scanning) on a secure `https://` address, so use the phone server:
 ```bash
 cd frontend
-npm run dev -- --host
+npm run dev:phone
 ```
-Then visit the **Network** address Vite prints (e.g. `http://192.168.1.20:5173`). Phone browsers usually only allow camera QR scanning on a secure (`https://`) address. A USB or Bluetooth barcode scanner works anywhere.
+1. On the phone (same Wi-Fi as the PC), open the **Network** address it prints, e.g. `https://192.168.1.20:5174`.
+2. The first time, the phone warns that the connection is not private (the certificate is made by your own PC). On iPhone tap **Show Details → visit this website**; on Android tap **Advanced → Proceed**.
+3. Sign in, open **Point of sale**, tap the camera button and allow the camera.
+
+If the page does not load, allow Node.js through Windows Firewall on private networks. A USB or Bluetooth barcode scanner works on any address.
 
 ---
 
