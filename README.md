@@ -217,7 +217,6 @@ Then visit the **Network** address Vite prints (e.g. `http://192.168.1.20:5173`)
 ## Notes
 - Damage report photos are stored in `backend/uploads/` and are not committed.
 - Point-of-sale receipt numbers restart at `0001` each day for each branch.
-- `_old_php_backup/` contains the earlier PHP version of the system, kept for reference only.
 
 ---
 
