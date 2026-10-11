@@ -129,6 +129,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\nPort ${PORT} is already in use: the backend is probably already running (another terminal or a background window).`);
+    console.error(`Use that one, or close it and run this again. To see what is using the port: netstat -ano | findstr :${PORT}\n`);
+    process.exit(1);
+  }
+  throw err;
+});
 server.listen(PORT, () => {
   console.log(`🚀 HQ Inventory Express API running on http://localhost:${PORT}`);
 });
