@@ -1,3 +1,4 @@
+const dns = require('dns').promises;
 const nodemailer = require('nodemailer');
 
 // Outgoing email (forgot-password codes). Configured in backend/.env:
@@ -5,34 +6,43 @@ const nodemailer = require('nodemailer');
 // With Gmail, SMTP_PASS is an App password (Google Account > Security > App passwords), not the normal password.
 const isMailConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
-let transporter = null;
-const getTransporter = () => {
-  if (!transporter) {
-    const port = Number(process.env.SMTP_PORT) || 465;
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port,
-      secure: port === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      connectionTimeout: 15000,
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
-    });
-  }
-  return transporter;
-};
+// Find the mail server's address with the operating system's lookup (as the browser does). Nodemailer's own
+// DNS query gives up when the router answers slowly ("queryA ETIMEOUT smtp.gmail.com") instead of falling back.
+// The certificate is still checked against the real host name (tls.servername).
+async function createTransport() {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT) || 465;
+  let address = host;
+  try { address = (await dns.lookup(host, { family: 4 })).address; } catch { /* let nodemailer try the name itself */ }
+  return nodemailer.createTransport({
+    host: address,
+    port,
+    secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    tls: { servername: host },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
+}
 
-// One retry for passing network hiccups (DNS or connection timeouts)
-const TRANSIENT = /ETIMEOUT|ETIMEDOUT|ECONNECTION|ECONNRESET|ESOCKET|EDNS|EAI_AGAIN|ENOTFOUND/;
+// Up to 3 tries for passing network hiccups (DNS, connection timeouts). Wrong password etc. fail straight away.
+const TRANSIENT = /ETIMEOUT|ETIMEDOUT|ECONNECTION|ECONNRESET|ESOCKET|EDNS|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|421|45\d/;
 async function sendMail({ to, subject, text, html }) {
   const message = { from: process.env.MAIL_FROM || process.env.SMTP_USER, to, subject, text, html };
-  try {
-    return await getTransporter().sendMail(message);
-  } catch (err) {
-    if (!TRANSIENT.test(`${err.code} ${err.message}`)) throw err;
-    await new Promise(r => setTimeout(r, 1500));
-    return getTransporter().sendMail(message);
+  const pauses = [0, 1000, 3000];
+  let lastErr;
+  for (const pause of pauses) {
+    if (pause) await new Promise(r => setTimeout(r, pause));
+    try {
+      return await (await createTransport()).sendMail(message);
+    } catch (err) {
+      lastErr = err;
+      console.error(`Email to ${to} failed (${err.code || err.responseCode || 'error'}): ${err.message}`);
+      if (!TRANSIENT.test(`${err.code} ${err.responseCode} ${err.message}`)) break;
+    }
   }
+  throw lastErr;
 }
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

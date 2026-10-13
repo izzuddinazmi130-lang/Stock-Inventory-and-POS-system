@@ -1406,6 +1406,8 @@ const ms = {
   "Reset code not sent": "Kod set semula tidak dihantar",
   "Asked for a reset code again, but 5 were already sent in 15 minutes": "Meminta kod set semula lagi, tetapi 5 kod sudah dihantar dalam 15 minit",
   "Asked for a reset code again within a minute (the earlier email is still valid)": "Meminta kod set semula lagi dalam masa seminit (e-mel sebelumnya masih sah)",
+  "Reset email failed": "E-mel set semula gagal",
+  "The reset code email could not be sent": "E-mel kod set semula tidak dapat dihantar",
 
   // ── Messages from the server
   "A photo is too large. Each photo can be at most 5 MB.": "Gambar terlalu besar. Setiap gambar maksimum 5 MB.",

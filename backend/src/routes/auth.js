@@ -257,6 +257,8 @@ router.post('/forgot-password', async (req, res) => {
       await sendMail({ to: user.email, ...mail });
     } catch (mailErr) {
       console.error('Reset email failed:', mailErr.message);
+      await recordAuditLog(user.id, user.role, 'PASSWORD_RESET_EMAIL_FAILED', 'users', user.id, null,
+        { email: user.email, error: `${mailErr.code || mailErr.responseCode || ''} ${mailErr.message}`.trim().slice(0, 300) }, req);
       await pool.query('DELETE FROM password_resets WHERE id = ?', [ins.insertId]); // not sent: doesn't count towards the limits
       return res.status(502).json({ success: false, code: 'EMAIL_FAILED', message: 'The email could not be sent. Try again in a few minutes, or ask your HQ Super Admin to reset your password.' });
     }
