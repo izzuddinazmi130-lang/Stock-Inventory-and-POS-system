@@ -186,8 +186,8 @@ Open **http://localhost:5173**.
 
 | Where | Command | What it does |
 |---|---|---|
-| `backend/` | `npm run dev` | Start the API and restart it automatically when code changes |
-| `backend/` | `npm start` | Start the API (production) |
+| `backend/` | `npm run dev` | Start the API and restart it automatically when code or `backend/.env` changes |
+| `backend/` | `npm start` | Start the API (production). Does **not** reload: restart it after changing code or `.env` |
 | `backend/` | `node src/scripts/reset-password.js <email>` | Emergency password reset: prints a temporary password; the user must change it at the next sign-in |
 | `frontend/` | `npm run dev` | Start the development server (http://localhost:5173) |
 | `frontend/` | `npm run dev:phone` | Start the https server for phones and tablets (needed for camera scanning) |
