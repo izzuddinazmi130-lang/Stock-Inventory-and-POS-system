@@ -322,7 +322,7 @@ router.post('/:id/reset-password', async (req, res) => {
     }
     const temporary = custom || tempPassword();
     const hash = await bcrypt.hash(temporary, 10);
-    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 1, updated_at = NOW() WHERE id = ?', [hash, userId]);
+    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 1, password_changed_at = NOW(), updated_at = NOW() WHERE id = ?', [hash, userId]);
 
     await recordAuditLog(req.user.id, req.user.role, 'RESET_PASSWORD', 'users', userId, null,
       { email: users[0].email, full_name: users[0].full_name, generated: !custom }, req);

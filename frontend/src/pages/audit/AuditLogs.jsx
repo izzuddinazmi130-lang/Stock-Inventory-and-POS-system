@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { History, Shield, RefreshCw, User, AlertTriangle, Package, Boxes, LogIn, LogOut, CheckCircle, Laptop, Store, Building2, ShoppingCart } from 'lucide-react';
+import { History, Shield, RefreshCw, User, AlertTriangle, Package, Boxes, LogIn, LogOut, CheckCircle, Laptop, Store, Building2, ShoppingCart, KeyRound } from 'lucide-react';
 import {
   Badge, BusinessBranchFilter, Button, Card, FilterBar, Pagination, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState,
@@ -96,6 +96,16 @@ function parseAuditRecord(log) {
     ActionIcon = LogOut;
     summary = tr('Signed out');
     targetLabel = log.user_name ? `${log.user_name}` : tr('User #{value}', { value: log.entity_id || log.user_id });
+  } else if (['CHANGE_PASSWORD', 'RESET_PASSWORD', 'PASSWORD_RESET_REQUESTED', 'PASSWORD_RESET_BY_EMAIL'].includes(action)) {
+    category = 'auth';
+    tone = action === 'PASSWORD_RESET_REQUESTED' ? 'neutral' : 'warning';
+    ActionIcon = KeyRound;
+    const email = newData?.email || log.user_email || '';
+    if (action === 'CHANGE_PASSWORD') { badgeLabel = tr('Password changed'); summary = newData?.after_reset ? tr('Replaced the temporary password with their own') : tr('Changed their own password'); }
+    else if (action === 'RESET_PASSWORD') { badgeLabel = tr('Password reset'); summary = tr('HQ set a temporary password for {name}', { name: newData?.full_name || email || tr('a user') }); }
+    else if (action === 'PASSWORD_RESET_REQUESTED') { badgeLabel = tr('Reset code sent'); summary = tr('Asked for a password reset code by email'); }
+    else { badgeLabel = tr('Password reset'); summary = tr('Reset the password with an emailed code'); }
+    targetLabel = email ? tr('Account: {email}', { email }) : tr('User #{value}', { value: log.entity_id || log.user_id });
   } else if (action === 'CREATE_DAMAGE_REPORT') {
     category = 'damage';
     badgeLabel = tr('Damage Logged');

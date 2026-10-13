@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { CheckCircle2, Lock } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
 import AuthPreview, { AuthArtwork } from '../components/auth/AuthPreview';
+import ForgotPassword from '../components/auth/ForgotPassword';
 import {
   Alert, BusinessDot, Button, Checkbox, Field, Input, PasswordInput, Select, SegmentedControl, cn,
 } from '../components/ui';
@@ -29,7 +30,7 @@ function readRemembered() {
 }
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const formRef = useRef(null);
 
@@ -202,7 +203,15 @@ export default function Login() {
             <div key={isRegisterMode ? 'register' : 'signin'} className="animate-slide-up">
             {error && <Alert tone="danger" className="mb-6" onClose={() => setError('')}>{error}</Alert>}
 
-            {isRegisterMode && requestSent ? (
+            {!isRegisterMode && showForgot ? (
+              <ForgotPassword
+                initialEmail={formData.email}
+                controlClassName={control}
+                labelClassName={label}
+                onBack={() => setShowForgot(false)}
+                onDone={async () => { await refreshUser(); navigate('/dashboard'); }}
+              />
+            ) : isRegisterMode && requestSent ? (
               <div className="rounded-xl border border-success-line bg-success-soft p-6 text-center animate-fade-in" role="status">
                 <span className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface text-success shadow-soft">
                   <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
@@ -248,15 +257,10 @@ export default function Login() {
                   <>
                     <div className="flex items-center justify-between gap-4">
                       <Checkbox label={t('Remember me')} checked={remember} onChange={e => setRemember(e.target.checked)} />
-                      <Button variant="link" onClick={() => setShowForgot(v => !v)} aria-expanded={showForgot} className="text-[13px] font-medium rounded">
+                      <Button variant="link" onClick={() => { setShowForgot(true); setError(''); setFieldErrors({}); }} className="text-[13px] font-medium rounded">
                         {t('Forgot password?')}
                       </Button>
                     </div>
-                    {showForgot && (
-                      <Alert tone="info" onClose={() => setShowForgot(false)}>
-                        {t('Ask your HQ Super Admin to reset it. They’ll give you a temporary password, and you’ll choose your own new one right after signing in.')}
-                      </Alert>
-                    )}
                   </>
                 )}
 

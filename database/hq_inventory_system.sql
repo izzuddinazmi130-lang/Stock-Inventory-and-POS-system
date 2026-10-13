@@ -116,6 +116,20 @@ CREATE TABLE `damage_reports` (
   CONSTRAINT `damage_reports_ibfk_3` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `password_resets` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `code_hash` varchar(255) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `attempts` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `used_at` datetime DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_password_resets_user` (`user_id`,`created_at`),
+  CONSTRAINT `fk_password_resets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='Forgot-password codes sent by email (hashed, 15 minutes, single use)';
+
 CREATE TABLE `product_branch_stock` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `product_id` int(10) unsigned NOT NULL,
@@ -275,6 +289,7 @@ CREATE TABLE `users` (
   `branch_id` int(10) unsigned DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `must_change_password` tinyint(1) NOT NULL DEFAULT 0,
+  `password_changed_at` datetime DEFAULT NULL COMMENT 'Sessions signed in before this time are ended',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   UNIQUE KEY `uq_username` (`username`)

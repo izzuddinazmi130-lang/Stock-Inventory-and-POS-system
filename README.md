@@ -172,6 +172,11 @@ Open **http://localhost:5173**.
 | `JWT_SECRET` | Long random secret used to sign sessions | *(generate one)* |
 | `PORT` | API port | `5000` |
 | `CLIENT_URL` | Frontend address allowed to call the API | `http://localhost:5173` |
+| `SMTP_HOST` | Email server for forgot-password codes (leave empty to turn it off) | `smtp.gmail.com` |
+| `SMTP_PORT` | `465` (SSL) or `587` | `465` |
+| `SMTP_USER` | The email account that sends the codes | `yourshop@gmail.com` |
+| `SMTP_PASS` | For Gmail: an **App password** (not the normal password) | *(16 letters)* |
+| `MAIL_FROM` | Sender name and address | `"HQ Inventory <yourshop@gmail.com>"` |
 
 > Never commit `backend/.env`. It contains your database password and session secret.
 
@@ -199,6 +204,35 @@ For developers:
 - Wrap on-screen text in `t()` from `src/i18n`, written in English: `t('Save')`, `t('Only {stock} in stock.', { stock })`. For plurals, use `{n|item|items}`.
 - Add the Malay version to `src/i18n/ms.js` (the English sentence is the key). Anything missing simply shows in English.
 - Messages from the server are written in English and translated on arrival; ones that contain names or numbers are matched by the patterns at the end of `ms.js`.
+
+## Forgot password (email code)
+
+On the sign-in page, **Forgot password?** emails a 6-digit code. The user types the code and a new password, and is signed in. Rules:
+- A code works for 15 minutes, once. Asking again replaces the old code (at most 3 codes per 15 minutes, one per minute).
+- 5 wrong tries cancel the code. The page gives the same answer whether or not an email has an account.
+- Only active accounts get codes. After any password change, the account is signed out on other devices.
+- Requests and resets appear in the Activity log.
+
+Setting up Gmail: turn on 2-Step Verification for the sending account, create an **App password** (Google Account → Security → App passwords), and put it in `SMTP_PASS` in `backend/.env`. Without these settings the page tells users to ask the HQ Super Admin, who can still set a temporary password from **Users**.
+
+Every user needs a real email address they can open to use this.
+
+Existing database from before this feature? Run this once in phpMyAdmin (SQL tab):
+```sql
+CREATE TABLE IF NOT EXISTS password_resets (
+  id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id int NOT NULL,
+  code_hash varchar(255) NOT NULL,
+  expires_at datetime NOT NULL,
+  attempts tinyint unsigned NOT NULL DEFAULT 0,
+  used_at datetime DEFAULT NULL,
+  ip_address varchar(45) DEFAULT NULL,
+  created_at datetime NOT NULL DEFAULT current_timestamp(),
+  KEY idx_password_resets_user (user_id, created_at),
+  CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at datetime DEFAULT NULL AFTER must_change_password;
+```
 
 ## Database file
 
