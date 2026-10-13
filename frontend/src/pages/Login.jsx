@@ -7,6 +7,8 @@ import AuthPreview, { AuthArtwork } from '../components/auth/AuthPreview';
 import {
   Alert, BusinessDot, Button, Checkbox, Field, Input, PasswordInput, Select, SegmentedControl, cn,
 } from '../components/ui';
+import { t } from '../i18n';
+import LanguageSwitch from '../components/LanguageSwitch';
 
 const REMEMBER_KEY = 'hq-remembered-login';
 // Faint blue and violet light around the card, picking up the colours of the artwork
@@ -75,15 +77,15 @@ export default function Login() {
   // Same rules as before (required fields, 6-character password, matching confirmation), shown inline.
   const validate = () => {
     const errs = {};
-    if (isRegisterMode && !formData.full_name.trim()) errs.full_name = 'Enter your full name.';
-    if (!formData.email.trim()) errs.email = isRegisterMode ? 'Enter your work email.' : 'Enter your email or username.';
-    else if (isRegisterMode && !/^\S+@\S+\.\S+$/.test(formData.email)) errs.email = 'Enter a valid email address.';
-    if (!formData.password) errs.password = isRegisterMode ? 'Choose a password.' : 'Enter your password.';
-    else if (formData.password.length < 6) errs.password = 'Password must be at least 6 characters.';
+    if (isRegisterMode && !formData.full_name.trim()) errs.full_name = t('Enter your full name.');
+    if (!formData.email.trim()) errs.email = isRegisterMode ? t('Enter your work email.') : t('Enter your email or username.');
+    else if (isRegisterMode && !/^\S+@\S+\.\S+$/.test(formData.email)) errs.email = t('Enter a valid email address.');
+    if (!formData.password) errs.password = isRegisterMode ? t('Choose a password.') : t('Enter your password.');
+    else if (formData.password.length < 6) errs.password = t('Password must be at least 6 characters.');
     if (isRegisterMode) {
-      if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match.';
-      if (!formData.business_id) errs.business_id = 'Select your business.';
-      if (!formData.branch_id) errs.branch_id = 'Select your site or branch.';
+      if (formData.password !== formData.confirmPassword) errs.confirmPassword = t('Passwords do not match.');
+      if (!formData.business_id) errs.business_id = t('Select your business.');
+      if (!formData.branch_id) errs.branch_id = t('Select your site or branch.');
     }
     return errs;
   };
@@ -127,14 +129,14 @@ export default function Login() {
           } catch { /* storage unavailable: nothing to remember */ }
           navigate(res.user?.must_change_password ? '/change-password' : '/dashboard');
         } else {
-          showErrors({ password: res.message || 'Incorrect email or password.' });
+          showErrors({ password: res.message || t('Incorrect email or password.') });
         }
       }
     } catch (err) {
       // Wrong credentials come back as 4xx: show them under the password; anything else at the top
       const message = err.response?.data?.message;
       if (!isRegisterMode && err.response?.status < 500 && message) showErrors({ password: message });
-      else setError(message || err.message || 'Something went wrong. Please try again.');
+      else setError(message || err.message || t('Something went wrong. Please try again.'));
     } finally {
       setSubmitting(false);
     }
@@ -169,27 +171,30 @@ export default function Login() {
           {/* Reserves the height of the taller "Request access" form at every breakpoint, so the card keeps
               one size and the logo, heading and tabs never move when switching tabs. */}
           <div className="w-full max-w-[400px] min-h-[49.5rem] sm:min-h-[43rem] min-[900px]:min-h-[47.5rem]">
-            <BrandMark size="lg" className="mb-7 hidden min-[900px]:inline-flex" />
+            <div className="mb-7 flex items-center justify-between gap-3">
+              <BrandMark size="lg" className="hidden min-[900px]:inline-flex" />
+              <LanguageSwitch className="ml-auto" />
+            </div>
             {/* The heading is the only child here: re-keying it on a tab switch replays the fade without ever
                 leaving a second heading next to it */}
             <div className="mb-8">
               <div key={isRegisterMode ? 'register' : 'signin'} className="animate-fade-in">
                 <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
-                  {isRegisterMode ? 'Request access' : 'Welcome back'}
+                  {isRegisterMode ? t('Request access') : t('Welcome back')}
                 </h1>
                 <p className="mt-2 text-sm text-ink-muted">
-                  {isRegisterMode ? 'HQ reviews every request before you can sign in.' : 'Sign in to manage your inventory.'}
+                  {isRegisterMode ? t('HQ reviews every request before you can sign in.') : t('Sign in to manage your inventory.')}
                 </p>
               </div>
             </div>
 
             <SegmentedControl
               fullWidth
-              label="Choose sign in or request access"
+              label={t('Choose sign in or request access')}
               className="mb-8"
               value={isRegisterMode ? 'register' : 'signin'}
               onChange={v => setMode(v === 'register')}
-              tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'register', label: 'Request access' }]}
+              tabs={[{ value: 'signin', label: t('Sign in') }, { value: 'register', label: t('Request access') }]}
             />
 
             {/* Switching tabs fades the fields in (no height change: see the reserved height above) */}
@@ -202,21 +207,21 @@ export default function Login() {
                 <span className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface text-success shadow-soft">
                   <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <p className="text-sm font-medium text-ink">Request sent.</p>
-                <p className="mt-1 text-sm text-ink-secondary">An administrator will review your access.</p>
+                <p className="text-sm font-medium text-ink">{t('Request sent.')}</p>
+                <p className="mt-1 text-sm text-ink-secondary">{t('An administrator will review your access.')}</p>
                 <Button variant="secondary" className={cn(control, 'mt-6')} fullWidth onClick={() => setMode(false)}>
-                  Back to sign in
+                  {t('Back to sign in')}
                 </Button>
               </div>
             ) : (
               <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-4">
                 {isRegisterMode && (
-                  <Field label="Full name" labelClassName={label} required hideRequiredMark error={fieldErrors.full_name}>
-                    <Input className={control} type="text" name="full_name" autoComplete="name" placeholder="e.g. Ali bin Abu" value={formData.full_name} onChange={handleChange} />
+                  <Field label={t('Full name')} labelClassName={label} required hideRequiredMark error={fieldErrors.full_name}>
+                    <Input className={control} type="text" name="full_name" autoComplete="name" placeholder={t('e.g. Ali bin Abu')} value={formData.full_name} onChange={handleChange} />
                   </Field>
                 )}
 
-                <Field label={isRegisterMode ? 'Work email' : 'Email or username'} labelClassName={label} required hideRequiredMark error={fieldErrors.email}>
+                <Field label={isRegisterMode ? t('Work email') : t('Email or username')} labelClassName={label} required hideRequiredMark error={fieldErrors.email}>
                   <Input
                     className={control}
                     type={isRegisterMode ? 'email' : 'text'}
@@ -228,12 +233,12 @@ export default function Login() {
                   />
                 </Field>
 
-                <Field label="Password" labelClassName={label} required hideRequiredMark error={fieldErrors.password}>
+                <Field label={t('Password')} labelClassName={label} required hideRequiredMark error={fieldErrors.password}>
                   <PasswordInput
                     className={control}
                     name="password"
                     autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
-                    placeholder={isRegisterMode ? 'At least 6 characters' : 'Enter your password'}
+                    placeholder={isRegisterMode ? t('At least 6 characters') : t('Enter your password')}
                     value={formData.password}
                     onChange={handleChange}
                   />
@@ -242,14 +247,14 @@ export default function Login() {
                 {!isRegisterMode && (
                   <>
                     <div className="flex items-center justify-between gap-4">
-                      <Checkbox label="Remember me" checked={remember} onChange={e => setRemember(e.target.checked)} />
+                      <Checkbox label={t('Remember me')} checked={remember} onChange={e => setRemember(e.target.checked)} />
                       <Button variant="link" onClick={() => setShowForgot(v => !v)} aria-expanded={showForgot} className="text-[13px] font-medium rounded">
-                        Forgot password?
+                        {t('Forgot password?')}
                       </Button>
                     </div>
                     {showForgot && (
                       <Alert tone="info" onClose={() => setShowForgot(false)}>
-                        Ask your HQ Super Admin to reset it. They’ll give you a temporary password, and you’ll choose your own new one right after signing in.
+                        {t('Ask your HQ Super Admin to reset it. They’ll give you a temporary password, and you’ll choose your own new one right after signing in.')}
                       </Alert>
                     )}
                   </>
@@ -257,22 +262,22 @@ export default function Login() {
 
                 {isRegisterMode && (
                   <>
-                    <Field label="Confirm password" labelClassName={label} required hideRequiredMark error={fieldErrors.confirmPassword}>
-                      <PasswordInput className={control} name="confirmPassword" autoComplete="new-password" placeholder="Re-enter your password" value={formData.confirmPassword} onChange={handleChange} />
+                    <Field label={t('Confirm password')} labelClassName={label} required hideRequiredMark error={fieldErrors.confirmPassword}>
+                      <PasswordInput className={control} name="confirmPassword" autoComplete="new-password" placeholder={t('Re-enter your password')} value={formData.confirmPassword} onChange={handleChange} />
                     </Field>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Field label="Business" labelClassName={label} required hideRequiredMark error={fieldErrors.business_id}>
+                      <Field label={t('Business')} labelClassName={label} required hideRequiredMark error={fieldErrors.business_id}>
                         <div className="relative">
                           {selectedBusiness && <BusinessDot business={selectedBusiness} className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2" />}
                           <Select name="business_id" value={formData.business_id} onChange={handleChange} className={cn(control, selectedBusiness && 'pl-8')}>
-                            <option value="">Select…</option>
+                            <option value="">{t('Select…')}</option>
                             {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                           </Select>
                         </div>
                       </Field>
-                      <Field label="Branch" labelClassName={label} required hideRequiredMark error={fieldErrors.branch_id}>
+                      <Field label={t('Branch')} labelClassName={label} required hideRequiredMark error={fieldErrors.branch_id}>
                         <Select name="branch_id" className={control} value={formData.branch_id} onChange={handleChange} disabled={!formData.business_id || branches.length === 0}>
-                          <option value="">{formData.business_id ? 'Select…' : 'Business first'}</option>
+                          <option value="">{formData.business_id ? t('Select…') : t('Business first')}</option>
                           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </Select>
                       </Field>
@@ -282,11 +287,11 @@ export default function Login() {
 
                 <div className="pt-2">
                   <Button type="submit" loading={submitting} fullWidth size="lg" className={control}>
-                    {submitting ? 'Please wait…' : isRegisterMode ? 'Submit request' : 'Sign in'}
+                    {submitting ? t('Please wait…') : isRegisterMode ? t('Submit request') : t('Sign in')}
                   </Button>
                   <p className="mt-4 flex items-center justify-center gap-1.5 text-caption text-ink-muted">
                     <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-                    Access is restricted to authorized staff.
+                    {t('Access is restricted to authorized staff.')}
                   </p>
                 </div>
               </form>
@@ -298,7 +303,7 @@ export default function Login() {
       </div>
 
       <footer className="relative mt-6 text-center text-caption text-ink-muted">
-        © {new Date().getFullYear()} HQ Inventory · Inventory &amp; point of sale
+        {t('© {value} HQ Inventory · Inventory & point of sale', { value: new Date().getFullYear() })}
       </footer>
     </div>
   );

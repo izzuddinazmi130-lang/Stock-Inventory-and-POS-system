@@ -5,13 +5,15 @@ import ChangePasswordModal from './auth/ChangePasswordModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LowStockBell from './LowStockBell';
+import LanguageSwitch from './LanguageSwitch';
 import { currentSectionLabel } from './navigation';
 import { cn } from './ui/cn';
 import { ButtonBase, IconButton } from './ui/Button';
 import { SearchInput } from './ui/controls';
 import { Menu } from './ui/Menu';
 import { Badge } from './ui/Badge';
-import ScopeBadge from './ui/ScopeBadge';
+import ScopeBadge from './ui/ScopeBadge';
+import { t } from '../i18n';
 
 function getInitials(name) {
   if (!name) return 'U';
@@ -64,14 +66,14 @@ function GlobalSearch() {
         onChange={e => { setSearchVal(e.target.value); setShowResults(true); }}
         onFocus={() => setShowResults(true)}
         onKeyDown={e => { if (e.key === 'Enter') goToSearch(); if (e.key === 'Escape') setShowResults(false); }}
-        placeholder="Search products or SKU…"
-        aria-label="Search products"
+        placeholder={t('Search products or SKU…')}
+        aria-label={t('Search products')}
         className="bg-surface"
       />
       {showResults && searchVal.trim().length >= 2 && (
         <div className="absolute top-10 left-0 right-0 bg-surface border border-line rounded-xl shadow-popover overflow-hidden z-50 animate-scale-in origin-top">
           {results.length === 0 ? (
-            <div className="px-4 py-3 text-caption text-ink-muted">No matches for “{searchVal.trim()}”</div>
+            <div className="px-4 py-3 text-caption text-ink-muted">{t('No matches for “{value}”', { value: searchVal.trim() })}</div>
           ) : (
             <>
               {results.map(item => (
@@ -91,7 +93,7 @@ function GlobalSearch() {
                 onClick={goToSearch}
                 className={cn('w-full text-center px-4 py-2 text-caption font-semibold text-accent hover:bg-accent-soft transition-colors')}
               >
-                See all results
+                {t('See all results')}
               </ButtonBase>
             </>
           )}
@@ -113,7 +115,7 @@ export default function Header({ onOpenNav }) {
 
   return (
     <header className="sticky top-0 z-30 h-16 flex items-center gap-3 px-4 sm:px-6 lg:px-8 bg-page/85 backdrop-blur border-b border-line">
-      <IconButton icon={MenuIcon} label="Open navigation" onClick={onOpenNav} size="md" className="md:hidden -ml-2" tooltip={false} />
+      <IconButton icon={MenuIcon} label={t('Open navigation')} onClick={onOpenNav} size="md" className="md:hidden -ml-2" tooltip={false} />
 
       {section && <span className="text-sm font-medium text-ink truncate">{section}</span>}
 
@@ -123,29 +125,30 @@ export default function Header({ onOpenNav }) {
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <ScopeBadge compact className="hidden sm:inline-flex max-w-[16rem]" />
+        <LanguageSwitch />
         <LowStockBell />
         <Menu
-          label="Account"
+          label={t('Account')}
           width="w-64"
           header={
             <div className="min-w-0">
               <p className="text-sm font-semibold text-ink truncate">{user.full_name || user.email}</p>
               <p className="text-caption text-ink-muted truncate">{user.email}</p>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <Badge size="sm" tone={isSuper ? 'accent' : 'neutral'}>{isSuper ? 'Super admin' : 'Branch admin'}</Badge>
+                <Badge size="sm" tone={isSuper ? 'accent' : 'neutral'}>{isSuper ? t('Super admin') : t('Branch admin')}</Badge>
               </div>
               <ScopeBadge className="mt-2 sm:hidden" />
             </div>
           }
           items={[
-            { label: 'Change password', icon: KeyRound, onClick: () => setChangingPassword(true) },
+            { label: t('Change password'), icon: KeyRound, onClick: () => setChangingPassword(true) },
             { divider: true },
-            { label: 'Sign out', icon: LogOut, onClick: logout, tone: 'danger' },
+            { label: t('Sign out'), icon: LogOut, onClick: logout, tone: 'danger' },
           ]}
           trigger={({ ref, ...props }) => (
             <ButtonBase
               ref={ref}
-              aria-label="Account menu"
+              aria-label={t('Account menu')}
               className={cn('rounded-full p-0.5 hover:ring-4 hover:ring-sunken transition-shadow')}
               {...props}
             >

@@ -9,7 +9,8 @@ import { Package, History, PackageMinus, UserCheck, RefreshCw, Building2, Store,
 import {
   Button, ButtonBase, Card, CardHeader, KpiCard, PageHeader, StatusPill, Badge, BusinessDot, EmptyState, ErrorState,
   Table, THead, TBody, TH, TR, TD, TableState, Skeleton, cn,
-} from '../../components/ui';
+} from '../../components/ui';
+import { t, locale } from '../../i18n';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -109,7 +110,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error('Dashboard load error:', err);
-      setLoadError(err.response?.data?.message || 'The dashboard could not be loaded.');
+      setLoadError(err.response?.data?.message || t('The dashboard could not be loaded.'));
     } finally {
       setLoading(false);
     }
@@ -154,25 +155,25 @@ export default function Dashboard() {
     .slice(0, 5);
   const firstLoad = loading && recentMovements.length === 0 && products.length === 0;
 
-  const scopeName = isSuperAdmin ? (selectedBusiness?.name || 'all businesses') : (user?.branch_name || 'this branch');
+  const scopeName = isSuperAdmin ? (selectedBusiness?.name || t('all businesses')) : (user?.branch_name || t('this branch'));
 
   return (
     <Layout>
       <PageHeader
         breadcrumbs={false}
-        title={isSuperAdmin ? (selectedBusiness ? `${selectedBusiness.name} overview` : 'Overview') : `${user?.branch_name || 'My branch'} overview`}
-        description={isSuperAdmin ? 'Stock, alerts and activity across every business and branch.' : 'Stock, alerts and recent activity in your branch.'}
+        title={isSuperAdmin ? (selectedBusiness ? t('{name} overview', { name: selectedBusiness.name }) : t('Overview')) : t('{name} overview', { name: user?.branch_name || t('My branch') })}
+        description={isSuperAdmin ? t('Stock, alerts and activity across every business and branch.') : t('Stock, alerts and recent activity in your branch.')}
         meta={isSuperAdmin && selectedBusiness ? (
           <Badge tone="accent" dot>
-            Filtered: {selectedBusiness.name}
-            <ButtonBase onClick={() => setSelectedBusiness(null)} className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-accent-muted" aria-label="Clear business filter">
+            {t('Filtered: {name}', { name: selectedBusiness.name })}
+            <ButtonBase onClick={() => setSelectedBusiness(null)} className="-mr-1 ml-0.5 rounded-full p-0.5 hover:bg-accent-muted" aria-label={t('Clear business filter')}>
               <X className="w-3 h-3" aria-hidden="true" />
             </ButtonBase>
           </Badge>
         ) : null}
         actions={<>
-          <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
-          <Button variant="secondary" icon={isSuperAdmin ? Receipt : ScanLine} to={isSuperAdmin ? '/sales' : '/qr/scan'}>{isSuperAdmin ? 'Sales history' : 'Open point of sale'}</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchData} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>
+          <Button variant="secondary" icon={isSuperAdmin ? Receipt : ScanLine} to={isSuperAdmin ? '/sales' : '/qr/scan'}>{isSuperAdmin ? t('Sales history') : t('Open point of sale')}</Button>
         </>}
       />
 
@@ -183,17 +184,17 @@ export default function Dashboard() {
       <div className={cn('kpi-grid grid grid-cols-2 gap-3 sm:gap-4 mb-6', isSuperAdmin ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-3')}>
         {isSuperAdmin ? (
           <>
-            <KpiCard loading={firstLoad} label="Businesses" value={businessCount} meta="Registered" icon={Building2} tone="neutral" to="/businesses" />
-            <KpiCard loading={firstLoad} label="Branches" value={branchCount} meta="Across all businesses" icon={Store} tone="info" />
-            <KpiCard loading={firstLoad} label="Products" value={stats.totalItems} meta={`In ${scopeName}`} icon={Package} tone="accent" to="/products" />
-            <KpiCard loading={firstLoad} label="Low stock" value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
-            <KpiCard loading={firstLoad} label="New arrivals" value={stats.newArrivals || 0} meta="Marked as new" icon={Sparkles} tone="violet" />
+            <KpiCard loading={firstLoad} label={t('Businesses')} value={businessCount} meta={t('Registered')} icon={Building2} tone="neutral" to="/businesses" />
+            <KpiCard loading={firstLoad} label={t('Branches')} value={branchCount} meta={t('Across all businesses')} icon={Store} tone="info" />
+            <KpiCard loading={firstLoad} label={t('Products')} value={stats.totalItems} meta={t('In {scope}', { scope: scopeName })} icon={Package} tone="accent" to="/products" />
+            <KpiCard loading={firstLoad} label={t('Low stock')} value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? t('Need restocking') : t('All healthy')} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
+            <KpiCard loading={firstLoad} label={t('New arrivals')} value={stats.newArrivals || 0} meta={t('Marked as new')} icon={Sparkles} tone="violet" />
           </>
         ) : (
           <>
-            <KpiCard loading={firstLoad} label="Products" value={stats.totalItems} meta="Stocked in this branch" icon={Package} tone="accent" to="/products" />
-            <KpiCard loading={firstLoad} label="Low stock" value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
-            <KpiCard loading={firstLoad} label="New arrivals" value={stats.newArrivals || 0} meta="Marked as new" icon={Sparkles} tone="violet" />
+            <KpiCard loading={firstLoad} label={t('Products')} value={stats.totalItems} meta={t('Stocked in this branch')} icon={Package} tone="accent" to="/products" />
+            <KpiCard loading={firstLoad} label={t('Low stock')} value={stats.lowStockCount} meta={stats.lowStockCount > 0 ? t('Need restocking') : t('All healthy')} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} to="/low-stock" />
+            <KpiCard loading={firstLoad} label={t('New arrivals')} value={stats.newArrivals || 0} meta={t('Marked as new')} icon={Sparkles} tone="violet" />
           </>
         )}
       </div>
@@ -202,17 +203,17 @@ export default function Dashboard() {
         <Card className="overflow-hidden">
           <CardHeader
             icon={History}
-            title="Recent stock changes"
-            description="Latest sales, restocks, adjustments and damage."
-            actions={<Button variant="ghost" size="sm" iconRight={ArrowRight} to="/reports/movement">View all</Button>}
+            title={t('Recent stock changes')}
+            description={t('Latest sales, restocks, adjustments and damage.')}
+            actions={<Button variant="ghost" size="sm" iconRight={ArrowRight} to="/reports/movement">{t('View all')}</Button>}
           />
           <Table minWidth="36rem">
             <THead>
               <TR>
-                <TH>Product</TH>
-                <TH>Type</TH>
-                <TH numeric>Qty</TH>
-                <TH className="text-right">When</TH>
+                <TH>{t('Product')}</TH>
+                <TH>{t('Type')}</TH>
+                <TH numeric>{t('Qty')}</TH>
+                <TH className="text-right">{t('When')}</TH>
               </TR>
             </THead>
             <TBody>
@@ -221,8 +222,8 @@ export default function Dashboard() {
                 loading={firstLoad}
                 empty={!loading && recentMovements.length === 0}
                 emptyIcon={History}
-                emptyTitle="No stock changes yet"
-                emptyDescription="Sales, restocks and adjustments will appear here."
+                emptyTitle={t('No stock changes yet')}
+                emptyDescription={t('Sales, restocks and adjustments will appear here.')}
               />
               {recentMovements.map((mov, i) => (
                 <TR key={mov.id} index={i} highlight={freshIds.has(mov.id)}>
@@ -235,7 +236,7 @@ export default function Dashboard() {
                     {mov.movement_type === 'in' ? `+${mov.quantity}` : `-${mov.quantity}`}
                   </TD>
                   <TD className="text-right text-caption text-ink-muted whitespace-nowrap">
-                    {new Date(mov.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {new Date(mov.created_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}
                   </TD>
                 </TR>
               ))}
@@ -247,14 +248,14 @@ export default function Dashboard() {
           <Card>
             <CardHeader
               icon={PackageMinus}
-              title="Low stock"
-              actions={lowStockProducts.length > 0 && <Badge tone="warning" size="sm">{lowStockProducts.length} {lowStockProducts.length === 1 ? 'item' : 'items'}</Badge>}
+              title={t('Low stock')}
+              actions={lowStockProducts.length > 0 && <Badge tone="warning" size="sm">{t('{n} {n|item|items}', { n: lowStockProducts.length })}</Badge>}
             />
             <div className="p-2">
               {firstLoad ? (
                 <div className="space-y-3 p-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8" />)}</div>
               ) : lowStockProducts.length === 0 ? (
-                <EmptyState compact icon={PackageCheck} title="All stock levels healthy" />
+                <EmptyState compact icon={PackageCheck} title={t('All stock levels healthy')} />
               ) : (
                 <ul>
                   {lowStockProducts.map(p => {
@@ -266,8 +267,8 @@ export default function Dashboard() {
                           <p className="text-caption text-ink-muted font-mono truncate">{p.item_code}{isSuperAdmin && p.branch_name ? ` · ${p.branch_name}` : ''}</p>
                         </div>
                         <div className="text-right">
-                          <p className={cn('text-sm font-semibold tabular-nums', out ? 'text-danger-fg' : 'text-warning-fg')}>{out ? 'Out' : `${p.quantity} left`}</p>
-                          <p className="text-[11px] text-ink-muted tabular-nums">Alert at {p.minimum_quantity}</p>
+                          <p className={cn('text-sm font-semibold tabular-nums', out ? 'text-danger-fg' : 'text-warning-fg')}>{out ? t('Out') : t('{quantity} left', { quantity: p.quantity })}</p>
+                          <p className="text-[11px] text-ink-muted tabular-nums">{t('Alert at ')}{p.minimum_quantity}</p>
                         </div>
                       </li>
                     );
@@ -275,7 +276,7 @@ export default function Dashboard() {
                 </ul>
               )}
               {lowStockProducts.length > 0 && (
-                <div className="px-3 pt-1 pb-2"><Button variant="link" size="sm" iconRight={ArrowRight} to="/low-stock">Open low stock list</Button></div>
+                <div className="px-3 pt-1 pb-2"><Button variant="link" size="sm" iconRight={ArrowRight} to="/low-stock">{t('Open low stock list')}</Button></div>
               )}
             </div>
           </Card>
@@ -284,12 +285,12 @@ export default function Dashboard() {
 
           {isSuperAdmin && pendingCount > 0 && (
             <Card className="animate-fade-in">
-              <CardHeader icon={UserCheck} title="Pending approvals" />
+              <CardHeader icon={UserCheck} title={t('Pending approvals')} />
               <div className="p-5">
                 <p className="text-sm text-ink-secondary mb-4">
-                  <span className="font-semibold text-ink tabular-nums">{pendingCount}</span> {pendingCount === 1 ? 'person is' : 'people are'} waiting for account approval.
+                  <span className="font-semibold text-ink tabular-nums">{pendingCount}</span> {pendingCount === 1 ? t('person is') : t('people are')}{' '}{t('waiting for account approval.')}
                 </p>
-                <Button variant="accent-soft" fullWidth to="/users/pending">Review requests</Button>
+                <Button variant="accent-soft" fullWidth to="/users/pending">{t('Review requests')}</Button>
               </div>
             </Card>
           )}
@@ -301,10 +302,10 @@ export default function Dashboard() {
         <section className="mt-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-4">
             <div>
-              <h2 className="text-base font-semibold text-ink">Businesses</h2>
-              <p className="text-sm text-ink-muted">Select a business to filter this overview.</p>
+              <h2 className="text-base font-semibold text-ink">{t('Businesses')}</h2>
+              <p className="text-sm text-ink-muted">{t('Select a business to filter this overview.')}</p>
             </div>
-            <Button variant="ghost" size="sm" iconRight={ArrowRight} to="/businesses">Manage businesses</Button>
+            <Button variant="ghost" size="sm" iconRight={ArrowRight} to="/businesses">{t('Manage businesses')}</Button>
           </div>
 
           {firstLoad ? (
@@ -312,7 +313,7 @@ export default function Dashboard() {
               {[0, 1, 2].map(i => <Skeleton key={i} className="h-36 rounded-xl" />)}
             </div>
           ) : allBusinesses.length === 0 ? (
-            <Card><EmptyState icon={Building2} title="No businesses yet" description="Create a business to start adding branches and products." action={<Button to="/businesses" size="sm">Go to businesses</Button>} /></Card>
+            <Card><EmptyState icon={Building2} title={t('No businesses yet')} description={t('Create a business to start adding branches and products.')} action={<Button to="/businesses" size="sm">{t('Go to businesses')}</Button>} /></Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {allBusinesses.map(biz => {
@@ -339,11 +340,11 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-baseline gap-1.5">
                       <span className="font-display text-2xl font-semibold text-ink tabular-nums">{bizItems.length}</span>
-                      <span className="text-caption text-ink-muted">products</span>
+                      <span className="text-caption text-ink-muted">{t('products')}</span>
                     </div>
                     <dl className="mt-3 pt-3 border-t border-line-soft grid grid-cols-2 gap-2 text-caption">
-                      <div><dt className="text-ink-muted">Stock on hand</dt><dd className="font-medium text-ink tabular-nums">{bizTotalStock} units</dd></div>
-                      <div><dt className="text-ink-muted">Branches</dt><dd className="font-medium text-ink tabular-nums">{bizBranches.length}</dd></div>
+                      <div><dt className="text-ink-muted">{t('Stock on hand')}</dt><dd className="font-medium text-ink tabular-nums">{bizTotalStock}{t(' units')}</dd></div>
+                      <div><dt className="text-ink-muted">{t('Branches')}</dt><dd className="font-medium text-ink tabular-nums">{bizBranches.length}</dd></div>
                     </dl>
                   </Card>
                 );

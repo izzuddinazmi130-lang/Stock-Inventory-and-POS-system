@@ -8,7 +8,8 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { SaleReceipt, ReceiptModal } from '../../components/pos/Receipt';
 import { Alert, Button, IconButton, SegmentedControl, useConfirm } from '../../components/ui';
 import ProductFinder from './pos/ProductFinder';
-import OrderPanel from './pos/OrderPanel';
+import OrderPanel from './pos/OrderPanel';
+import { t as tr, locale } from '../../i18n';
 
 const MAX_TILES = 60;
 
@@ -45,7 +46,7 @@ export default function QrScanner({ embedded = false }) {
 // ═══════════════════════════════════════════════════════════════════════════
 function PosTerminal({ Wrap, user }) {
   const branchId = user?.branch_id ? String(user.branch_id) : '';
-  const branchName = user?.branch_name || 'My branch';
+  const branchName = user?.branch_name || tr('My branch');
   const businessName = user?.business_name || '';
 
   // Catalog for this branch
@@ -225,9 +226,9 @@ function PosTerminal({ Wrap, user }) {
         addToCart(toCartProduct(res.data.product));
         return true;
       }
-      setErrorMessage(`No product found for “${code}”.`);
+      setErrorMessage(tr('No product found for “{code}”.', { code }));
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || `No product found for “${code}”.`);
+      setErrorMessage(err.response?.data?.message || tr('No product found for “{code}”.', { code }));
     } finally {
       setLooking(false);
     }
@@ -314,10 +315,10 @@ function PosTerminal({ Wrap, user }) {
       if (cancelled) return;
       // Phones only allow the camera on secure (https) pages
       if (!window.isSecureContext) {
-        setCameraStatus('The camera only works on a secure (https) page. Open the https address of this system, or use “Scan from photo”.');
+        setCameraStatus(tr('The camera only works on a secure (https) page. Open the https address of this system, or use “Scan from photo”.'));
         return;
       }
-      setCameraStatus('Starting camera…');
+      setCameraStatus(tr('Starting camera…'));
       const config = { fps: 12, qrbox: (w, h) => { const size = Math.max(160, Math.min(260, Math.floor(Math.min(w, h) * 0.7))); return { width: size, height: size }; } };
       const onScan = (decodedText) => scanHandlerRef.current?.(decodedText);
       const start = async (source) => {
@@ -335,10 +336,10 @@ function PosTerminal({ Wrap, user }) {
         }
         cameraActiveRef.current = true;
         if (cancelled) { stopCamera(); return; }
-        setCameraStatus('Point the camera at a product QR code');
+        setCameraStatus(tr('Point the camera at a product QR code'));
         // If the phone takes the camera away (another app, a call), say so instead of showing a frozen picture
         const track = document.querySelector('#pos-camera-viewport video')?.srcObject?.getVideoTracks?.()[0];
-        track?.addEventListener('ended', () => { if (!cancelled) setCameraStatus('The camera stopped. Tap Close, then the camera button to start it again.'); });
+        track?.addEventListener('ended', () => { if (!cancelled) setCameraStatus(tr('The camera stopped. Tap Close, then the camera button to start it again.')); });
         // Camera names (readable now that permission is granted). Read the list only — Html5Qrcode.getCameras()
         // opens a second camera (the front one on phones), and iPhones then shut down the back camera that is scanning.
         navigator.mediaDevices.enumerateDevices().then(list => {
@@ -349,10 +350,10 @@ function PosTerminal({ Wrap, user }) {
         if (cancelled) return;
         const text = String(err?.name || err?.message || err);
         setCameraStatus(
-          /NotAllowed|Permission|denied/i.test(text) ? 'Camera access is blocked. Allow the camera for this site in the browser settings, then tap the camera button again.'
-          : /NotReadable|TrackStart|in use|Could not start/i.test(text) ? 'The camera is being used by another app. Close that app and try again.'
-          : /NotFound|Overconstrained|no camera|Requested device not found/i.test(text) ? 'No camera was found on this device. Use “Scan from photo” or type the code.'
-          : 'The camera could not start. Try again, or use “Scan from photo”.'
+          /NotAllowed|Permission|denied/i.test(text) ? tr('Camera access is blocked. Allow the camera for this site in the browser settings, then tap the camera button again.')
+          : /NotReadable|TrackStart|in use|Could not start/i.test(text) ? tr('The camera is being used by another app. Close that app and try again.')
+          : /NotFound|Overconstrained|no camera|Requested device not found/i.test(text) ? tr('No camera was found on this device. Use “Scan from photo” or type the code.')
+          : tr('The camera could not start. Try again, or use “Scan from photo”.')
         );
       }
     })();
@@ -367,7 +368,7 @@ function PosTerminal({ Wrap, user }) {
       const decoded = await reader.scanFile(file, false);
       handleScannedCode(decoded);
     } catch {
-      setErrorMessage('No QR code found in that image.');
+      setErrorMessage(tr('No QR code found in that image.'));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -376,13 +377,13 @@ function PosTerminal({ Wrap, user }) {
   // ── Checkout
   const handleConfirm = async () => {
     if (cart.length === 0) return;
-    if (!branchId) { setErrorMessage('Your account is not assigned to a branch. Ask HQ to assign one.'); return; }
+    if (!branchId) { setErrorMessage(tr('Your account is not assigned to a branch. Ask HQ to assign one.')); return; }
     if (stockProblems.length > 0) {
-      setErrorMessage('Some items have more than is in stock. Lower the quantity or remove them.');
+      setErrorMessage(tr('Some items have more than is in stock. Lower the quantity or remove them.'));
       return;
     }
     if (cashShortSen > 0) {
-      setErrorMessage(`Cash received is ${rm(cashShortSen / 100)} short of the total.`);
+      setErrorMessage(tr('Cash received is {value} short of the total.', { value: rm(cashShortSen / 100) }));
       return;
     }
     try {
@@ -393,7 +394,7 @@ function PosTerminal({ Wrap, user }) {
         price_tier: priceTier,
         payment_method: paymentMethod,
         store_id: storeId ? parseInt(storeId, 10) : null,
-        note: saleNote.trim() || (isSale ? '' : 'Inventory Restock Intake'),
+        note: saleNote.trim() || (isSale ? '' : tr('Inventory Restock Intake')),
         cash_received: isCashSale ? cashSen / 100 : null,
         items: cart.map(item => ({ product_id: item.id, sku: item.sku, quantity: item.quantity }))
       });
@@ -410,7 +411,7 @@ function PosTerminal({ Wrap, user }) {
         setCashReceived('');
         loadProducts();
       } else {
-        setErrorMessage(res.data.message || 'The transaction could not be completed.');
+        setErrorMessage(res.data.message || tr('The transaction could not be completed.'));
       }
     } catch (err) {
       setErrorMessage(err.response?.data?.message || err.message);
@@ -424,9 +425,9 @@ function PosTerminal({ Wrap, user }) {
     if (next === mode) return;
     if (cart.length > 0) {
       const ok = await confirm({
-        title: next === 'stock_out' ? 'Switch to selling?' : 'Switch to receiving stock?',
-        message: `The ${cart.length} item(s) in the list will be kept.`,
-        confirmLabel: 'Switch',
+        title: next === 'stock_out' ? tr('Switch to selling?') : tr('Switch to receiving stock?'),
+        message: tr('The {length} item(s) in the list will be kept.', { length: cart.length }),
+        confirmLabel: tr('Switch'),
       });
       if (!ok) return;
     }
@@ -442,30 +443,30 @@ function PosTerminal({ Wrap, user }) {
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">Point of sale</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-ink">{tr('Point of sale')}</h1>
           <p className="text-sm text-ink-muted truncate">{businessName && <>{businessName} · </>}{branchName}</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <SegmentedControl
             size="lg"
-            label="Transaction type"
+            label={tr('Transaction type')}
             value={mode}
             onChange={switchMode}
             fullWidth
             className="flex-1 sm:flex-none sm:w-auto"
             tabs={[
-              { value: 'stock_out', label: 'Sell', icon: ShoppingCart, tone: 'accent' },
-              { value: 'stock_in', label: 'Receive', icon: PackagePlus, tone: 'success' },
+              { value: 'stock_out', label: tr('Sell'), icon: ShoppingCart, tone: 'accent' },
+              { value: 'stock_in', label: tr('Receive'), icon: PackagePlus, tone: 'success' },
             ]}
           />
-          <Button variant="secondary" size="lg" icon={History} to="/sales" title="Past sales and receipts">
-            <span className="hidden sm:inline">Sales history</span>
+          <Button variant="secondary" size="lg" icon={History} to="/sales" title={tr('Past sales and receipts')}>
+            <span className="hidden sm:inline">{tr('Sales history')}</span>
           </Button>
           <IconButton
             variant="secondary"
             size="lg"
             icon={soundEnabled ? Volume2 : VolumeX}
-            label={soundEnabled ? 'Mute scan sound' : 'Turn scan sound on'}
+            label={soundEnabled ? tr('Mute scan sound') : tr('Turn scan sound on')}
             aria-pressed={soundEnabled}
             onClick={() => setSoundEnabled(s => !s)}
           />
@@ -474,7 +475,7 @@ function PosTerminal({ Wrap, user }) {
 
       {!isSale && (
         <Alert tone="success" icon={ArrowDownToLine} className="mb-4">
-          Receiving stock: items you add are counted into {branchName}'s stock. Nothing is charged.
+          {tr('Receiving stock: items you add are counted into {branchName}\'s stock. Nothing is charged.', { branchName })}
         </Alert>
       )}
 
@@ -548,17 +549,17 @@ function PosTerminal({ Wrap, user }) {
         return (
           <ReceiptModal
             onClose={close}
-            closeLabel={receipt.mode === 'stock_out' ? 'New sale' : 'Done'}
+            closeLabel={receipt.mode === 'stock_out' ? tr('New sale') : tr('Done')}
             closeVariant={receipt.mode === 'stock_out' ? 'primary' : 'success'}
             header={
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-success-soft ring-8 ring-success-soft/50 text-success-fg flex items-center justify-center mx-auto mb-3 animate-scale-in">
                   <CheckCircle2 className="w-7 h-7" aria-hidden="true" />
                 </div>
-                <h2 className="text-lg font-semibold text-ink">{receipt.mode === 'stock_out' ? 'Payment complete' : 'Stock received'}</h2>
+                <h2 className="text-lg font-semibold text-ink">{receipt.mode === 'stock_out' ? tr('Payment complete') : tr('Stock received')}</h2>
                 {isSaleReceipt && receipt.sale.change_due > 0 && (
                   <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1 text-sm text-success-fg">
-                    Give change <strong className="font-semibold tabular-nums">{rm(receipt.sale.change_due)}</strong>
+                    {tr('Give change')}{' '}<strong className="font-semibold tabular-nums">{rm(receipt.sale.change_due)}</strong>
                   </p>
                 )}
               </div>
@@ -569,10 +570,10 @@ function PosTerminal({ Wrap, user }) {
             ) : (
               <div className="pos-receipt font-mono text-xs text-ink p-4 border border-dashed border-line-strong rounded-lg">
                 <div className="text-center mb-3">
-                  <div className="text-sm font-bold">{businessName || 'Stock received'}</div>
+                  <div className="text-sm font-bold">{businessName || tr('Stock received')}</div>
                   <div>{branchName}{receipt.storeName ? ` · ${receipt.storeName}` : ''}</div>
-                  <div className="text-ink-muted mt-1">{new Date(receipt.timestamp).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-                  <div className="mt-1 font-bold">STOCK RECEIVED</div>
+                  <div className="text-ink-muted mt-1">{new Date(receipt.timestamp).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                  <div className="mt-1 font-bold">{tr('STOCK RECEIVED')}</div>
                 </div>
                 <div className="border-t border-dashed border-line-strong pt-2 space-y-1.5">
                   {receipt.items?.map((it, idx) => (
@@ -581,13 +582,13 @@ function PosTerminal({ Wrap, user }) {
                         <span className="truncate">{it.name}</span>
                         <span>+{it.quantity}</span>
                       </div>
-                      <div className="text-ink-muted">Stock now {it.new_stock}</div>
+                      <div className="text-ink-muted">{tr('Stock now ')}{it.new_stock}</div>
                     </div>
                   ))}
                 </div>
                 <div className="border-t border-dashed border-line-strong mt-2 pt-2 space-y-0.5">
-                  <div className="flex justify-between"><span>Units</span><span>{receipt.total_quantity}</span></div>
-                  {receipt.note && <div className="text-ink-muted pt-1">Note: {receipt.note}</div>}
+                  <div className="flex justify-between"><span>{tr('Units')}</span><span>{receipt.total_quantity}</span></div>
+                  {receipt.note && <div className="text-ink-muted pt-1">{tr('Note: ')}{receipt.note}</div>}
                 </div>
               </div>
             )}

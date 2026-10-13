@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn, focusRing } from './cn';
 import { Alert } from './controls';
-import { useConfirm } from './Confirm';
+import { useConfirm } from './Confirm';
+import { t as tr } from '../../i18n';
 
 // ── Shared overlay behaviour ────────────────────────────────────────────────
 const stack = [];          // open overlays, topmost last (Esc / focus trap only act on the top one)
@@ -125,10 +126,10 @@ function ModalPanel({
     if (guardUnsaved && onSubmit && dirty.current) {
       asking.current = true;
       const discard = await confirm({
-        title: 'Discard changes?',
-        message: 'What you entered in this form hasn’t been saved and will be lost.',
-        confirmLabel: 'Discard',
-        cancelLabel: 'Keep editing',
+        title: tr('Discard changes?'),
+        message: tr('What you entered in this form hasn’t been saved and will be lost.'),
+        confirmLabel: tr('Discard'),
+        cancelLabel: tr('Keep editing'),
         tone: 'danger',
       });
       asking.current = false;
@@ -186,7 +187,7 @@ function ModalPanel({
                 type="button"
                 onClick={requestClose}
                 className={cn('p-1.5 -m-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors', focusRing)}
-                aria-label="Close"
+                aria-label={tr('Close')}
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -247,7 +248,7 @@ function DrawerPanel({ title, onClose, side = 'right', width = 'w-80', children,
         {title && (
           <div className="flex items-center justify-between gap-3 px-5 h-16 border-b border-line-soft flex-shrink-0">
             <h2 id={titleId} className="text-base font-semibold text-ink">{title}</h2>
-            <button type="button" onClick={onClose} className={cn('p-1.5 -m-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken', focusRing)} aria-label="Close">
+            <button type="button" onClick={onClose} className={cn('p-1.5 -m-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken', focusRing)} aria-label={tr('Close')}>
               <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>

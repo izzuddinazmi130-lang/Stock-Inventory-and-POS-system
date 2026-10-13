@@ -10,26 +10,27 @@ import {
   BusinessDot, Card, FilterBar, KpiCard, PageHeader, SearchInput, Select, StatusPill, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
+import { t as tr, locale } from '../../i18n';
 
 const TABS = [
-  { value: 'active', label: 'Live now' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'ended', label: 'Ended' },
-  { value: 'all', label: 'All' },
+  { value: 'active', label: tr('Live now') },
+  { value: 'upcoming', label: tr('Upcoming') },
+  { value: 'ended', label: tr('Ended') },
+  { value: 'all', label: tr('All') },
 ];
 
 const EMPTY = {
-  active: ['No pop-up store is live right now', 'Stores show up here while their event is running.'],
-  upcoming: ['Nothing coming up', 'Stores that are scheduled to start later show up here.'],
-  ended: ['No ended stores yet', 'Pop-up stores that have finished, with their final sales, show up here.'],
-  all: ['No pop-up stores yet', 'Add a pop-up store from a branch’s Pop-up stores page.'],
+  active: [tr('No pop-up store is live right now'), tr('Stores show up here while their event is running.')],
+  upcoming: [tr('Nothing coming up'), tr('Stores that are scheduled to start later show up here.')],
+  ended: [tr('No ended stores yet'), tr('Pop-up stores that have finished, with their final sales, show up here.')],
+  all: [tr('No pop-up stores yet'), tr('Add a pop-up store from a branch’s Pop-up stores page.')],
 };
 
 // "4 Oct" or "1 – 10 Oct" style date range
 function dateRange(start, end) {
-  const fmt = (d, opts) => new Date(d).toLocaleDateString('en-MY', opts);
+  const fmt = (d, opts) => new Date(d).toLocaleDateString(locale, opts);
   if (!start) return '—';
-  if (!end) return `From ${fmt(start, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  if (!end) return tr('From {start}', { start: fmt(start, { day: 'numeric', month: 'short', year: 'numeric' }) });
   const s = new Date(start), e = new Date(end);
   if (s.toDateString() === e.toDateString()) return fmt(start, { day: 'numeric', month: 'short', year: 'numeric' });
   const sameYear = s.getFullYear() === e.getFullYear();
@@ -65,7 +66,7 @@ export default function PopUpStores() {
       const res = await api.get('/stores', { params: businessId ? { business_id: businessId } : {} });
       if (res.data.success) setStores(res.data.stores || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not load the pop-up stores.');
+      setError(err.response?.data?.message || tr('Could not load the pop-up stores.'));
     } finally {
       setLoading(false);
     }
@@ -102,46 +103,46 @@ export default function PopUpStores() {
   return (
     <Layout>
       <PageHeader
-        title="Pop-up stores"
-        description="Every pop-up store in all businesses, with its sales. Click a store to see its report."
+        title={tr('Pop-up stores')}
+        description={tr('Every pop-up store in all businesses, with its sales. Click a store to see its report.')}
       />
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
-        <KpiCard loading={first} label="Live now" value={counts.active} icon={Radio} tone="success"
-          meta={counts.active ? live.map(s => s.name).slice(0, 2).join(', ') + (counts.active > 2 ? ` +${counts.active - 2}` : '') : 'No event running'}
+        <KpiCard loading={first} label={tr('Live now')} value={counts.active} icon={Radio} tone="success"
+          meta={counts.active ? live.map(s => s.name).slice(0, 2).join(', ') + (counts.active > 2 ? ` +${counts.active - 2}` : '') : tr('No event running')}
           onClick={() => setParam('tab', 'active')} />
-        <KpiCard loading={first} label="Sales today" value={todayLive} format={v => rm(v)} icon={TrendingUp} tone="accent"
-          meta={`${todaySales} ${todaySales === 1 ? 'receipt' : 'receipts'} at live stores`} />
-        <KpiCard loading={first} label="Upcoming" value={counts.upcoming} icon={CalendarClock} tone="info"
-          meta={nextUp ? `Next: ${nextUp.name}, ${dateRange(nextUp.start_date)}` : 'Nothing scheduled'}
+        <KpiCard loading={first} label={tr('Sales today')} value={todayLive} format={v => rm(v)} icon={TrendingUp} tone="accent"
+          meta={tr('{todaySales} {todaySales|receipt|receipts} at live stores', { todaySales })} />
+        <KpiCard loading={first} label={tr('Upcoming')} value={counts.upcoming} icon={CalendarClock} tone="info"
+          meta={nextUp ? tr('Next: {name}, {start_date}', { name: nextUp.name, start_date: dateRange(nextUp.start_date) }) : tr('Nothing scheduled')}
           onClick={() => setParam('tab', 'upcoming')} />
       </div>
 
       <FilterBar onReset={() => { setSearch(''); setParam('business', ''); }} resetVisible={Boolean(search || businessId)}>
         <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search store, venue, branch or person in charge…" aria-label="Search pop-up stores" />
-        <Select wrapperClassName="md:w-48" aria-label="Business" value={businessId} onChange={e => setParam('business', e.target.value)}>
-          <option value="">All businesses</option>
+          placeholder={tr('Search store, venue, branch or person in charge…')} aria-label={tr('Search pop-up stores')} />
+        <Select wrapperClassName="md:w-48" aria-label={tr('Business')} value={businessId} onChange={e => setParam('business', e.target.value)}>
+          <option value="">{tr('All businesses')}</option>
           {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </Select>
       </FilterBar>
 
       <Card className="overflow-hidden">
         <div className="px-5 pt-3 border-b border-line-soft">
-          <Tabs label="Store status" value={tab} onChange={v => setParam('tab', v === 'active' ? '' : v)} className="border-b-0"
+          <Tabs label={tr('Store status')} value={tab} onChange={v => setParam('tab', v === 'active' ? '' : v)} className="border-b-0"
             tabs={TABS.map(t => ({ ...t, count: counts[t.value] || 0 }))} />
         </div>
         <Table minWidth="58rem">
           <THead>
             <TR>
-              <TH>Store</TH>
-              <TH>Business · Branch</TH>
-              <TH>Dates</TH>
-              <TH>Status</TH>
-              <TH numeric>Today</TH>
-              <TH numeric>Receipts</TH>
-              <TH numeric>Total sales</TH>
-              <TH className="w-10"><span className="sr-only">Open</span></TH>
+              <TH>{tr('Store')}</TH>
+              <TH>{tr('Business · Branch')}</TH>
+              <TH>{tr('Dates')}</TH>
+              <TH>{tr('Status')}</TH>
+              <TH numeric>{tr('Today')}</TH>
+              <TH numeric>{tr('Receipts')}</TH>
+              <TH numeric>{tr('Total sales')}</TH>
+              <TH className="w-10"><span className="sr-only">{tr('Open')}</span></TH>
             </TR>
           </THead>
           <TBody>
@@ -152,11 +153,11 @@ export default function PopUpStores() {
               onRetry={load}
               empty={!first && !error && shown.length === 0}
               emptyIcon={Store}
-              emptyTitle={search ? 'No store matches' : EMPTY[tab][0]}
-              emptyDescription={search ? 'Try another name, or clear the search.' : EMPTY[tab][1]}
+              emptyTitle={search ? tr('No store matches') : EMPTY[tab][0]}
+              emptyDescription={search ? tr('Try another name, or clear the search.') : EMPTY[tab][1]}
             />
             {shown.map((s, i) => (
-              <TR key={s.id} index={i} onClick={() => navigate(`/stores/${s.id}/report`)} aria-label={`Open the report for ${s.name}`}>
+              <TR key={s.id} index={i} onClick={() => navigate(`/stores/${s.id}/report`)} aria-label={tr('Open the report for {name}', { name: s.name })}>
                 <TD>
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-fg">

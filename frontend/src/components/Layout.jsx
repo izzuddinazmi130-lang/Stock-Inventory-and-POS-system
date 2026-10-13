@@ -5,7 +5,8 @@ import Sidebar, { NavList } from './Sidebar';
 import BrandMark from './BrandMark';
 import TopProgress from './TopProgress';
 import { Drawer } from './ui/Modal';
-import { BusinessProvider } from '../context/BusinessContext';
+import { BusinessProvider } from '../context/BusinessContext';
+import { t } from '../i18n';
 
 const ShellContext = createContext(false);
 const COLLAPSE_KEY = 'hq.sidebar.collapsed';
@@ -39,7 +40,7 @@ function Frame({ children }) {
     <div className="min-h-screen flex bg-page">
       <TopProgress />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-surface focus:shadow-popover focus:text-sm">
-        Skip to content
+        {t('Skip to content')}
       </a>
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="flex-1 min-w-0 flex flex-col">

@@ -8,7 +8,8 @@ import {
   Table, THead, TBody, TH, TR, TD, TableState, toDateInput, useConfirm, useToast,
 } from '../../components/ui';
 import BranchFields from '../../components/forms/BranchFields';
-import CatalogPicker from '../../components/forms/CatalogPicker';
+import CatalogPicker from '../../components/forms/CatalogPicker';
+import { t } from '../../i18n';
 
 // Collect the distinct skip reasons returned by /products/add-to-branch across several requests
 const collectSkipReasons = (settled) => [...new Set(settled.flatMap(r =>
@@ -60,7 +61,7 @@ export default function BranchList() {
       if (busRes.data.success) setBusiness(busRes.data.business || busRes.data.data);
       if (brRes.data.success) setBranches(brRes.data.branches || brRes.data.data || []);
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Could not load the branches.');
+      setLoadError(err.response?.data?.message || t('Could not load the branches.'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +81,7 @@ export default function BranchList() {
       const res = await api.get('/products/catalog', { params: { business_id: id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
     } catch {
-      setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
+      setMessage({ type: 'danger', text: t('Could not load this business’s products.') });
     } finally {
       setCatalogLoading(false);
     }
@@ -125,8 +126,8 @@ export default function BranchList() {
           const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.data.success).length;
           const failed = results.length - succeeded;
           stockMsg = failed > 0
-            ? ` ${succeeded} existing product(s) stocked, ${failed} failed to add (${collectSkipReasons(results)}).`
-            : ` ${succeeded} existing product(s) stocked into this branch.`;
+            ? t(' {succeeded} existing product(s) stocked, {failed} failed to add ({results}).', { succeeded, failed, results: collectSkipReasons(results) })
+            : t(' {succeeded} existing product(s) stocked into this branch.', { succeeded });
         }
 
         toast.success(`${res.data.message}${stockMsg}`);
@@ -139,10 +140,10 @@ export default function BranchList() {
         setStockSelections({});
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to add branch' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to add branch') });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to add branch' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to add branch') });
     } finally {
       setCreatingBranch(false);
     }
@@ -159,10 +160,10 @@ export default function BranchList() {
         setShowEditModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to update branch' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to update branch') });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update branch' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to update branch') });
     } finally {
       setSaving(false);
     }
@@ -170,9 +171,9 @@ export default function BranchList() {
 
   const handleDelete = async (b) => {
     const ok = await confirm({
-      title: `Delete ${b.name}?`,
-      message: 'This deletes the branch. A branch that has sales or a live pop-up store cannot be deleted.',
-      confirmLabel: 'Delete branch',
+      title: t('Delete {name}?', { name: b.name }),
+      message: t('This deletes the branch. A branch that has sales or a live pop-up store cannot be deleted.'),
+      confirmLabel: t('Delete branch'),
       tone: 'danger',
     });
     if (!ok) return;
@@ -185,7 +186,7 @@ export default function BranchList() {
         toast.error(res.data.message);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete branch');
+      toast.error(err.response?.data?.message || t('Failed to delete branch'));
     }
   };
 
@@ -212,33 +213,33 @@ export default function BranchList() {
   return (
     <Layout>
       <PageHeader
-        breadcrumbs={[{ label: 'Businesses', to: '/businesses' }, { label: business?.name || 'Business' }]}
-        title={business ? `${business.name} branches` : 'Branches'}
-        description="Open a branch to see its stock, products and people."
+        breadcrumbs={[{ label: t('Businesses'), to: '/businesses' }, { label: business?.name || t('Business') }]}
+        title={business ? t('{name} branches', { name: business.name }) : t('Branches')}
+        description={t('Open a branch to see its stock, products and people.')}
         meta={business ? <Badge><BusinessDot business={business} size="sm" />{business.industry ? <span className="capitalize">{business.industry}</span> : business.name}</Badge> : null}
-        actions={<Button icon={Plus} onClick={openAddModal}>Add branch</Button>}
+        actions={<Button icon={Plus} onClick={openAddModal}>{t('Add branch')}</Button>}
       />
 
       {!loading && !loadError && branches.length === 0 ? (
         <Card>
           <EmptyState
             icon={Building2}
-            title="No branches yet"
-            description={`Add the first branch for ${business ? business.name : 'this business'}.`}
-            action={<Button icon={Plus} onClick={openAddModal}>Add branch</Button>}
+            title={t('No branches yet')}
+            description={t('Add the first branch for {value}.', { value: business ? business.name : 'this business' })}
+            action={<Button icon={Plus} onClick={openAddModal}>{t('Add branch')}</Button>}
           />
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <CardHeader title="Branches" description={loading && branches.length === 0 ? 'Loading…' : `${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}`} />
+          <CardHeader title={t('Branches')} description={loading && branches.length === 0 ? t('Loading…') : t('{n} {n|branch|branches}', { n: branches.length })} />
           <Table minWidth="48rem">
             <THead>
               <TR>
-                <TH>Branch</TH>
-                <TH>Location</TH>
-                <TH>Contact</TH>
-                <TH>Status</TH>
-                <TH className="w-px"><span className="sr-only">Actions</span></TH>
+                <TH>{t('Branch')}</TH>
+                <TH>{t('Location')}</TH>
+                <TH>{t('Contact')}</TH>
+                <TH>{t('Status')}</TH>
+                <TH className="w-px"><span className="sr-only">{t('Actions')}</span></TH>
               </TR>
             </THead>
             <TBody>
@@ -260,27 +261,27 @@ export default function BranchList() {
                   <TD>
                     <div className="text-sm text-ink flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
-                      {b.city ? `${b.city}${b.state ? `, ${b.state}` : ''}` : <span className="text-ink-muted">Not set</span>}
+                      {b.city ? `${b.city}${b.state ? `, ${b.state}` : ''}` : <span className="text-ink-muted">{t('Not set')}</span>}
                     </div>
                     {b.address && <div className="text-caption text-ink-muted truncate max-w-xs">{b.address}</div>}
                   </TD>
                   <TD>
-                    <div className="text-sm text-ink">{b.contact_person || <span className="text-ink-muted">Not set</span>}</div>
+                    <div className="text-sm text-ink">{b.contact_person || <span className="text-ink-muted">{t('Not set')}</span>}</div>
                     <div className="text-caption text-ink-muted">{b.contact_phone || b.contact_email || '—'}</div>
                   </TD>
                   <TD>
-                    <Badge tone={b.is_active === 1 ? 'success' : 'neutral'} dot size="sm">{b.is_active === 1 ? 'Active' : 'Inactive'}</Badge>
+                    <Badge tone={b.is_active === 1 ? 'success' : 'neutral'} dot size="sm">{b.is_active === 1 ? t('Active') : t('Inactive')}</Badge>
                   </TD>
                   <TD onClick={e => e.stopPropagation()}>
                     <div className="flex justify-end">
                       <Menu
-                        label={`Actions for ${b.name}`}
+                        label={t('Actions for {name}', { name: b.name })}
                         items={[
-                          { label: 'Edit branch', icon: Pencil, onClick: () => openEditModal(b) },
-                          { label: 'Stock reports', icon: BarChart3, to: `/reports?business_id=${b.business_id}&branch_id=${b.id}` },
-                          { label: 'Pop-up stores', icon: Store, to: `/branches/${b.id}/stores` },
+                          { label: t('Edit branch'), icon: Pencil, onClick: () => openEditModal(b) },
+                          { label: t('Stock reports'), icon: BarChart3, to: `/reports?business_id=${b.business_id}&branch_id=${b.id}` },
+                          { label: t('Pop-up stores'), icon: Store, to: `/branches/${b.id}/stores` },
                           { divider: true },
-                          { label: 'Delete branch', icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
+                          { label: t('Delete branch'), icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
                         ]}
                       />
                     </div>
@@ -296,21 +297,21 @@ export default function BranchList() {
         <Modal
           size="lg"
           icon={Building2}
-          title={`Add a branch to ${business?.name || 'this business'}`}
-          description="Only the branch name is required."
+          title={t('Add a branch to {name}', { name: business?.name || t('this business') })}
+          description={t('Only the branch name is required.')}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button type="submit" loading={creatingBranch}>Create branch</Button>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={creatingBranch}>{t('Create branch')}</Button>
           </>}
         >
           <BranchFields form={addForm} setForm={setAddForm} />
           <FormSection
-            title="Starting products"
-            description={`Optional. Tick products from ${business ? business.name : 'this business'}'s catalog to stock them in the new branch straight away.`}
+            title={t('Starting products')}
+            description={t('Optional. Tick products from {value}\'s catalog to stock them in the new branch straight away.', { value: business ? business.name : 'this business' })}
           >
             <CatalogPicker
               products={catalogProducts}
@@ -320,7 +321,7 @@ export default function BranchList() {
               selections={stockSelections}
               onToggle={toggleProductSelection}
               onQuantity={updateProductQuantity}
-              emptyText="This business has no products yet."
+              emptyText={t('This business has no products yet.')}
             />
           </FormSection>
         </Modal>
@@ -330,14 +331,14 @@ export default function BranchList() {
         <Modal
           size="lg"
           icon={Pencil}
-          title={`Edit ${editForm.name || 'branch'}`}
+          title={t('Edit {value}', { value: editForm.name || 'branch' })}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save changes</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Save changes')}</Button>
           </>}
         >
           <BranchFields form={editForm} setForm={setEditForm} showStatus />

@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { QrCode, Package, Building2, Ruler, Download, ChevronDown, FileImage, FileText, Image as ImageIcon } from 'lucide-react';
 import { Alert, Button, ButtonBase, Card, CardHeader, Checkbox, EmptyState, Menu, PageHeader, QuantityStepper, SearchInput, Skeleton, cn, useToast } from '../../components/ui';
 import { labelImage, labelsPdf, saveBlob } from './labelExport';
+import { t } from '../../i18n';
 
 // Only the label sheet is printed: everything else on the page (the app root) is hidden.
 const PRINT_CSS = `
@@ -40,7 +41,7 @@ function variantLine(item) {
   if (!item) return '';
   const v = item.variants || {};
   const parts = [];
-  if (v.size || item.size) parts.push(`Size ${v.size || item.size}`);
+  if (v.size || item.size) parts.push(t('Size {size}', { size: v.size || item.size }));
   Object.entries(v).forEach(([k, val]) => {
     if (k !== 'size' && val) parts.push(String(val));
   });
@@ -107,7 +108,7 @@ export default function QrGenerator({ embedded = false }) {
           if (first) setSelectedKey(rowKey(first));
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Could not load products.');
+        setError(err.response?.data?.message || t('Could not load products.'));
       } finally {
         setItemsLoading(false);
       }
@@ -173,13 +174,13 @@ export default function QrGenerator({ embedded = false }) {
       const base = `QR-label-${String(labelItem.item_code || labelItem.id).replace(/[^A-Za-z0-9_-]+/g, '-')}`;
       if (format === 'pdf') {
         saveBlob(await labelsPdf({ qrSvg: qrData.qr_svg, label, copies }), `${base}-${copies}x.pdf`);
-        toast.success(`Saved a PDF with ${copies} label${copies === 1 ? '' : 's'}.`);
+        toast.success(t('Saved a PDF with {copies} label{value}.', { copies, value: copies === 1 ? '' : 's' }));
       } else {
         saveBlob(await labelImage({ qrSvg: qrData.qr_svg, label, format }), `${base}.${format}`);
-        toast.success(`Saved the label as ${format.toUpperCase()}.`);
+        toast.success(t('Saved the label as {value}.', { value: format.toUpperCase() }));
       }
     } catch (err) {
-      toast.error(err.message || 'Could not create the file.');
+      toast.error(err.message || t('Could not create the file.'));
     } finally {
       setDownloading('');
     }
@@ -198,26 +199,26 @@ export default function QrGenerator({ embedded = false }) {
 
       <PageHeader
         breadcrumbs={false}
-        title="Print QR labels"
-        description="Pick a product, check the label, then print or download it (PNG, JPG or PDF). Stick the label on the item or shelf so it can be scanned at the point of sale."
+        title={t('Print QR labels')}
+        description={t('Pick a product, check the label, then print or download it (PNG, JPG or PDF). Stick the label on the item or shelf so it can be scanned at the point of sale.')}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ── Left: product picker ── */}
         <Card as="section" className="lg:col-span-5 overflow-hidden">
           <CardHeader
-            title={<StepTitle n={1}>Choose a product</StepTitle>}
-            actions={<span className="text-caption text-ink-muted tabular-nums">{filtered.length} of {items.length}</span>}
+            title={<StepTitle n={1}>{t('Choose a product')}</StepTitle>}
+            actions={<span className="text-caption text-ink-muted tabular-nums">{filtered.length}{t(' of ')}{items.length}</span>}
           />
           <div className="p-3 border-b border-line-soft">
-            <SearchInput value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, SKU, size or category…" aria-label="Search products" />
+            <SearchInput value={search} onChange={e => setSearch(e.target.value)} placeholder={t('Search by name, SKU, size or category…')} aria-label={t('Search products')} />
           </div>
 
-          <div className="max-h-[520px] overflow-y-auto divide-y divide-line-soft" role="listbox" aria-label="Products">
+          <div className="max-h-[520px] overflow-y-auto divide-y divide-line-soft" role="listbox" aria-label={t('Products')}>
             {itemsLoading ? (
               <div className="p-3 space-y-2">{[0, 1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12" />)}</div>
             ) : filtered.length === 0 ? (
-              <EmptyState compact icon={Package} title={items.length === 0 ? 'No products yet' : 'No products match your search'} />
+              <EmptyState compact icon={Package} title={items.length === 0 ? t('No products yet') : t('No products match your search')} />
             ) : filtered.map(item => {
               const isSelected = rowKey(item) === selectedKey;
               const variants = variantLine(item);
@@ -238,7 +239,7 @@ export default function QrGenerator({ embedded = false }) {
                     </p>
                   </div>
                   <span className={cn('flex-shrink-0 text-caption font-medium tabular-nums', parseInt(item.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg')}>
-                    {parseInt(item.quantity, 10) || 0} in stock
+                    {parseInt(item.quantity, 10) || 0}{' '}{t('in stock')}
                   </span>
                 </ButtonBase>
               );
@@ -248,7 +249,7 @@ export default function QrGenerator({ embedded = false }) {
 
         {/* ── Right: preview + print options ── */}
         <Card as="section" className="lg:col-span-7 overflow-hidden lg:sticky lg:top-20">
-          <CardHeader title={<StepTitle n={2}>Check the label and print</StepTitle>} />
+          <CardHeader title={<StepTitle n={2}>{t('Check the label and print')}</StepTitle>} />
 
           {error && <Alert tone="danger" className="mx-4 mt-4">{error}</Alert>}
 
@@ -263,7 +264,7 @@ export default function QrGenerator({ embedded = false }) {
                 <Label item={labelItem} qrSvg={qrData.qr_svg} showPrice={showPrice} />
               </div>
             ) : (
-              <EmptyState compact icon={QrCode} title="Choose a product to see its label" />
+              <EmptyState compact icon={QrCode} title={t('Choose a product to see its label')} />
             )}
           </div>
 
@@ -271,38 +272,38 @@ export default function QrGenerator({ embedded = false }) {
             <div className="px-4 pb-1 -mt-1 text-caption text-ink-muted flex flex-wrap gap-x-4 gap-y-1">
               <span>{labelItem.category}</span>
               {labelItem.branch_name && <span className="inline-flex items-center gap-1"><Building2 className="w-3 h-3" aria-hidden="true" />{labelItem.branch_name}</span>}
-              <span className="inline-flex items-center gap-1"><Ruler className="w-3 h-3" aria-hidden="true" />70 × 36 mm</span>
+              <span className="inline-flex items-center gap-1"><Ruler className="w-3 h-3" aria-hidden="true" />{t('70 × 36 mm')}</span>
             </div>
           )}
 
           {noPrice && showPrice && (
             <Alert tone="warning" className="mx-4 mt-3">
-              This product has no customer price yet, so the label will show RM 0.00. Set a price in Products, or untick “Show price”.
+              {t('This product has no customer price yet, so the label will show RM 0.00. Set a price in Products, or untick “Show price”.')}
             </Alert>
           )}
 
           <div className="p-4 mt-3 border-t border-line-soft flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-ink">Copies</span>
-              <QuantityStepper min={1} max={100} value={copies} onChange={setCopiesSafe} label="Number of copies" />
+              <span className="text-sm font-medium text-ink">{t('Copies')}</span>
+              <QuantityStepper min={1} max={100} value={copies} onChange={setCopiesSafe} label={t('Number of copies')} />
             </div>
 
-            <Checkbox label="Show price" className="whitespace-nowrap" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} />
+            <Checkbox label={t('Show price')} className="whitespace-nowrap" checked={showPrice} onChange={e => setShowPrice(e.target.checked)} />
 
             <div className="flex gap-2 sm:ml-auto">
               <Menu
-                label="Download label"
+                label={t('Download label')}
                 align="end"
                 width="w-64"
                 items={[
-                  { label: 'PNG image (1 label)', icon: FileImage, onClick: () => download('png') },
-                  { label: 'JPG image (1 label)', icon: ImageIcon, onClick: () => download('jpg') },
+                  { label: t('PNG image (1 label)'), icon: FileImage, onClick: () => download('png') },
+                  { label: t('JPG image (1 label)'), icon: ImageIcon, onClick: () => download('jpg') },
                   { divider: true },
-                  { label: `PDF, A4 (${copies} label${copies === 1 ? '' : 's'})`, icon: FileText, onClick: () => download('pdf') },
+                  { label: t('PDF, A4 ({copies} label{value})', { copies, value: copies === 1 ? '' : 's' }), icon: FileText, onClick: () => download('pdf') },
                 ]}
                 trigger={({ ref, ...props }) => (
                   <Button ref={ref} variant="primary" icon={Download} loading={Boolean(downloading)} disabled={!canPrint} {...props}>
-                    Download <ChevronDown className="w-4 h-4 -mr-1" aria-hidden="true" />
+                    {t('Download')}{' '}<ChevronDown className="w-4 h-4 -mr-1" aria-hidden="true" />
                   </Button>
                 )}
               />

@@ -13,6 +13,7 @@ import {
 } from '../../components/ui';
 import BranchFields from '../../components/forms/BranchFields';
 import CatalogPicker from '../../components/forms/CatalogPicker';
+import { t } from '../../i18n';
 
 // Collect the distinct skip reasons returned by /products/add-to-branch across several requests
 const collectSkipReasons = (settled) => [...new Set(settled.flatMap(r =>
@@ -72,7 +73,7 @@ export default function BranchDetail() {
         setItems(productsRes.data.items || []);
       }
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Could not load this branch.');
+      setLoadError(err.response?.data?.message || t('Could not load this branch.'));
     } finally {
       setLoading(false);
     }
@@ -88,15 +89,15 @@ export default function BranchDetail() {
       setSaving(true);
       const res = await api.put(`/branches/${id}`, editForm);
       if (res.data.success) {
-        toast.success('Branch details saved.');
+        toast.success(t('Branch details saved.'));
         setMessage(null);
         setShowEditModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to update branch' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to update branch') });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update branch' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to update branch') });
     } finally {
       setSaving(false);
     }
@@ -115,7 +116,7 @@ export default function BranchDetail() {
       const res = await api.get('/products/catalog', { params: { business_id: branch.business_id } });
       if (res.data.success) setCatalogProducts(res.data.products || []);
     } catch {
-      setMessage({ type: 'danger', text: 'Could not load this business’s products.' });
+      setMessage({ type: 'danger', text: t('Could not load this business’s products.') });
     } finally {
       setCatalogLoading(false);
     }
@@ -141,7 +142,7 @@ export default function BranchDetail() {
     e.preventDefault();
     const selectedIds = Object.keys(stockSelections);
     if (selectedIds.length === 0) {
-      setMessage({ type: 'danger', text: 'Please select at least one product to add to this branch.' });
+      setMessage({ type: 'danger', text: t('Please select at least one product to add to this branch.') });
       return;
     }
 
@@ -161,16 +162,16 @@ export default function BranchDetail() {
       const failed = results.length - succeeded;
 
       if (succeeded > 0) {
-        if (failed > 0) toast.warning(`${succeeded} product(s) added to ${branch.name}, but ${failed} failed (${collectSkipReasons(results)}).`);
-        else toast.success(`${succeeded} product(s) added to ${branch.name}.`);
+        if (failed > 0) toast.warning(t('{succeeded} product(s) added to {name}, but {failed} failed ({results}).', { succeeded, name: branch.name, failed, results: collectSkipReasons(results) }));
+        else toast.success(t('{succeeded} product(s) added to {name}.', { succeeded, name: branch.name }));
         setMessage(null);
         setShowAddExistingModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: `Failed to add the selected product(s) to this branch: ${collectSkipReasons(results)}` });
+        setMessage({ type: 'danger', text: t('Failed to add the selected product(s) to this branch: {results}', { results: collectSkipReasons(results) }) });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to add products to this branch.' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to add products to this branch.') });
     } finally {
       setAddingExisting(false);
     }
@@ -196,7 +197,7 @@ export default function BranchDetail() {
         <Card>
           {loadError
             ? <ErrorState description={loadError} onRetry={fetchData} />
-            : <EmptyState icon={Building2} title="Branch not found" description="It may have been deleted." action={<Button variant="secondary" to="/businesses">Back to businesses</Button>} />}
+            : <EmptyState icon={Building2} title={t('Branch not found')} description={t('It may have been deleted.')} action={<Button variant="secondary" to="/businesses">{t('Back to businesses')}</Button>} />}
         </Card>
       </Layout>
     );
@@ -210,30 +211,30 @@ export default function BranchDetail() {
     <Layout>
       <PageHeader
         breadcrumbs={[
-          { label: 'Businesses', to: '/businesses' },
-          { label: branch.business_name || 'Business', to: `/businesses/${branch.business_id}/branches` },
+          { label: t('Businesses'), to: '/businesses' },
+          { label: branch.business_name || t('Business'), to: `/businesses/${branch.business_id}/branches` },
           { label: branch.name },
         ]}
         title={branch.name}
-        description={`Stock, alerts and people for ${branch.name}.`}
+        description={t('Stock, alerts and people for {name}.', { name: branch.name })}
         meta={<>
           <Badge tone="neutral" className="font-mono">{branch.branch_code || `BR-${branch.id}`}</Badge>
           <Badge tone="neutral"><BusinessDot business={{ name: branch.business_name, id: branch.business_id }} size="sm" />{branch.business_name}</Badge>
-          {inactive && <Badge tone="warning">Inactive</Badge>}
+          {inactive && <Badge tone="warning">{t('Inactive')}</Badge>}
         </>}
         actions={<>
-          <Button variant="secondary" icon={Layers} onClick={openAddExistingModal}>Add existing product</Button>
-          <Button icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>Add product</Button>
+          <Button variant="secondary" icon={Layers} onClick={openAddExistingModal}>{t('Add existing product')}</Button>
+          <Button icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>{t('Add product')}</Button>
           <Menu
-            label="More branch actions"
+            label={t('More branch actions')}
             triggerVariant="secondary"
             triggerSize="md"
             items={[
-              { label: 'Edit branch', icon: Pencil, onClick: () => { setMessage(null); setShowEditModal(true); }, hidden: !isSuperAdmin },
-              { label: 'Stock reports', icon: BarChart3, to: `/reports?business_id=${branch.business_id}&branch_id=${id}` },
-              { label: 'Pop-up stores', icon: Store, to: `/branches/${id}/stores` },
+              { label: t('Edit branch'), icon: Pencil, onClick: () => { setMessage(null); setShowEditModal(true); }, hidden: !isSuperAdmin },
+              { label: t('Stock reports'), icon: BarChart3, to: `/reports?business_id=${branch.business_id}&branch_id=${id}` },
+              { label: t('Pop-up stores'), icon: Store, to: `/branches/${id}/stores` },
               { divider: true },
-              { label: 'Refresh', icon: RefreshCw, onClick: fetchData },
+              { label: t('Refresh'), icon: RefreshCw, onClick: fetchData },
             ]}
           />
         </>}
@@ -242,16 +243,16 @@ export default function BranchDetail() {
       <Card className="p-4 mb-6">
         <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           {[
-            [MapPin, 'Location', branch.city ? `${branch.city}${branch.state ? `, ${branch.state}` : ''}` : branch.address || 'Not set'],
-            [Users, 'Contact person', branch.contact_person || 'Not set'],
-            [Phone, 'Phone / email', branch.contact_phone || branch.contact_email || 'Not set'],
-            [Clock, 'Opening hours', branch.operating_hours || 'Not set'],
+            [MapPin, t('Location'), branch.city ? `${branch.city}${branch.state ? `, ${branch.state}` : ''}` : branch.address || t('Not set')],
+            [Users, t('Contact person'), branch.contact_person || t('Not set')],
+            [Phone, t('Phone / email'), branch.contact_phone || branch.contact_email || t('Not set')],
+            [Clock, t('Opening hours'), branch.operating_hours || t('Not set')],
           ].map(([Icon, label, value]) => (
             <div key={label} className="flex items-start gap-3 min-w-0">
               <span className="w-8 h-8 rounded-lg bg-sunken text-ink-secondary flex items-center justify-center flex-shrink-0"><Icon className="w-4 h-4" aria-hidden="true" /></span>
               <div className="min-w-0">
                 <dt className="text-caption text-ink-muted">{label}</dt>
-                <dd className={cn('font-medium truncate', value === 'Not set' ? 'text-ink-muted' : 'text-ink')}>{value}</dd>
+                <dd className={cn('font-medium truncate', value === t('Not set') ? 'text-ink-muted' : 'text-ink')}>{value}</dd>
               </div>
             </div>
           ))}
@@ -259,26 +260,26 @@ export default function BranchDetail() {
       </Card>
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard label="Products" value={Number(stats.totalItems) || 0} icon={Package} tone="accent" meta="Stocked in this branch" />
-        <KpiCard label="Items in stock" value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta="All products" />
-        <KpiCard label="Low stock" value={Number(stats.lowStockCount) || 0} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} meta={stats.lowStockCount > 0 ? 'Need restocking' : 'All healthy'} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} />
+        <KpiCard label={t('Products')} value={Number(stats.totalItems) || 0} icon={Package} tone="accent" meta={t('Stocked in this branch')} />
+        <KpiCard label={t('Items in stock')} value={Number(stats.totalStock) || 0} icon={Boxes} tone="success" meta={t('All products')} />
+        <KpiCard label={t('Low stock')} value={Number(stats.lowStockCount) || 0} icon={PackageMinus} tone={stats.lowStockCount > 0 ? 'warning' : 'success'} meta={stats.lowStockCount > 0 ? t('Need restocking') : t('All healthy')} metaTone={stats.lowStockCount > 0 ? 'danger' : 'success'} />
       </div>
 
       <Card className="overflow-hidden mb-6">
         <CardHeader
           icon={Package}
-          title="Products in this branch"
-          description={`${items.length} ${items.length === 1 ? 'product' : 'products'}`}
-          actions={<Button variant="ghost" size="sm" to={`/products?business_id=${branch.business_id}&branch_id=${id}`}>Open in Products</Button>}
+          title={t('Products in this branch')}
+          description={t('{n} {n|product|products}', { n: items.length })}
+          actions={<Button variant="ghost" size="sm" to={`/products?business_id=${branch.business_id}&branch_id=${id}`}>{t('Open in Products')}</Button>}
         />
         <Table minWidth="44rem">
           <THead>
             <TR>
-              <TH>Product</TH>
-              <TH>Category</TH>
-              <TH>Stock</TH>
-              <TH numeric>Price</TH>
-              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+              <TH>{t('Product')}</TH>
+              <TH>{t('Category')}</TH>
+              <TH>{t('Stock')}</TH>
+              <TH numeric>{t('Price')}</TH>
+              <TH className="w-px"><span className="sr-only">{t('Actions')}</span></TH>
             </TR>
           </THead>
           <TBody>
@@ -286,8 +287,8 @@ export default function BranchDetail() {
               colSpan={5}
               empty={items.length === 0}
               emptyIcon={Package}
-              emptyTitle={`No products in ${branch.name} yet`}
-              emptyAction={<Button size="sm" icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>Add product</Button>}
+              emptyTitle={t('No products in {name} yet', { name: branch.name })}
+              emptyAction={<Button size="sm" icon={Plus} to={`/products/add?business_id=${branch.business_id}&branch_id=${branch.id}`}>{t('Add product')}</Button>}
             />
             {items.map((item, i) => {
               const minQty = parseInt(item.minimum_quantity ?? item.min_quantity ?? 0, 10) || 0;
@@ -299,19 +300,19 @@ export default function BranchDetail() {
                     <div className="font-medium text-ink">{item.item_name}</div>
                     <div className="font-mono text-caption text-ink-muted">{item.item_code}</div>
                   </TD>
-                  <TD className="text-ink-secondary">{item.category || 'General'}</TD>
+                  <TD className="text-ink-secondary">{item.category || t('General')}</TD>
                   <TD>
                     <div className="flex items-center gap-2">
                       <span className={cn('font-semibold tabular-nums', level === 'out' ? 'text-danger-fg' : level === 'low' ? 'text-warning-fg' : 'text-ink')}>{item.quantity}</span>
                       <StatusPill kind="stock" value={level} size="sm" showIcon={false} />
                     </div>
-                    <div className="text-caption text-ink-muted tabular-nums mt-0.5">Alert at {minQty}</div>
+                    <div className="text-caption text-ink-muted tabular-nums mt-0.5">{t('Alert at ')}{minQty}</div>
                   </TD>
-                  <TD numeric className="font-semibold">RM {parseFloat(item.selling_price || 0).toFixed(2)}</TD>
+                  <TD numeric className="font-semibold">{t('RM ')}{parseFloat(item.selling_price || 0).toFixed(2)}</TD>
                   <TD>
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="secondary" size="sm" icon={ArrowUpDown} to={`/products?business_id=${branch.business_id}&branch_id=${id}&product_id=${item.id}`}>Adjust</Button>
-                      <IconButton icon={QrCode} label="Print QR label" to={`/qr/generate?product_id=${item.id}`} />
+                      <Button variant="secondary" size="sm" icon={ArrowUpDown} to={`/products?business_id=${branch.business_id}&branch_id=${id}&product_id=${item.id}`}>{t('Adjust')}</Button>
+                      <IconButton icon={QrCode} label={t('Print QR label')} to={`/qr/generate?product_id=${item.id}`} />
                     </div>
                   </TD>
                 </TR>
@@ -325,25 +326,25 @@ export default function BranchDetail() {
         <div className="flex items-center gap-3 min-w-0">
           <span className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" aria-hidden="true" /></span>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-ink">Branch admins <span className="text-ink-muted font-normal tabular-nums">({admins.length})</span></h2>
-            <p className="text-sm text-ink-muted truncate">{admins.length > 0 ? admins.map(a => a.full_name).join(', ') : 'No branch admin assigned yet'}</p>
+            <h2 className="text-sm font-semibold text-ink">{t('Branch admins')}{' '}<span className="text-ink-muted font-normal tabular-nums">({admins.length})</span></h2>
+            <p className="text-sm text-ink-muted truncate">{admins.length > 0 ? admins.map(a => a.full_name).join(', ') : t('No branch admin assigned yet')}</p>
           </div>
         </div>
-        <Button variant="secondary" size="sm" to={`/users?business_id=${branch.business_id}&branch_id=${branch.id}`}>Manage people</Button>
+        <Button variant="secondary" size="sm" to={`/users?business_id=${branch.business_id}&branch_id=${branch.id}`}>{t('Manage people')}</Button>
       </Card>
 
       {showEditModal && (
         <Modal
           size="lg"
           icon={Pencil}
-          title={`Edit ${branch.name}`}
+          title={t('Edit {name}', { name: branch.name })}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save changes</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Save changes')}</Button>
           </>}
         >
           <BranchFields form={editForm} setForm={setEditForm} showStatus />
@@ -353,16 +354,16 @@ export default function BranchDetail() {
       {showAddExistingModal && (
         <Modal
           icon={Layers}
-          title={`Add products to ${branch.name}`}
-          description={`Pick products that already exist in ${branch.business_name}'s catalog. Products already in this branch are not listed.`}
+          title={t('Add products to {name}', { name: branch.name })}
+          description={t('Pick products that already exist in {business_name}\'s catalog. Products already in this branch are not listed.', { business_name: branch.business_name })}
           onClose={() => setShowAddExistingModal(false)}
           onSubmit={handleAddExistingSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowAddExistingModal(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setShowAddExistingModal(false)}>{t('Cancel')}</Button>
             <Button type="submit" icon={Layers} loading={addingExisting} disabled={Object.keys(stockSelections).length === 0}>
-              {addingExisting ? 'Adding…' : `Add ${Object.keys(stockSelections).length || ''} to branch`}
+              {addingExisting ? t('Adding…') : t('Add {value} to branch', { value: Object.keys(stockSelections).length || '' })}
             </Button>
           </>}
         >
@@ -375,8 +376,8 @@ export default function BranchDetail() {
             onToggle={toggleProductSelection}
             onQuantity={updateProductQuantity}
             emptyText={catalogProducts.length === 0
-              ? 'This business has no products yet.'
-              : 'Every catalog product is already in this branch.'}
+              ? t('This business has no products yet.')
+              : t('Every catalog product is already in this branch.')}
           />
         </Modal>
       )}

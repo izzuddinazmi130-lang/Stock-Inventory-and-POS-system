@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '../i18n';
 
 // Requests in flight, shared with the api client (services/api.js). Listeners are told when the count changes.
 let pending = 0;
@@ -48,7 +49,7 @@ export default function TopProgress() {
 
   if (!state.visible) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[90] h-0.5" role="progressbar" aria-label="Loading" aria-busy={!state.done}>
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[90] h-0.5" role="progressbar" aria-label={t('Loading')} aria-busy={!state.done}>
       <div
         className="h-full bg-accent shadow-[0_0_8px_rgb(var(--accent)/0.6)] transition-[width,opacity] duration-slow ease-out"
         style={{ width: `${state.width}%`, opacity: state.done ? 0 : 1 }}

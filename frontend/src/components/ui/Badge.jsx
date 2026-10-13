@@ -3,7 +3,8 @@ import {
   PackageCheck, PackageMinus, PackageX, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, SlidersHorizontal,
   CheckCircle2, Clock, XCircle, PauseCircle, Radio, CalendarClock, CircleSlash, Banknote, QrCode, CreditCard, Tag,
 } from 'lucide-react';
-import { cn } from './cn';
+import { cn } from './cn';
+import { t } from '../../i18n';
 
 // Full class strings (Tailwind can't see interpolated names)
 const TONES = {
@@ -49,35 +50,35 @@ export default Badge;
 // ── Status pills: one mapping per domain so the same status always looks the same ──
 const STATUS = {
   stock: {
-    ok: { tone: 'success', label: 'In stock', icon: PackageCheck },
-    low: { tone: 'warning', label: 'Low stock', icon: PackageMinus },
-    out: { tone: 'danger', label: 'Out of stock', icon: PackageX },
+    ok: { tone: 'success', label: t('In stock'), icon: PackageCheck },
+    low: { tone: 'warning', label: t('Low stock'), icon: PackageMinus },
+    out: { tone: 'danger', label: t('Out of stock'), icon: PackageX },
   },
   movement: {
-    in: { tone: 'success', label: 'Stock in', icon: ArrowDownToLine },
-    out: { tone: 'info', label: 'Stock out', icon: ArrowUpFromLine },
-    adjust: { tone: 'violet', label: 'Adjusted', icon: SlidersHorizontal },
-    damage: { tone: 'danger', label: 'Damage', icon: AlertTriangle },
+    in: { tone: 'success', label: t('Stock in'), icon: ArrowDownToLine },
+    out: { tone: 'info', label: t('Stock out'), icon: ArrowUpFromLine },
+    adjust: { tone: 'violet', label: t('Adjusted'), icon: SlidersHorizontal },
+    damage: { tone: 'danger', label: t('Damage'), icon: AlertTriangle },
   },
   user: {
-    active: { tone: 'success', label: 'Active', icon: CheckCircle2 },
-    pending: { tone: 'warning', label: 'Pending', icon: Clock },
-    declined: { tone: 'danger', label: 'Declined', icon: XCircle },
-    suspended: { tone: 'neutral', label: 'Suspended', icon: PauseCircle },
+    active: { tone: 'success', label: t('Active'), icon: CheckCircle2 },
+    pending: { tone: 'warning', label: t('Pending'), icon: Clock },
+    declined: { tone: 'danger', label: t('Declined'), icon: XCircle },
+    suspended: { tone: 'neutral', label: t('Suspended'), icon: PauseCircle },
   },
   store: {
-    active: { tone: 'success', label: 'Live', icon: Radio },
-    upcoming: { tone: 'info', label: 'Upcoming', icon: CalendarClock },
-    ended: { tone: 'neutral', label: 'Ended', icon: CircleSlash },
+    active: { tone: 'success', label: t('Live'), icon: Radio },
+    upcoming: { tone: 'info', label: t('Upcoming'), icon: CalendarClock },
+    ended: { tone: 'neutral', label: t('Ended'), icon: CircleSlash },
   },
   product: {
-    available: { tone: 'success', label: 'For sale', icon: Tag },
-    discontinued: { tone: 'neutral', label: 'Hidden', icon: CircleSlash },
+    available: { tone: 'success', label: t('For sale'), icon: Tag },
+    discontinued: { tone: 'neutral', label: t('Hidden'), icon: CircleSlash },
   },
   payment: {
-    cash: { tone: 'neutral', label: 'Cash', icon: Banknote },
-    qr: { tone: 'neutral', label: 'QR / e-Wallet', icon: QrCode },
-    online_banking: { tone: 'neutral', label: 'Card / Online', icon: CreditCard },
+    cash: { tone: 'neutral', label: t('Cash'), icon: Banknote },
+    qr: { tone: 'neutral', label: t('QR / e-Wallet'), icon: QrCode },
+    online_banking: { tone: 'neutral', label: t('Card / Online'), icon: CreditCard },
   },
 };
 

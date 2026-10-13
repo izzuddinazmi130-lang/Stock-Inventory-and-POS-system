@@ -6,7 +6,8 @@ import api from '../../services/api';
 import {
   Modal, FormSection, Field, Input, Select, Textarea, Button, Card, Badge, BusinessDot, EmptyState, ErrorState, Menu, PageHeader,
   Skeleton, useConfirm, useToast,
-} from '../../components/ui';
+} from '../../components/ui';
+import { t } from '../../i18n';
 
 export default function BusinessList() {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export default function BusinessList() {
         setBusinesses(res.data.businesses || res.data.data || []);
       }
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Could not load the businesses.');
+      setLoadError(err.response?.data?.message || t('Could not load the businesses.'));
     } finally {
       setLoading(false);
     }
@@ -65,10 +66,10 @@ export default function BusinessList() {
         });
         fetchBusinesses();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to create business' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to create business') });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to create business' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to create business') });
     } finally {
       setSaving(false);
     }
@@ -85,10 +86,10 @@ export default function BusinessList() {
         setShowEditModal(false);
         fetchBusinesses();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to update business' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to update business') });
       }
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Failed to update business' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Failed to update business') });
     } finally {
       setSaving(false);
     }
@@ -97,14 +98,14 @@ export default function BusinessList() {
   const handleDelete = async (b) => {
     const branchCount = Number(b.active_branch_count || b.total_branch_count || 0);
     if (branchCount > 0) {
-      toast.warning(`${b.name} still has ${branchCount} branch(es). Delete or move its branches first.`);
+      toast.warning(t('{name} still has {branchCount} branch(es). Delete or move its branches first.', { name: b.name, branchCount }));
       return;
     }
 
     const ok = await confirm({
-      title: `Delete ${b.name}?`,
-      message: 'This permanently removes the business. It cannot be undone.',
-      confirmLabel: 'Delete business',
+      title: t('Delete {name}?', { name: b.name }),
+      message: t('This permanently removes the business. It cannot be undone.'),
+      confirmLabel: t('Delete business'),
       tone: 'danger',
     });
     if (!ok) return;
@@ -118,7 +119,7 @@ export default function BusinessList() {
         toast.error(res.data.message);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete business');
+      toast.error(err.response?.data?.message || t('Failed to delete business'));
     }
   };
 
@@ -144,9 +145,9 @@ export default function BusinessList() {
   return (
     <Layout>
       <PageHeader
-        title="Businesses"
-        description="Each business has its own branches, products and product form."
-        actions={<Button icon={Plus} onClick={openAdd}>Add business</Button>}
+        title={t('Businesses')}
+        description={t('Each business has its own branches, products and product form.')}
+        actions={<Button icon={Plus} onClick={openAdd}>{t('Add business')}</Button>}
       />
 
       {loading && businesses.length === 0 ? (
@@ -157,7 +158,7 @@ export default function BusinessList() {
         <Card><ErrorState description={loadError} onRetry={fetchBusinesses} /></Card>
       ) : businesses.length === 0 ? (
         <Card>
-          <EmptyState icon={Building2} title="No businesses yet" description="Add your first business to start creating branches and products." action={<Button icon={Plus} onClick={openAdd}>Add business</Button>} />
+          <EmptyState icon={Building2} title={t('No businesses yet')} description={t('Add your first business to start creating branches and products.')} action={<Button icon={Plus} onClick={openAdd}>{t('Add business')}</Button>} />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -174,16 +175,16 @@ export default function BusinessList() {
                       </span>
                       <div className="min-w-0">
                         <h2 className="text-base font-semibold text-ink truncate">{b.name}</h2>
-                        <p className="text-caption text-ink-muted truncate">{b.legal_name || (b.registration_number ? `Reg. ${b.registration_number}` : 'No registered name')}</p>
+                        <p className="text-caption text-ink-muted truncate">{b.legal_name || (b.registration_number ? t('Reg. {registration_number}', { registration_number: b.registration_number }) : t('No registered name'))}</p>
                       </div>
                     </div>
                     <Menu
-                      label={`Actions for ${b.name}`}
+                      label={t('Actions for {name}', { name: b.name })}
                       items={[
-                        { label: 'Edit details', icon: Pencil, onClick: () => openEditModal(b) },
-                        { label: 'Product form', icon: SlidersHorizontal, onClick: () => navigate(`/businesses/${b.id}/forms`) },
+                        { label: t('Edit details'), icon: Pencil, onClick: () => openEditModal(b) },
+                        { label: t('Product form'), icon: SlidersHorizontal, onClick: () => navigate(`/businesses/${b.id}/forms`) },
                         { divider: true },
-                        { label: 'Delete business', icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
+                        { label: t('Delete business'), icon: Trash2, tone: 'danger', onClick: () => handleDelete(b) },
                       ]}
                     />
                   </div>
@@ -194,17 +195,17 @@ export default function BusinessList() {
                   </div>
 
                   <dl className="space-y-1.5 text-sm text-ink-secondary">
-                    <div className="flex items-center gap-2"><dt className="sr-only">Contact</dt><User className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_person || <span className="text-ink-muted">No contact person</span>}</dd></div>
-                    {b.contact_email && <div className="flex items-center gap-2"><dt className="sr-only">Email</dt><Mail className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_email}</dd></div>}
-                    {b.contact_phone && <div className="flex items-center gap-2"><dt className="sr-only">Phone</dt><Phone className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="tabular-nums">{b.contact_phone}</dd></div>}
+                    <div className="flex items-center gap-2"><dt className="sr-only">{t('Contact')}</dt><User className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_person || <span className="text-ink-muted">{t('No contact person')}</span>}</dd></div>
+                    {b.contact_email && <div className="flex items-center gap-2"><dt className="sr-only">{t('Email')}</dt><Mail className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="truncate">{b.contact_email}</dd></div>}
+                    {b.contact_phone && <div className="flex items-center gap-2"><dt className="sr-only">{t('Phone')}</dt><Phone className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" /><dd className="tabular-nums">{b.contact_phone}</dd></div>}
                   </dl>
                 </div>
 
                 <div className="px-5 py-3 border-t border-line-soft flex items-center justify-between gap-2 bg-subtle/60 rounded-b-xl">
                   <span className="text-sm text-ink-muted">
-                    <span className="font-semibold text-ink tabular-nums">{activeBranches}</span> active {activeBranches === 1 ? 'branch' : 'branches'}
+                    <span className="font-semibold text-ink tabular-nums">{activeBranches}</span>{' '}{activeBranches === 1 ? t('active branch') : t('active branches')}
                   </span>
-                  <Button variant="ghost" size="sm" iconRight={ArrowRight} onClick={() => navigate(`/businesses/${b.id}/branches`)}>Branches</Button>
+                  <Button variant="ghost" size="sm" iconRight={ArrowRight} onClick={() => navigate(`/businesses/${b.id}/branches`)}>{t('Branches')}</Button>
                 </div>
               </Card>
             );
@@ -216,15 +217,15 @@ export default function BusinessList() {
         <Modal
           size="lg"
           icon={Building2}
-          title="Add a new business"
-          description="Only the trading name is required. You can fill in the rest later."
+          title={t('Add a new business')}
+          description={t('Only the trading name is required. You can fill in the rest later.')}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create business</Button>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Create business')}</Button>
           </>}
         >
           <BusinessFields form={addForm} setForm={setAddForm} />
@@ -235,15 +236,15 @@ export default function BusinessList() {
         <Modal
           size="lg"
           icon={Pencil}
-          title={`Edit ${editForm.name || 'business'}`}
-          description="Changes apply to this business and all of its branches."
+          title={t('Edit {value}', { value: editForm.name || 'business' })}
+          description={t('Changes apply to this business and all of its branches.')}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save changes</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Save changes')}</Button>
           </>}
         >
           <BusinessFields form={editForm} setForm={setEditForm} />
@@ -258,48 +259,48 @@ function BusinessFields({ form, setForm }) {
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   return (
     <>
-      <FormSection title="Business identity">
+      <FormSection title={t('Business identity')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Trading name" required hint="The name staff and customers know.">
-            <Input required placeholder="e.g. Kaftanasia" value={form.name} onChange={set('name')} />
+          <Field label={t('Trading name')} required hint={t('The name staff and customers know.')}>
+            <Input required placeholder={t('e.g. Kaftanasia')} value={form.name} onChange={set('name')} />
           </Field>
-          <Field label="Registered company name" optional>
-            <Input placeholder="e.g. Kaftanasia Sdn. Bhd." value={form.legal_name} onChange={set('legal_name')} />
+          <Field label={t('Registered company name')} optional>
+            <Input placeholder={t('e.g. Kaftanasia Sdn. Bhd.')} value={form.legal_name} onChange={set('legal_name')} />
           </Field>
-          <Field label="Registration number" optional>
+          <Field label={t('Registration number')} optional>
             <Input placeholder="e.g. 202601099882 (123456-X)" value={form.registration_number} onChange={set('registration_number')} />
           </Field>
-          <Field label="Industry" optional hint="Used to group businesses. Product form fields are set under “Product form”.">
+          <Field label={t('Industry')} optional hint={t('Used to group businesses. Product form fields are set under “Product form”.')}>
             <Select value={form.industry} onChange={set('industry')}>
-              <option value="">Choose an industry…</option>
-              <option value="fashion">Fashion &amp; Apparel</option>
-              <option value="technology">Technology &amp; Electronics</option>
-              <option value="general">General / Other</option>
+              <option value="">{t('Choose an industry…')}</option>
+              <option value="fashion">{t('Fashion & Apparel')}</option>
+              <option value="technology">{t('Technology & Electronics')}</option>
+              <option value="general">{t('General / Other')}</option>
             </Select>
           </Field>
         </div>
       </FormSection>
 
-      <FormSection title="Main contact" description="Who HQ should reach about this business.">
+      <FormSection title={t('Main contact')} description={t('Who HQ should reach about this business.')}>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Field label="Contact person" optional>
-            <Input placeholder="Full name" value={form.contact_person} onChange={set('contact_person')} />
+          <Field label={t('Contact person')} optional>
+            <Input placeholder={t('Full name')} value={form.contact_person} onChange={set('contact_person')} />
           </Field>
-          <Field label="Email" optional>
+          <Field label={t('Email')} optional>
             <Input type="email" placeholder="you@gmail.com" value={form.contact_email} onChange={set('contact_email')} />
           </Field>
-          <Field label="Phone" optional>
+          <Field label={t('Phone')} optional>
             <Input type="tel" placeholder="+60 12-33445566" value={form.contact_phone} onChange={set('contact_phone')} />
           </Field>
         </div>
       </FormSection>
 
-      <FormSection title="Other details">
-        <Field label="Head office address" optional>
-          <Input placeholder="Street, building, city, state" value={form.address} onChange={set('address')} />
+      <FormSection title={t('Other details')}>
+        <Field label={t('Head office address')} optional>
+          <Input placeholder={t('Street, building, city, state')} value={form.address} onChange={set('address')} />
         </Field>
-        <Field label="Internal notes" optional hint="Only visible to HQ.">
-          <Textarea rows={2} placeholder="Anything worth remembering about this business…" value={form.notes} onChange={set('notes')} />
+        <Field label={t('Internal notes')} optional hint={t('Only visible to HQ.')}>
+          <Textarea rows={2} placeholder={t('Anything worth remembering about this business…')} value={form.notes} onChange={set('notes')} />
         </Field>
       </FormSection>
     </>

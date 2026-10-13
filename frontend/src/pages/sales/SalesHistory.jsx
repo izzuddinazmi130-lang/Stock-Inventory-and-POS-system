@@ -12,11 +12,12 @@ import {
   Badge, BusinessDot, Button, ButtonBase, Card, CardHeader, FilterBar, Input, KpiCard, PageHeader, Pagination, SearchInput, SegmentedControl, Select, Spinner,
   StatusPill, Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
+import { t as tr, locale } from '../../i18n';
 
 // Where a sale was rung up: the branch counter ("Shop floor") or a pop-up store
 function locationLabel(row) {
-  if (row.store_id == null) return 'Branch counter';
-  return row.store_name || `Pop-up store #${row.store_id} (deleted)`;
+  if (row.store_id == null) return tr('Branch counter');
+  return row.store_name || tr('Pop-up store #{store_id} (deleted)', { store_id: row.store_id });
 }
 
 function LocationBadge({ row }) {
@@ -49,12 +50,12 @@ function periodRange(period) {
 }
 
 const PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: 'month', label: 'This month' },
-  { value: 'all', label: 'All time' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'today', label: tr('Today') },
+  { value: 'yesterday', label: tr('Yesterday') },
+  { value: '7d', label: tr('Last 7 days') },
+  { value: 'month', label: tr('This month') },
+  { value: 'all', label: tr('All time') },
+  { value: 'custom', label: tr('Custom') },
 ];
 
 export default function SalesHistory() {
@@ -157,7 +158,7 @@ export default function SalesHistory() {
         setTotalPages(res.data.total_pages || 1);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not load sales.');
+      setError(err.response?.data?.message || tr('Could not load sales.'));
     } finally {
       setLoading(false);
     }
@@ -179,7 +180,7 @@ export default function SalesHistory() {
       const res = await api.get(`/sales/${id}`);
       if (res.data.success) setOpenSale(res.data.sale);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not open that receipt.');
+      setError(err.response?.data?.message || tr('Could not open that receipt.'));
     } finally {
       setOpeningId(null);
     }
@@ -188,7 +189,7 @@ export default function SalesHistory() {
   const changeFilter = (setter) => (value) => { setter(value); setPage(1); };
   const rangeLabel = range.from
     ? (range.from === range.to ? formatDay(range.from) : `${formatDay(range.from)} – ${formatDay(range.to)}`)
-    : 'All time';
+    : tr('All time');
 
   const firstLoad = loading && sales.length === 0;
   const hasFilters = Boolean(search || payment || location || period !== 'today');
@@ -200,7 +201,7 @@ export default function SalesHistory() {
     byLocation.filter(l => l.store_id != null).forEach(l => {
       if (!seen.has(l.store_id)) seen.set(l.store_id, { id: l.store_id, label: locationLabel(l), branch: l.branch_name });
     });
-    if (location && location !== 'floor' && !seen.has(Number(location))) seen.set(Number(location), { id: Number(location), label: 'Selected pop-up store', branch: '' });
+    if (location && location !== 'floor' && !seen.has(Number(location))) seen.set(Number(location), { id: Number(location), label: tr('Selected pop-up store'), branch: '' });
     return [...seen.values()];
   }, [byLocation, location]);
 
@@ -217,18 +218,18 @@ export default function SalesHistory() {
     <Layout>
       <PageHeader
         breadcrumbs={isSuperAdmin && scopeChosen ? [
-          { label: 'Sales history', to: '/sales' },
+          { label: tr('Sales history'), to: '/sales' },
           ...(!businessId
-            ? [{ label: 'All businesses' }]
+            ? [{ label: tr('All businesses') }]
             : branchId
-              ? [{ label: scopeBusiness?.name || 'Business', to: `/sales?view=1&business=${businessId}` }, { label: scopeBranch?.name || 'Branch' }]
-              : [{ label: scopeBusiness?.name || 'Business' }]),
+              ? [{ label: scopeBusiness?.name || tr('Business'), to: `/sales?view=1&business=${businessId}` }, { label: scopeBranch?.name || tr('Branch') }]
+              : [{ label: scopeBusiness?.name || tr('Business') }]),
         ] : undefined}
-        title="Sales history"
-        description="Every sale from the point of sale, with its receipt. Open a sale to view or reprint the receipt."
+        title={tr('Sales history')}
+        description={tr('Every sale from the point of sale, with its receipt. Open a sale to view or reprint the receipt.')}
         actions={isSuperAdmin
-          ? (scopeChosen && <Button variant="secondary" icon={ArrowLeftRight} onClick={changeScope}>Change business or branch</Button>)
-          : <Button icon={ScanLine} to="/qr/scan">Open point of sale</Button>}
+          ? (scopeChosen && <Button variant="secondary" icon={ArrowLeftRight} onClick={changeScope}>{tr('Change business or branch')}</Button>)
+          : <Button icon={ScanLine} to="/qr/scan">{tr('Open point of sale')}</Button>}
       />
 
       {isSuperAdmin && scopeChosen && businessId && businessBranches.length > 1 && (
@@ -240,12 +241,12 @@ export default function SalesHistory() {
       )}
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
-        <SegmentedControl label="Period" value={period} onChange={changeFilter(setPeriod)} tabs={PERIODS} className="max-w-full overflow-x-auto" />
+        <SegmentedControl label={tr('Period')} value={period} onChange={changeFilter(setPeriod)} tabs={PERIODS} className="max-w-full overflow-x-auto" />
         {period === 'custom' && (
           <div className="flex items-center gap-2 animate-fade-in">
-            <Input type="date" size="sm" value={customFrom} max={customTo} onChange={e => changeFilter(setCustomFrom)(e.target.value)} aria-label="From date" />
-            <span className="text-caption text-ink-muted">to</span>
-            <Input type="date" size="sm" value={customTo} min={customFrom} onChange={e => changeFilter(setCustomTo)(e.target.value)} aria-label="To date" />
+            <Input type="date" size="sm" value={customFrom} max={customTo} onChange={e => changeFilter(setCustomFrom)(e.target.value)} aria-label={tr('From date')} />
+            <span className="text-caption text-ink-muted">{tr('to')}</span>
+            <Input type="date" size="sm" value={customTo} min={customFrom} onChange={e => changeFilter(setCustomTo)(e.target.value)} aria-label={tr('To date')} />
           </div>
         )}
       </div>
@@ -262,10 +263,10 @@ export default function SalesHistory() {
         />
       ) : (<>
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <KpiCard loading={firstLoad} label="Total sales" value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta={(compare && <DayDelta data={compare} />) || 'Money taken'} />
-        <KpiCard loading={firstLoad} label="Receipts" value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={compare?.previous ? `Day before: ${compare.previous.sales_count}` : rangeLabel} />
-        <KpiCard loading={firstLoad} label="Average per receipt" value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta="Total sales ÷ receipts" />
-        <KpiCard loading={firstLoad} label="Items sold" value={summary ? summary.units : 0} icon={Package} tone="neutral" meta="Across all receipts" />
+        <KpiCard loading={firstLoad} label={tr('Total sales')} value={summary ? summary.revenue : 0} format={rm} icon={TrendingUp} tone="success" meta={(compare && <DayDelta data={compare} />) || tr('Money taken')} />
+        <KpiCard loading={firstLoad} label={tr('Receipts')} value={summary ? summary.sales_count : 0} icon={Receipt} tone="accent" meta={compare?.previous ? tr('Day before: {sales_count}', { sales_count: compare.previous.sales_count }) : rangeLabel} />
+        <KpiCard loading={firstLoad} label={tr('Average per receipt')} value={summary ? summary.average : 0} format={rm} icon={ShoppingBag} tone="neutral" meta={tr('Total sales ÷ receipts')} />
+        <KpiCard loading={firstLoad} label={tr('Items sold')} value={summary ? summary.units : 0} icon={Package} tone="neutral" meta={tr('Across all receipts')} />
       </div>
       {summary && summary.revenue > 0 && <PaymentSplit byPayment={summary.by_payment} total={summary.revenue} />}
 
@@ -273,7 +274,7 @@ export default function SalesHistory() {
         <DayInsights
           day={range.from}
           isToday={period === 'today'}
-          dayLabel={period === 'today' ? 'Today' : 'Yesterday'}
+          dayLabel={period === 'today' ? tr('Today') : tr('Yesterday')}
           businessId={isSuperAdmin ? businessId : ''}
           branchId={isSuperAdmin ? branchId : ''}
           showBranches={isSuperAdmin && !branchId}
@@ -296,36 +297,36 @@ export default function SalesHistory() {
           wrapperClassName="md:flex-1 md:min-w-[16rem]"
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
-          placeholder="Search by receipt number, product, SKU or note…"
-          aria-label="Search sales"
+          placeholder={tr('Search by receipt number, product, SKU or note…')}
+          aria-label={tr('Search sales')}
         />
-        <Select wrapperClassName="md:w-48" aria-label="Location" value={location} onChange={e => changeFilter(setLocation)(e.target.value)}>
-          <option value="">All locations</option>
-          <option value="floor">Branch counter</option>
+        <Select wrapperClassName="md:w-48" aria-label={tr('Location')} value={location} onChange={e => changeFilter(setLocation)(e.target.value)}>
+          <option value="">{tr('All locations')}</option>
+          <option value="floor">{tr('Branch counter')}</option>
           {storeOptions.length > 0 && (
-            <optgroup label="Pop-up stores">
+            <optgroup label={tr('Pop-up stores')}>
               {storeOptions.map(o => <option key={o.id} value={o.id}>{o.label}{isSuperAdmin && o.branch ? ` · ${o.branch}` : ''}</option>)}
             </optgroup>
           )}
         </Select>
-        <Select wrapperClassName="md:w-44" aria-label="Payment method" value={payment} onChange={e => changeFilter(setPayment)(e.target.value)}>
-          <option value="">All payments</option>
+        <Select wrapperClassName="md:w-44" aria-label={tr('Payment method')} value={payment} onChange={e => changeFilter(setPayment)(e.target.value)}>
+          <option value="">{tr('All payments')}</option>
           {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </Select>
       </FilterBar>
 
       <Card className="overflow-hidden">
-        <CardHeader title="Receipts" description={firstLoad ? 'Loading…' : `${summary?.sales_count ?? sales.length} ${(summary?.sales_count ?? sales.length) === 1 ? 'receipt' : 'receipts'}`} />
+        <CardHeader title={tr('Receipts')} description={firstLoad ? tr('Loading…') : tr('{n} {n|receipt|receipts}', { n: summary?.sales_count ?? sales.length })} />
         <Table minWidth={isSuperAdmin ? '62rem' : '56rem'}>
           <THead>
             <TR>
-              <TH>Receipt</TH>
-              <TH>When</TH>
-              <TH>Items</TH>
-              <TH>Payment</TH>
-              <TH>Location</TH>
-              <TH>Served by</TH>
-              <TH numeric>Total</TH>
+              <TH>{tr('Receipt')}</TH>
+              <TH>{tr('When')}</TH>
+              <TH>{tr('Items')}</TH>
+              <TH>{tr('Payment')}</TH>
+              <TH>{tr('Location')}</TH>
+              <TH>{tr('Served by')}</TH>
+              <TH numeric>{tr('Total')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -336,9 +337,9 @@ export default function SalesHistory() {
               onRetry={load}
               empty={!loading && !error && sales.length === 0}
               emptyIcon={Receipt}
-              emptyTitle="No sales found"
-              emptyDescription="Try another period or clear the search."
-              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
+              emptyTitle={tr('No sales found')}
+              emptyDescription={tr('Try another period or clear the search.')}
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>{tr('Clear filters')}</Button> : null}
             />
             {sales.map((s, i) => {
               const preview = s.items_preview || [];
@@ -351,7 +352,7 @@ export default function SalesHistory() {
                   <TD className="whitespace-nowrap text-ink-secondary">{formatDateTime(s.created_at)}</TD>
                   <TD className="max-w-[13rem] 2xl:max-w-xs">
                     <p className="truncate text-ink">{preview[0] || '—'}</p>
-                    {preview.length > 1 && <p className="text-caption text-ink-muted">+ {preview.length - 1} more</p>}
+                    {preview.length > 1 && <p className="text-caption text-ink-muted">{tr('+ {value} more', { value: preview.length - 1 })}</p>}
                   </TD>
                   <TD><StatusPill kind="payment" value={s.payment_method} size="sm" /></TD>
                   <TD className="max-w-[14rem]">
@@ -365,12 +366,12 @@ export default function SalesHistory() {
             })}
           </TBody>
         </Table>
-        <Pagination page={page} totalPages={totalPages} onChange={setPage} prevLabel="Newer" nextLabel="Older" />
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} prevLabel={tr('Newer')} nextLabel={tr('Older')} />
       </Card>
       </>)}
 
       {openSale && (
-        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel={tr('Close')} closeVariant="secondary">
           <SaleReceipt sale={openSale} />
         </ReceiptModal>
       )}
@@ -380,7 +381,7 @@ export default function SalesHistory() {
 
 function formatDay(value) {
   const d = new Date(`${value}T00:00:00`);
-  return isNaN(d) ? value : d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+  return isNaN(d) ? value : d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // Head office: choose what to look at before any receipts are shown
@@ -394,13 +395,13 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
   const Figures = ({ revenue, sales, strong }) => (
     <div className="text-right flex-shrink-0">
       <div className={cn('tabular-nums text-ink', strong ? 'text-base font-semibold' : 'text-sm font-semibold')}>{loading ? '…' : rm(revenue)}</div>
-      <div className="text-caption text-ink-muted tabular-nums">{loading ? '' : `${sales} receipt${sales === 1 ? '' : 's'}`}</div>
+      <div className="text-caption text-ink-muted tabular-nums">{loading ? '' : tr('{sales} {sales|receipt|receipts}', { sales })}</div>
     </div>
   );
 
   return (
-    <section aria-label="Choose what to view">
-      <p className="mb-3 text-sm text-ink-secondary">Choose a business or branch to see its sales. Figures are for <strong className="font-medium text-ink">{rangeLabel}</strong>.</p>
+    <section aria-label={tr('Choose what to view')}>
+      <p className="mb-3 text-sm text-ink-secondary">{tr('Choose a business or branch to see its sales. Figures are for')}{' '}<strong className="font-medium text-ink">{rangeLabel}</strong>.</p>
 
       <ButtonBase
         onClick={() => onPick({})}
@@ -408,8 +409,8 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
       >
         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-fg"><Globe className="h-5 w-5" aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-ink">All businesses</div>
-          <div className="text-caption text-ink-muted">Every branch and pop-up store together</div>
+          <div className="font-semibold text-ink">{tr('All businesses')}</div>
+          <div className="text-caption text-ink-muted">{tr('Every branch and pop-up store together')}</div>
         </div>
         <Figures revenue={summary?.revenue || 0} sales={summary?.sales_count || 0} strong />
         <ChevronRight className="h-4 w-4 text-ink-subtle group-hover:text-accent" aria-hidden="true" />
@@ -425,7 +426,7 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
                 <BusinessDot business={biz} />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-ink truncate">{biz.name}</div>
-                  <div className="text-caption text-ink-muted">{bizBranches.length} branch{bizBranches.length === 1 ? '' : 'es'}</div>
+                  <div className="text-caption text-ink-muted">{bizBranches.length}{tr(' branch')}{bizBranches.length === 1 ? '' : 'es'}</div>
                 </div>
                 <Figures revenue={total.revenue} sales={total.sales} strong />
               </div>
@@ -449,10 +450,10 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
                     </li>
                   );
                 })}
-                {bizBranches.length === 0 && <li className="px-5 py-3 text-caption text-ink-muted">No branches yet</li>}
+                {bizBranches.length === 0 && <li className="px-5 py-3 text-caption text-ink-muted">{tr('No branches yet')}</li>}
               </ul>
               <div className="border-t border-line-soft bg-subtle/60 px-5 py-2.5">
-                <Button variant="link" size="sm" iconRight={ChevronRight} onClick={() => onPick({ business: biz.id })}>View all of {biz.name}</Button>
+                <Button variant="link" size="sm" iconRight={ChevronRight} onClick={() => onPick({ business: biz.id })}>{tr('View all of ')}{biz.name}</Button>
               </div>
             </Card>
           );
@@ -467,9 +468,9 @@ function ScopePicker({ businesses, branches, byLocation, summary, loading, range
 function ScopeBar({ businessBranches, branchId, onBranch }) {
   return (
     <Card className="mb-4 flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
-      <span className="text-caption font-medium uppercase tracking-wide text-ink-muted">Branch</span>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Switch branch">
-        {[{ id: '', name: 'All branches' }, ...businessBranches].map(b => {
+      <span className="text-caption font-medium uppercase tracking-wide text-ink-muted">{tr('Branch')}</span>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('Switch branch')}>
+        {[{ id: '', name: tr('All branches') }, ...businessBranches].map(b => {
           const on = String(b.id) === String(branchId || '');
           return (
             <ButtonBase
@@ -497,18 +498,18 @@ function LocationBreakdown({ rows, isSuperAdmin, rangeLabel, active, onPick }) {
   return (
     <Card className="mb-4 overflow-hidden">
       <CardHeader
-        title={<span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" aria-hidden="true" /> Sales by location</span>}
-        description={`Where the money came from · ${rangeLabel} · click a location to see only its receipts`}
+        title={<span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" aria-hidden="true" />{' '}{tr('Sales by location')}</span>}
+        description={tr('Where the money came from · {rangeLabel} · click a location to see only its receipts', { rangeLabel })}
       />
       <Table minWidth="44rem">
         <THead>
           <TR>
-            <TH>Location</TH>
-            <TH numeric>Receipts</TH>
-            <TH numeric>Items</TH>
-            <TH>Share</TH>
-            <TH numeric>Total sales</TH>
-            <TH numeric>Last sale</TH>
+            <TH>{tr('Location')}</TH>
+            <TH numeric>{tr('Receipts')}</TH>
+            <TH numeric>{tr('Items')}</TH>
+            <TH>{tr('Share')}</TH>
+            <TH numeric>{tr('Total sales')}</TH>
+            <TH numeric>{tr('Last sale')}</TH>
           </TR>
         </THead>
         <TBody>
@@ -531,13 +532,13 @@ function LocationBreakdown({ rows, isSuperAdmin, rangeLabel, active, onPick }) {
                             onClick={e => e.stopPropagation()}
                             className="flex-shrink-0 rounded text-caption font-medium text-accent-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                           >
-                            Store report
+                            {tr('Store report')}
                           </Link>
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 truncate text-caption text-ink-muted">
                         {isSuperAdmin && <BusinessDot business={{ id: r.business_id, name: r.business_name }} size="sm" />}
-                        {isSuperAdmin ? `${r.business_name} · ${r.branch_name}` : (popUp ? (r.store_venue || 'Pop-up store') : r.branch_name)}
+                        {isSuperAdmin ? `${r.business_name} · ${r.branch_name}` : (popUp ? (r.store_venue || tr('Pop-up store')) : r.branch_name)}
                       </div>
                     </div>
                   </div>
@@ -572,7 +573,7 @@ function PaymentSplit({ byPayment, total }) {
   ];
   return (
     <Card className="px-4 py-3 mb-4">
-      <div className="flex h-2 rounded-full overflow-hidden bg-sunken" role="img" aria-label="Sales by payment method">
+      <div className="flex h-2 rounded-full overflow-hidden bg-sunken" role="img" aria-label={tr('Sales by payment method')}>
         {parts.map(p => byPayment[p.key] > 0 && (
           <div key={p.key} className={`${p.color} transition-[width] duration-slow ease-out`} style={{ width: `${(byPayment[p.key] / total) * 100}%` }} />
         ))}

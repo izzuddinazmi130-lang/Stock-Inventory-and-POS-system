@@ -10,6 +10,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { SaleReceipt, ReceiptModal, rm } from '../../components/pos/Receipt';
+import { t, locale } from '../../i18n';
 
 // The API sends "2026-10-04 09:00:00". Safari (iPhone) cannot read that form, so make it ISO-like first.
 function toDate(val) {
@@ -22,7 +23,7 @@ function formatDateTime(val) {
   if (!val) return '—';
   const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleString('en-MY', {
+  return d.toLocaleString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -36,7 +37,7 @@ function formatDateOnly(val) {
   if (!val) return '—';
   const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleDateString('en-MY', {
+  return d.toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
@@ -47,7 +48,7 @@ function formatTimeOnly(val) {
   if (!val) return '—';
   const d = toDate(val) || new Date(NaN);
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleTimeString('en-MY', {
+  return d.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
@@ -80,30 +81,30 @@ function getTimingStatusText(store, phase) {
 
   if (phase === 'before') {
     const diffMs = sTime - now;
-    if (diffMs <= 0) return 'Starts shortly';
+    if (diffMs <= 0) return t('Starts shortly');
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     const remHours = hours % 24;
     if (days > 0) {
-      return `Starts in ${days} day${days > 1 ? 's' : ''}${remHours > 0 ? `, ${remHours}h` : ''}`;
+      return t('Starts in {days} day{value}{value2}', { days, value: days > 1 ? 's' : '', value2: remHours > 0 ? `, ${remHours}h` : '' });
     }
     const mins = Math.floor(diffMs / (1000 * 60));
-    if (hours > 0) return `Starts in ${hours}h ${mins % 60}m`;
-    return `Starts in ${Math.max(1, mins)} min${mins !== 1 ? 's' : ''}`;
+    if (hours > 0) return t('Starts in {hours}h {value}m', { hours, value: mins % 60 });
+    return t('Starts in {n} min{value}', { n: Math.max(1, mins), value: mins !== 1 ? 's' : '' });
   }
 
   if (phase === 'during') {
     const diffMs = eTime - now;
-    if (diffMs <= 0) return 'Ending now';
+    if (diffMs <= 0) return t('Ending now');
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     const remHours = hours % 24;
     if (days > 0) {
-      return `Closes in ${days}d ${remHours}h`;
+      return t('Closes in {days}d {remHours}h', { days, remHours });
     }
     const mins = Math.floor(diffMs / (1000 * 60));
-    if (hours > 0) return `Ends in ${hours}h ${mins % 60}m`;
-    return `Ends in ${Math.max(1, mins)} mins`;
+    if (hours > 0) return t('Ends in {hours}h {value}m', { hours, value: mins % 60 });
+    return t('Ends in {n} mins', { n: Math.max(1, mins) });
   }
 
   // Phase is 'after'
@@ -111,13 +112,13 @@ function getTimingStatusText(store, phase) {
     const closedTime = toDate(store.ended_at)?.getTime() || eTime;
     const diffMs = now - closedTime;
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (days > 0) return `Concluded ${days} day${days > 1 ? 's' : ''} ago`;
+    if (days > 0) return t('Concluded {days} day{value} ago', { days, value: days > 1 ? 's' : '' });
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (hours > 0) return `Concluded ${hours} hour${hours > 1 ? 's' : ''} ago`;
-    return 'Recently concluded';
+    if (hours > 0) return t('Concluded {hours} hour{value} ago', { hours, value: hours > 1 ? 's' : '' });
+    return t('Recently concluded');
   }
 
-  return 'Concluded';
+  return t('Concluded');
 }
 
 export default function StoreReport() {
@@ -149,7 +150,7 @@ export default function StoreReport() {
         }
       } catch (storeErr) {
         console.error('Store detail fetch error:', storeErr);
-        const errMsg = storeErr.response?.data?.message || storeErr.message || 'Failed to fetch store details';
+        const errMsg = storeErr.response?.data?.message || storeErr.message || t('Failed to fetch store details');
         setMessage({ type: 'danger', text: errMsg });
         return;
       }
@@ -164,12 +165,12 @@ export default function StoreReport() {
         }
       } catch (repErr) {
         console.warn('Store movements fetch warning:', repErr);
-        const repErrMsg = repErr.response?.data?.message || repErr.message || 'Could not load transaction breakdown';
+        const repErrMsg = repErr.response?.data?.message || repErr.message || t('Could not load transaction breakdown');
         setMessage({ type: 'warning', text: repErrMsg });
       }
     } catch (err) {
       console.error('Unexpected error fetching report:', err);
-      setMessage({ type: 'danger', text: err.response?.data?.message || err.message || 'An error occurred while loading the report' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || err.message || t('An error occurred while loading the report') });
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ export default function StoreReport() {
       const res = await api.get(`/sales/${saleId}`);
       if (res.data.success) setOpenSale(res.data.sale);
     } catch (err) {
-      setMessage({ type: 'warning', text: err.response?.data?.message || 'Could not open that receipt.' });
+      setMessage({ type: 'warning', text: err.response?.data?.message || t('Could not open that receipt.') });
     } finally {
       setOpeningId(null);
     }
@@ -219,14 +220,14 @@ export default function StoreReport() {
       <Layout>
         <Card>
           <ErrorState
-            title={/access denied/i.test(message?.text || '') ? 'You don’t have access to this store' : 'Pop-up store not found'}
+            title={/access denied/i.test(message?.text || '') ? t('You don’t have access to this store') : t('Pop-up store not found')}
             description={/access denied/i.test(message?.text || '')
-              ? 'This pop-up store belongs to another branch. You can only open your own branch’s stores.'
-              : (message?.text || `Pop-up store #${id} may have been deleted.`)}
+              ? t('This pop-up store belongs to another branch. You can only open your own branch’s stores.')
+              : (message?.text || t('Pop-up store #{id} may have been deleted.', { id }))}
             onRetry={/access denied/i.test(message?.text || '') ? undefined : () => fetchReport()}
           />
           <div className="flex justify-center pb-8 -mt-6">
-            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? 'Pop-up stores' : 'My pop-up stores'}</Button>
+            <Button variant="ghost" icon={ArrowLeft} to={backTo}>{isSuperAdmin ? t('Pop-up stores') : t('My pop-up stores')}</Button>
           </div>
         </Card>
       </Layout>
@@ -234,9 +235,9 @@ export default function StoreReport() {
   }
 
   const phaseAlert = {
-    before: { tone: 'warning', icon: Clock, title: `Not live yet · ${timingText}`, body: <>Opens <strong>{formatDateTime(store.start_date)}</strong> and runs until <strong>{formatDateTime(store.end_date)}</strong>. {lines.length ? 'Sales made before it opened are included below.' : 'Sales will appear here once it starts.'}</> },
-    during: { tone: 'success', icon: Radio, title: `Live now · ${timingText}`, body: <>Sales at this store are being recorded until <strong>{formatDateTime(store.end_date)}</strong>. The numbers below update as you sell.</> },
-    after: { tone: 'info', icon: CheckCircle2, title: 'Final report', body: <>This store closed <strong>{formatDateTime(store.ended_at || store.end_date)}</strong>. The numbers below are final.</> },
+    before: { tone: 'warning', icon: Clock, title: t('Not live yet · {timingText}', { timingText }), body: <>{t('Opens')}{' '}<strong>{formatDateTime(store.start_date)}</strong>{' '}{t('and runs until')}{' '}<strong>{formatDateTime(store.end_date)}</strong>. {lines.length ? t('Sales made before it opened are included below.') : t('Sales will appear here once it starts.')}</> },
+    during: { tone: 'success', icon: Radio, title: t('Live now · {timingText}', { timingText }), body: <>{t('Sales at this store are being recorded until')}{' '}<strong>{formatDateTime(store.end_date)}</strong>{t('. The numbers below update as you sell.')}</> },
+    after: { tone: 'info', icon: CheckCircle2, title: t('Final report'), body: <>{t('This store closed')}{' '}<strong>{formatDateTime(store.ended_at || store.end_date)}</strong>{t('. The numbers below are final.')}</> },
   }[phase];
 
   return (
@@ -244,8 +245,8 @@ export default function StoreReport() {
       <PageHeader
         breadcrumbs={[
           ...(isSuperAdmin
-            ? [{ label: 'Pop-up stores', to: '/stores' }, { label: `${store.business_name || 'Business'} · ${store.branch_name || 'Branch'}` }]
-            : [{ label: 'Pop-up stores', to: `/branches/${store.branch_id}/stores` }]),
+            ? [{ label: t('Pop-up stores'), to: '/stores' }, { label: `${store.business_name || t('Business')} · ${store.branch_name || t('Branch')}` }]
+            : [{ label: t('Pop-up stores'), to: `/branches/${store.branch_id}/stores` }]),
           { label: store.name },
         ]}
         title={store.name}
@@ -255,8 +256,8 @@ export default function StoreReport() {
           <span className="inline-flex items-center gap-1.5 text-caption text-ink-muted tabular-nums"><Calendar className="w-3.5 h-3.5" aria-hidden="true" />{formatDateTime(store.start_date)} → {formatDateTime(store.end_date)}</span>
         </>}
         actions={<>
-          <Button variant="secondary" icon={ArrowLeft} to={backTo}>'Pop-up stores'</Button>
-          <Button variant="ghost" icon={RefreshCw} onClick={() => fetchReport()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+          <Button variant="secondary" icon={ArrowLeft} to={backTo}>{t('\'Pop-up stores\'')}</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={() => fetchReport()} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>
         </>}
       />
 
@@ -266,61 +267,61 @@ export default function StoreReport() {
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KpiCard
-          label="Total sales"
+          label={t('Total sales')}
           value={Number(summary.total_sales) || 0}
           format={rm}
           icon={TrendingUp}
           tone="accent"
-          meta={`${summary.total_transactions || 0} ${summary.total_transactions === 1 ? 'receipt' : 'receipts'} · ${summary.total_items_sold || 0} ${summary.total_items_sold === 1 ? 'item' : 'items'} sold`}
+          meta={t('{receipts} {receipts|receipt|receipts} · {items} {items|item|items} sold', { receipts: Number(summary.total_transactions) || 0, items: Number(summary.total_items_sold) || 0 })}
         />
-        <KpiCard label="Cash" value={Number(summary.total_cash) || 0} format={rm} icon={Banknote} tone="neutral" meta="Collected at the booth" />
-        <KpiCard label="QR / e-Wallet" value={Number(summary.total_qr) || 0} format={rm} icon={QrCode} tone="neutral" meta="DuitNow QR and e-wallets" />
-        <KpiCard label="Card / online" value={Number(summary.total_online) || 0} format={rm} icon={CreditCard} tone="neutral" meta="Card and online banking" />
+        <KpiCard label={t('Cash')} value={Number(summary.total_cash) || 0} format={rm} icon={Banknote} tone="neutral" meta={t('Collected at the booth')} />
+        <KpiCard label={t('QR / e-Wallet')} value={Number(summary.total_qr) || 0} format={rm} icon={QrCode} tone="neutral" meta={t('DuitNow QR and e-wallets')} />
+        <KpiCard label={t('Card / online')} value={Number(summary.total_online) || 0} format={rm} icon={CreditCard} tone="neutral" meta={t('Card and online banking')} />
       </div>
 
       <Card className="p-5 mb-6">
-        <h2 className="text-sm font-semibold text-ink mb-4">Dates and contact</h2>
+        <h2 className="text-sm font-semibold text-ink mb-4">{t('Dates and contact')}</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <div>
-            <dt className="text-caption text-ink-muted">Starts</dt>
+            <dt className="text-caption text-ink-muted">{t('Starts')}</dt>
             <dd className="font-medium text-ink mt-0.5">{formatDateOnly(store.start_date)}</dd>
             <dd className="text-caption text-ink-secondary tabular-nums">{formatTimeOnly(store.start_date)}</dd>
           </div>
           <div>
-            <dt className="text-caption text-ink-muted">Ends</dt>
+            <dt className="text-caption text-ink-muted">{t('Ends')}</dt>
             <dd className="font-medium text-ink mt-0.5">{formatDateOnly(store.end_date)}</dd>
             <dd className="text-caption text-ink-secondary tabular-nums">{formatTimeOnly(store.end_date)}</dd>
           </div>
           <div>
-            <dt className="text-caption text-ink-muted">Person in charge</dt>
-            <dd className="font-medium text-ink mt-0.5 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />{store.person_in_charge || 'HQ staff'}</dd>
+            <dt className="text-caption text-ink-muted">{t('Person in charge')}</dt>
+            <dd className="font-medium text-ink mt-0.5 flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />{store.person_in_charge || t('HQ staff')}</dd>
             <dd className="text-caption text-ink-secondary flex items-center gap-1.5 tabular-nums"><Phone className="w-3 h-3 text-ink-muted" aria-hidden="true" />{store.contact_phone || '—'}</dd>
           </div>
           <div>
-            <dt className="text-caption text-ink-muted">Status</dt>
+            <dt className="text-caption text-ink-muted">{t('Status')}</dt>
             <dd className="mt-1"><StatusPill kind="store" value={PHASE_TO_STATUS[phase]} size="sm" /></dd>
             <dd className="text-caption text-ink-secondary mt-1">{timingText}</dd>
           </div>
         </dl>
-        {store.notes && <p className="mt-4 pt-3 border-t border-line-soft text-sm text-ink-secondary"><span className="font-medium text-ink">Notes: </span>{store.notes}</p>}
+        {store.notes && <p className="mt-4 pt-3 border-t border-line-soft text-sm text-ink-secondary"><span className="font-medium text-ink">{t('Notes:')}{' '}</span>{store.notes}</p>}
       </Card>
 
       <Card className="overflow-hidden">
         <CardHeader
           icon={Receipt}
-          title="Items sold"
-          description={`${lines.length} ${lines.length === 1 ? 'line' : 'lines'} from ${summary.total_transactions || 0} ${summary.total_transactions === 1 ? 'receipt' : 'receipts'} · click a line to open its receipt`}
+          title={t('Items sold')}
+          description={t('{lines} {lines|line|lines} from {receipts} {receipts|receipt|receipts} · click a line to open its receipt', { lines: lines.length, receipts: Number(summary.total_transactions) || 0 })}
         />
         <Table minWidth="56rem">
           <THead>
             <TR>
-              <TH>Receipt</TH>
-              <TH>Item</TH>
-              <TH numeric>Qty</TH>
-              <TH numeric>Price</TH>
-              <TH numeric>Amount</TH>
-              <TH>Payment</TH>
-              <TH className="text-right">When</TH>
+              <TH>{t('Receipt')}</TH>
+              <TH>{t('Item')}</TH>
+              <TH numeric>{t('Qty')}</TH>
+              <TH numeric>{t('Price')}</TH>
+              <TH numeric>{t('Amount')}</TH>
+              <TH>{t('Payment')}</TH>
+              <TH className="text-right">{t('When')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -328,12 +329,12 @@ export default function StoreReport() {
               colSpan={7}
               empty={lines.length === 0}
               emptyIcon={phase === 'before' ? Clock : phase === 'during' ? Radio : CheckCircle2}
-              emptyTitle={phase === 'before' ? 'No sales yet' : phase === 'during' ? 'Waiting for the first sale' : 'No sales were recorded'}
+              emptyTitle={phase === 'before' ? t('No sales yet') : phase === 'during' ? t('Waiting for the first sale') : t('No sales were recorded')}
               emptyDescription={phase === 'before'
-                ? `The event opens ${formatDateTime(store.start_date)}.`
+                ? t('The event opens {start_date}.', { start_date: formatDateTime(store.start_date) })
                 : phase === 'during'
-                ? 'Choose this store at the Point of sale when selling, and sales appear here.'
-                : 'Nothing was sold at this store.'}
+                ? t('Choose this store at the Point of sale when selling, and sales appear here.')
+                : t('Nothing was sold at this store.')}
             />
             {lines.map((l, i) => (
               <TR key={l.id} index={i} onClick={() => openReceipt(l.sale_id)}>
@@ -354,11 +355,11 @@ export default function StoreReport() {
             ))}
           </TBody>
         </Table>
-        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">Showing the latest 500 lines. The totals above include every sale.</p>}
+        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">{t('Showing the latest 500 lines. The totals above include every sale.')}</p>}
       </Card>
 
       {openSale && (
-        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel={t('Close')} closeVariant="secondary">
           <SaleReceipt sale={openSale} />
         </ReceiptModal>
       )}

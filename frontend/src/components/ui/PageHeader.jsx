@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { cn, focusRing } from './cn';
 import { useAuth } from '../../context/AuthContext';
-import { sectionFor } from '../navigation';
+import { sectionFor } from '../navigation';
+import { t } from '../../i18n';
 
 /**
  * Breadcrumb trail: "Sidebar section › Page › Sub-page". The section (the sidebar heading the page sits under,
@@ -21,7 +22,7 @@ export function Breadcrumbs({ items, section, className }) {
   if (!trail.length) return null;
   const crumbs = group ? [{ label: group, section: true }, ...trail] : trail;
   return (
-    <nav aria-label="Breadcrumb" className={cn('mb-2', className)}>
+    <nav aria-label={t('Breadcrumb')} className={cn('mb-2', className)}>
       <ol className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-caption text-ink-muted">
         {crumbs.map((crumb, i) => {
           const last = i === crumbs.length - 1;
@@ -57,7 +58,7 @@ export default function PageHeader({ title, description, breadcrumbs, section, b
             <Link
               to={back.to || back}
               className={cn('mt-0.5 p-2 -ml-2 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors flex-shrink-0', focusRing)}
-              aria-label={back.label || 'Back'}
+              aria-label={back.label || t('Back')}
             >
               <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </Link>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Package } from 'lucide-react';
-import { Checkbox, EmptyState, Input, SearchInput, Skeleton, cn } from '../ui';
+import { Checkbox, EmptyState, Input, SearchInput, Skeleton, cn } from '../ui';
+import { t } from '../../i18n';
 
 // Searchable checklist of catalog products with a starting-stock box for each ticked product.
 // selections: { [productId]: quantity }
@@ -15,12 +16,12 @@ export default function CatalogPicker({ products, loading, search, onSearch, sel
         <SearchInput
           wrapperClassName="flex-1"
           size="sm"
-          placeholder="Search by product name or SKU…"
+          placeholder={t('Search by product name or SKU…')}
           value={search}
           onChange={e => onSearch(e.target.value)}
-          aria-label="Search products"
+          aria-label={t('Search products')}
         />
-        <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', count ? 'text-accent' : 'text-ink-muted')}>{count} selected</span>
+        <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', count ? 'text-accent' : 'text-ink-muted')}>{count}{t(' selected')}</span>
       </div>
 
       {loading ? (
@@ -41,12 +42,12 @@ export default function CatalogPicker({ products, loading, search, onSearch, sel
                   description={<>
                     <span className="font-mono text-accent">{p.sku}</span>
                     {p.category && <> · {p.category}</>}
-                    {p.branch_count != null && <> · in {p.branch_count} branch{Number(p.branch_count) === 1 ? '' : 'es'}</>}
+                    {p.branch_count != null && <>{' '}{t('· in {branch_count} branch', { branch_count: p.branch_count })}{Number(p.branch_count) === 1 ? '' : 'es'}</>}
                   </>}
                 />
                 {checked && (
                   <label className="flex items-center gap-1.5 text-caption text-ink-muted flex-shrink-0 animate-fade-in">
-                    Starting stock
+                    {t('Starting stock')}
                     <Input
                       type="number"
                       size="sm"
@@ -56,17 +57,17 @@ export default function CatalogPicker({ products, loading, search, onSearch, sel
                       value={selections[p.id]}
                       onChange={e => onQuantity(p.id, e.target.value)}
                       className="w-20 px-2 font-mono"
-                      aria-label={`Starting stock for ${p.name}`}
+                      aria-label={t('Starting stock for {name}', { name: p.name })}
                     />
                   </label>
                 )}
               </li>
             );
           })}
-          {visible.length === 0 && <li><EmptyState compact title="No products match that search" /></li>}
+          {visible.length === 0 && <li><EmptyState compact title={t('No products match that search')} /></li>}
         </ul>
       )}
-      <p className="text-caption text-ink-muted mt-1.5">Starting stock can be 0 if you only want the product listed in this branch.</p>
+      <p className="text-caption text-ink-muted mt-1.5">{t('Starting stock can be 0 if you only want the product listed in this branch.')}</p>
     </div>
   );
 }

@@ -10,13 +10,14 @@ import {
   SegmentedControl, StatusPill, BusinessDot, Table, THead, TBody, TH, TR, TD, TableState, useConfirm, useToast,
 } from '../../components/ui';
 import { RoleBadge, UserAccessFields, UserAccessModal, relativeTime } from './components/UserModals';
+import { t, locale } from '../../i18n';
 
 const STATUS_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'suspended', label: 'Suspended' },
-  { value: 'declined', label: 'Declined' },
+  { value: 'all', label: t('All') },
+  { value: 'active', label: t('Active') },
+  { value: 'pending', label: t('Pending') },
+  { value: 'suspended', label: t('Suspended') },
+  { value: 'declined', label: t('Declined') },
 ];
 
 export default function UserManagement() {
@@ -218,7 +219,7 @@ export default function UserManagement() {
   };
 
   const handleDelete = async (id, name) => {
-    const ok = await confirm({ title: `Delete ${name}'s account?`, message: 'They lose access immediately. This cannot be undone.', confirmLabel: 'Delete account', tone: 'danger' });
+    const ok = await confirm({ title: t('Delete {name}\'s account?', { name }), message: t('They lose access immediately. This cannot be undone.'), confirmLabel: t('Delete account'), tone: 'danger' });
     if (!ok) return;
     try {
       const res = await api.delete(`/users/${id}`);
@@ -231,21 +232,21 @@ export default function UserManagement() {
     }
   };
 
-  const handleSuspend = async (id, name = 'this user') => {
-    const ok = await confirm({ title: `Suspend ${name}?`, message: 'They cannot sign in until you activate the account again.', confirmLabel: 'Suspend' });
+  const handleSuspend = async (id, name = t('this user')) => {
+    const ok = await confirm({ title: t('Suspend {name}?', { name }), message: t('They cannot sign in until you activate the account again.'), confirmLabel: t('Suspend') });
     if (!ok) return;
     try {
       await api.patch(`/users/${id}/suspend`);
-      toast.success(`${name} is suspended.`);
+      toast.success(t('{name} is suspended.', { name }));
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     }
     fetchUsers();
   };
-  const handleActivate = async (id, name = 'The user') => {
+  const handleActivate = async (id, name = t('The user')) => {
     try {
       await api.patch(`/users/${id}/activate`);
-      toast.success(`${name} can sign in again.`);
+      toast.success(t('{name} can sign in again.', { name }));
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     }
@@ -253,7 +254,7 @@ export default function UserManagement() {
   };
 
   const handleApprove = async (id, name) => {
-    const ok = await confirm({ title: `Approve ${name}?`, message: 'They get access straight away.', confirmLabel: 'Approve' });
+    const ok = await confirm({ title: t('Approve {name}?', { name }), message: t('They get access straight away.'), confirmLabel: t('Approve') });
     if (!ok) return;
     try {
       const res = await api.post(`/users/${id}/approve`);
@@ -267,7 +268,7 @@ export default function UserManagement() {
   };
 
   const handleReject = async (id, name) => {
-    const ok = await confirm({ title: `Decline ${name}'s request?`, confirmLabel: 'Decline', tone: 'danger' });
+    const ok = await confirm({ title: t('Decline {name}\'s request?', { name }), confirmLabel: t('Decline'), tone: 'danger' });
     if (!ok) return;
     try {
       const res = await api.post(`/users/${id}/reject`);
@@ -307,9 +308,9 @@ export default function UserManagement() {
   return (
     <Layout>
       <PageHeader
-        title="Users"
-        description="Who can sign in, what they can see, and new account requests."
-        actions={<Button icon={Plus} onClick={() => openAddModal()}>Add user</Button>}
+        title={t('Users')}
+        description={t('Who can sign in, what they can see, and new account requests.')}
+        actions={<Button icon={Plus} onClick={() => openAddModal()}>{t('Add user')}</Button>}
       />
 
       {/* With one super admin, nobody can reset that account's password from the app */}
@@ -317,28 +318,28 @@ export default function UserManagement() {
         <Alert
           tone="warning"
           className="mb-6"
-          title="There is only one super admin"
-          action={<Button variant="secondary" size="sm" onClick={() => openAddModal('super_admin')}>Add a second super admin</Button>}
+          title={t('There is only one super admin')}
+          action={<Button variant="secondary" size="sm" onClick={() => openAddModal('super_admin')}>{t('Add a second super admin')}</Button>}
         >
-          If this person forgets their password, no one can reset it from the app. Add a second super admin you trust so you can reset each other’s passwords.
+          {t('If this person forgets their password, no one can reset it from the app. Add a second super admin you trust so you can reset each other’s passwords.')}
         </Alert>
       )}
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Users" value={Number(userStats.total) || 0} icon={Users} tone="accent" meta="All accounts" />
-        <KpiCard loading={firstLoad} label="Super admins" value={Number(userStats.superadmins) || 0} icon={ShieldCheck} tone="violet" meta="Full HQ access" />
+        <KpiCard loading={firstLoad} label={t('Users')} value={Number(userStats.total) || 0} icon={Users} tone="accent" meta={t('All accounts')} />
+        <KpiCard loading={firstLoad} label={t('Super admins')} value={Number(userStats.superadmins) || 0} icon={ShieldCheck} tone="violet" meta={t('Full HQ access')} />
         <KpiCard
           loading={firstLoad}
-          label="Branch admins"
+          label={t('Branch admins')}
           value={Number(userStats.admins) || 0}
           icon={UserCheck}
           tone="info"
-          meta={userStats.byBusiness?.map(b => `${b.name} ${b.count}`).join(' · ') || 'None yet'}
+          meta={userStats.byBusiness?.map(b => `${b.name} ${b.count}`).join(' · ') || t('None yet')}
         />
       </div>
 
       <FilterBar onReset={resetAll} resetVisible={hasFilters}>
-        <SearchInput wrapperClassName="md:w-60" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search name or email…" aria-label="Search users" />
+        <SearchInput wrapperClassName="md:w-60" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('Search name or email…')} aria-label={t('Search users')} />
         <BusinessBranchFilter
           businesses={businesses}
           branches={branchesForFilter}
@@ -353,20 +354,20 @@ export default function UserManagement() {
 
       <Card className="overflow-hidden">
         <CardHeader
-          title="Accounts"
-          description={firstLoad ? 'Loading…' : `${users.length} ${users.length === 1 ? 'account' : 'accounts'}`}
-          actions={<SegmentedControl size="sm" label="Account status" value={statusFilter} onChange={setStatusFilter} tabs={STATUS_TABS} className="max-w-full overflow-x-auto" />}
+          title={t('Accounts')}
+          description={firstLoad ? t('Loading…') : t('{n} {n|account|accounts}', { n: users.length })}
+          actions={<SegmentedControl size="sm" label={t('Account status')} value={statusFilter} onChange={setStatusFilter} tabs={STATUS_TABS} className="max-w-full overflow-x-auto" />}
         />
         <Table minWidth="62rem">
           <THead>
             <TR>
-              <TH>User</TH>
-              <TH>Role</TH>
-              <TH>Business &amp; branch</TH>
-              <TH>Status</TH>
-              <TH>Last sign-in</TH>
-              <TH>Created</TH>
-              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+              <TH>{t('User')}</TH>
+              <TH>{t('Role')}</TH>
+              <TH>{t('Business & branch')}</TH>
+              <TH>{t('Status')}</TH>
+              <TH>{t('Last sign-in')}</TH>
+              <TH>{t('Created')}</TH>
+              <TH className="w-px"><span className="sr-only">{t('Actions')}</span></TH>
             </TR>
           </THead>
           <TBody>
@@ -377,8 +378,8 @@ export default function UserManagement() {
               onRetry={fetchUsers}
               empty={!loading && !loadError && users.length === 0}
               emptyIcon={Users}
-              emptyTitle={statusFilter === 'pending' ? 'No pending requests' : 'No users match these filters'}
-              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetAll}>Clear filters</Button> : null}
+              emptyTitle={statusFilter === 'pending' ? t('No pending requests') : t('No users match these filters')}
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetAll}>{t('Clear filters')}</Button> : null}
             />
             {users.map((u, i) => (
               <TR key={u.id} index={i}>
@@ -391,40 +392,40 @@ export default function UserManagement() {
                 <TD><RoleBadge role={u.role} /></TD>
                 <TD>
                   {u.role === 'super_admin' ? (
-                    <span className="text-sm text-ink-secondary">All businesses &amp; branches</span>
+                    <span className="text-sm text-ink-secondary">{t('All businesses & branches')}</span>
                   ) : (
                     <>
                       <div className="text-sm text-ink flex items-center gap-1.5">
                         <BusinessDot business={{ id: u.business_id, name: u.business_name }} size="sm" />
-                        {u.business_name || 'No business'}
+                        {u.business_name || t('No business')}
                       </div>
                       <div className="text-caption text-ink-muted">
-                        {u.branch_name || 'No branch'}{u.branch_code && <span className="font-mono"> · {u.branch_code}</span>}
+                        {u.branch_name || t('No branch')}{u.branch_code && <span className="font-mono"> · {u.branch_code}</span>}
                       </div>
                     </>
                   )}
                 </TD>
                 <TD><StatusPill kind="user" value={u.status} size="sm" /></TD>
                 <TD className="text-caption text-ink-muted whitespace-nowrap">{relativeTime(u.last_login)}</TD>
-                <TD className="text-caption text-ink-muted whitespace-nowrap tabular-nums">{new Date(u.created_at).toLocaleDateString('en-MY', { dateStyle: 'medium' })}</TD>
+                <TD className="text-caption text-ink-muted whitespace-nowrap tabular-nums">{new Date(u.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}</TD>
                 <TD>
                   <div className="flex items-center justify-end gap-1">
                     {u.status === 'pending' && (
                       <>
-                        <Button variant="success" size="sm" icon={Check} onClick={() => handleApprove(u.id, u.full_name)}>Approve</Button>
-                        <Button variant="ghost" size="sm" icon={X} onClick={() => handleReject(u.id, u.full_name)}>Decline</Button>
+                        <Button variant="success" size="sm" icon={Check} onClick={() => handleApprove(u.id, u.full_name)}>{t('Approve')}</Button>
+                        <Button variant="ghost" size="sm" icon={X} onClick={() => handleReject(u.id, u.full_name)}>{t('Decline')}</Button>
                       </>
                     )}
                     <Menu
-                      label={`Actions for ${u.full_name}`}
+                      label={t('Actions for {full_name}', { full_name: u.full_name })}
                       items={[
-                        { label: 'View access', icon: Eye, onClick: () => setInspectUser(u) },
-                        { label: 'Change access', icon: Pencil, onClick: () => openEditModal(u) },
-                        { label: 'Reset password', icon: KeyRound, onClick: () => setResetUser(u), hidden: u.id === currentUser?.id || u.status === 'pending' || u.status === 'declined' },
-                        { label: 'Suspend', icon: PauseCircle, onClick: () => handleSuspend(u.id, u.full_name), hidden: u.status !== 'active' },
-                        { label: 'Activate', icon: PlayCircle, onClick: () => handleActivate(u.id, u.full_name), hidden: u.status !== 'suspended' },
+                        { label: t('View access'), icon: Eye, onClick: () => setInspectUser(u) },
+                        { label: t('Change access'), icon: Pencil, onClick: () => openEditModal(u) },
+                        { label: t('Reset password'), icon: KeyRound, onClick: () => setResetUser(u), hidden: u.id === currentUser?.id || u.status === 'pending' || u.status === 'declined' },
+                        { label: t('Suspend'), icon: PauseCircle, onClick: () => handleSuspend(u.id, u.full_name), hidden: u.status !== 'active' },
+                        { label: t('Activate'), icon: PlayCircle, onClick: () => handleActivate(u.id, u.full_name), hidden: u.status !== 'suspended' },
                         { divider: true },
-                        { label: 'Delete account', icon: Trash2, tone: 'danger', onClick: () => handleDelete(u.id, u.full_name) },
+                        { label: t('Delete account'), icon: Trash2, tone: 'danger', onClick: () => handleDelete(u.id, u.full_name) },
                       ]}
                     />
                   </div>
@@ -438,27 +439,27 @@ export default function UserManagement() {
       {showAddModal && (
         <Modal
           icon={Users}
-          title="Add a user"
-          description="The account can sign in straight away with the password you set."
+          title={t('Add a user')}
+          description={t('The account can sign in straight away with the password you set.')}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create user</Button>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Create user')}</Button>
           </>}
         >
-          <FormSection title="Account">
+          <FormSection title={t('Account')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Full name" required>
-                <Input required placeholder="e.g. Ali bin Abu" value={addForm.full_name} onChange={e => setAddForm({ ...addForm, full_name: e.target.value })} />
+              <Field label={t('Full name')} required>
+                <Input required placeholder={t('e.g. Ali bin Abu')} value={addForm.full_name} onChange={e => setAddForm({ ...addForm, full_name: e.target.value })} />
               </Field>
-              <Field label="Email" required hint="Used to sign in.">
+              <Field label={t('Email')} required hint={t('Used to sign in.')}>
                 <Input type="email" required placeholder="you@gmail.com" value={addForm.email} onChange={e => setAddForm({ ...addForm, email: e.target.value })} />
               </Field>
             </div>
-            <Field label="Password" required hint="At least 6 characters. Share it with the user privately.">
+            <Field label={t('Password')} required hint={t('At least 6 characters. Share it with the user privately.')}>
               <Input type="password" required minLength={6} autoComplete="new-password" value={addForm.password} onChange={e => setAddForm({ ...addForm, password: e.target.value })} />
             </Field>
           </FormSection>
@@ -469,15 +470,15 @@ export default function UserManagement() {
       {showEditModal && (
         <Modal
           icon={Pencil}
-          title="Change user access"
+          title={t('Change user access')}
           description={editForm.full_name ? `${editForm.full_name}${editForm.email ? ` · ${editForm.email}` : ''}` : undefined}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save changes</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Save changes')}</Button>
           </>}
         >
           <UserAccessFields form={editForm} setForm={setEditForm} businesses={businesses} branches={editBranches} />

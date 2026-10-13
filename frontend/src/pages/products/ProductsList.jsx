@@ -9,7 +9,8 @@ import {
   Button, BusinessBranchFilter, Card, CardHeader, FilterBar, PageHeader, SearchInput, Select, SegmentedControl, useConfirm, useToast,
 } from '../../components/ui';
 import { ByBranchTable, CombinedTable } from './components/ProductTables';
-import { AdjustStockModal, EditProductModal, QrLabelModal, AddToBranchModal } from './components/ProductModals';
+import { AdjustStockModal, EditProductModal, QrLabelModal, AddToBranchModal } from './components/ProductModals';
+import { t } from '../../i18n';
 
 export default function ProductsList() {
   const { user } = useAuth();
@@ -271,9 +272,9 @@ export default function ProductsList() {
     setModalError('');
     const setCount = adjustForm.adjustment_type === 'adjust';
     const rawQty = String(adjustForm.quantity ?? '').trim();
-    if (rawQty === '' || !Number.isInteger(Number(rawQty))) { setModalError('Enter a whole number.'); return; }
-    if (adjustQty < (setCount ? 0 : 1)) { setModalError(setCount ? 'The count cannot be negative.' : 'Enter a quantity of at least 1.'); return; }
-    if (adjustNewQty != null && adjustNewQty < 0) { setModalError(`Only ${adjustCurrentQty} in stock. You can't remove ${adjustQty}.`); return; }
+    if (rawQty === '' || !Number.isInteger(Number(rawQty))) { setModalError(t('Enter a whole number.')); return; }
+    if (adjustQty < (setCount ? 0 : 1)) { setModalError(setCount ? t('The count cannot be negative.') : t('Enter a quantity of at least 1.')); return; }
+    if (adjustNewQty != null && adjustNewQty < 0) { setModalError(t('Only {adjustCurrentQty} in stock. You can\'t remove {adjustQty}.', { adjustCurrentQty, adjustQty })); return; }
     try {
       setSaving(true);
       const res = await api.post('/products/adjust-stock', {
@@ -323,8 +324,8 @@ export default function ProductsList() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setModalError('');
-    if (!editForm.item_name.trim()) { setModalError('Product name is required.'); return; }
-    if (!editForm.sku.trim()) { setModalError('SKU is required.'); return; }
+    if (!editForm.item_name.trim()) { setModalError(t('Product name is required.')); return; }
+    if (!editForm.sku.trim()) { setModalError(t('SKU is required.')); return; }
     const num = (v) => (v === '' || v == null ? 0 : parseFloat(v) || 0);
     try {
       setSaving(true);
@@ -355,9 +356,9 @@ export default function ProductsList() {
   // ── Delete Product ──
   const handleDelete = async (id, name) => {
     const ok = await confirm({
-      title: `Delete ${name}?`,
-      message: 'This permanently removes everything about this product in every branch: stock, movements, damage reports and photos. It cannot be undone.\n\nTo take it out of just one branch, use “Remove from branch” instead.',
-      confirmLabel: 'Delete product',
+      title: t('Delete {name}?', { name }),
+      message: t('This permanently removes everything about this product in every branch: stock, movements, damage reports and photos. It cannot be undone.\n\nTo take it out of just one branch, use “Remove from branch” instead.'),
+      confirmLabel: t('Delete product'),
       tone: 'danger',
     });
     if (!ok) return;
@@ -377,13 +378,13 @@ export default function ProductsList() {
     const qty = parseInt(branch.quantity, 10) || 0;
     const others = branchCount - 1;
     const ok = await confirm({
-      title: `Remove ${product.item_name} from ${branch.branch_name}?`,
+      title: t('Remove {item_name} from {branch_name}?', { item_name: product.item_name, branch_name: branch.branch_name }),
       message: [
-        others === 1 ? 'It stays in the other branch with its stock.' : `It stays in the other ${others} branches with their stock.`,
-        qty !== 0 ? `The ${qty} unit${Math.abs(qty) === 1 ? '' : 's'} counted at ${branch.branch_name} will be written off (recorded as a stock adjustment).` : null,
-        'Past sales and stock history for this branch are kept.',
+        others === 1 ? t('It stays in the other branch with its stock.') : t('It stays in the other {others} branches with their stock.', { others }),
+        qty !== 0 ? t('The {qty} unit{value} counted at {branch_name} will be written off (recorded as a stock adjustment).', { qty, value: Math.abs(qty) === 1 ? '' : 's', branch_name: branch.branch_name }) : null,
+        t('Past sales and stock history for this branch are kept.'),
       ].filter(Boolean).join('\n\n'),
-      confirmLabel: 'Remove from branch',
+      confirmLabel: t('Remove from branch'),
       tone: 'danger',
     });
     if (!ok) return;
@@ -420,7 +421,7 @@ export default function ProductsList() {
         setQrData(res.data);
       }
     } catch (err) {
-      notifyError(err.response?.data?.message || 'Could not create the QR code.');
+      notifyError(err.response?.data?.message || t('Could not create the QR code.'));
     } finally {
       setQrLoading(false);
     }
@@ -464,7 +465,7 @@ export default function ProductsList() {
       if (catRes.data.success) setCatalogProducts(catRes.data.products || []);
       if (brRes.data.success) setBranches(brRes.data.branches || brRes.data.data || []);
     } catch {
-      notifyError('Could not load this business’s products.');
+      notifyError(t('Could not load this business’s products.'));
     } finally {
       setCatalogLoading(false);
     }
@@ -482,11 +483,11 @@ export default function ProductsList() {
   const handleAddToBranchSubmit = async (e) => {
     e.preventDefault();
     if (addToBranchForm.product_ids.length === 0) {
-      toast.warning('Choose at least one product.');
+      toast.warning(t('Choose at least one product.'));
       return;
     }
     if (isSuperAdmin && addToBranchForm.branch_ids.length === 0) {
-      toast.warning('Select at least one branch.');
+      toast.warning(t('Select at least one branch.'));
       return;
     }
 
@@ -532,21 +533,21 @@ export default function ProductsList() {
   return (
     <Layout>
       <PageHeader
-        title="Products"
-        description="Every product, its stock in each branch, alert levels and prices."
+        title={t('Products')}
+        description={t('Every product, its stock in each branch, alert levels and prices.')}
         actions={<>
-          <Button variant="secondary" icon={PackagePlus} onClick={openAddToBranchModal}>Add to branch / Restock</Button>
-          <Button icon={Plus} to="/products/add">Add product</Button>
+          <Button variant="secondary" icon={PackagePlus} onClick={openAddToBranchModal}>{t('Add to branch / Restock')}</Button>
+          <Button icon={Plus} to="/products/add">{t('Add product')}</Button>
         </>}
       />
 
       <FilterBar onReset={clearFilters} resetVisible={hasAnyFilter}>
         <SearchInput
           wrapperClassName="md:flex-1 md:min-w-[16rem] md:max-w-sm"
-          placeholder="Search SKU, name, colour, model…"
+          placeholder={t('Search SKU, name, colour, model…')}
           value={search}
           onChange={e => setSearch(e.target.value)}
-          aria-label="Search products"
+          aria-label={t('Search products')}
         />
         {isSuperAdmin && (
           <BusinessBranchFilter
@@ -560,47 +561,47 @@ export default function ProductsList() {
             branchClassName="md:w-52"
           />
         )}
-        <Select wrapperClassName="md:w-40" aria-label="Category" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-          <option value="All">All categories</option>
+        <Select wrapperClassName="md:w-40" aria-label={t('Category')} value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+          <option value="All">{t('All categories')}</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </Select>
-        <Select wrapperClassName="md:w-40" aria-label="Stock level" value={selectedStockStatus} onChange={e => setSelectedStockStatus(e.target.value)}>
-          <option value="all">Any stock level</option>
-          <option value="in_stock">In stock</option>
-          <option value="low_stock">Low stock</option>
-          <option value="out_of_stock">Out of stock</option>
+        <Select wrapperClassName="md:w-40" aria-label={t('Stock level')} value={selectedStockStatus} onChange={e => setSelectedStockStatus(e.target.value)}>
+          <option value="all">{t('Any stock level')}</option>
+          <option value="in_stock">{t('In stock')}</option>
+          <option value="low_stock">{t('Low stock')}</option>
+          <option value="out_of_stock">{t('Out of stock')}</option>
         </Select>
-        <Select wrapperClassName="md:w-36" aria-label="Product status" value={selectedProductStatus} onChange={e => setSelectedProductStatus(e.target.value)}>
-          <option value="active">For sale</option>
-          <option value="discontinued">Hidden</option>
-          <option value="All">Any status</option>
+        <Select wrapperClassName="md:w-36" aria-label={t('Product status')} value={selectedProductStatus} onChange={e => setSelectedProductStatus(e.target.value)}>
+          <option value="active">{t('For sale')}</option>
+          <option value="discontinued">{t('Hidden')}</option>
+          <option value="All">{t('Any status')}</option>
         </Select>
-        <Select wrapperClassName="md:w-44" aria-label="Sort by" value={selectedSort} onChange={e => setSelectedSort(e.target.value)}>
-          <option value="date_desc">Newest first</option>
-          <option value="date_asc">Oldest first</option>
-          <option value="name_asc">Name A–Z</option>
-          <option value="name_desc">Name Z–A</option>
-          <option value="sku_asc">SKU A–Z</option>
-          <option value="qty_desc">Most stock</option>
-          <option value="qty_asc">Least stock</option>
+        <Select wrapperClassName="md:w-44" aria-label={t('Sort by')} value={selectedSort} onChange={e => setSelectedSort(e.target.value)}>
+          <option value="date_desc">{t('Newest first')}</option>
+          <option value="date_asc">{t('Oldest first')}</option>
+          <option value="name_asc">{t('Name A–Z')}</option>
+          <option value="name_desc">{t('Name Z–A')}</option>
+          <option value="sku_asc">{t('SKU A–Z')}</option>
+          <option value="qty_desc">{t('Most stock')}</option>
+          <option value="qty_asc">{t('Least stock')}</option>
         </Select>
       </FilterBar>
 
       <Card className="overflow-hidden">
         <CardHeader
-          title={combined ? 'All branches combined' : isSuperAdmin ? 'By branch' : 'Products in your branch'}
-          description={loading && listCount === 0 ? 'Loading…' : `${listCount} ${combined ? (listCount === 1 ? 'product' : 'products') : (listCount === 1 ? 'row' : 'rows')}`}
+          title={combined ? t('All branches combined') : isSuperAdmin ? t('By branch') : t('Products in your branch')}
+          description={loading && listCount === 0 ? t('Loading…') : combined ? t('{n} {n|product|products}', { n: listCount }) : t('{n} {n|row|rows}', { n: listCount })}
           actions={<>
             {isSuperAdmin && (
               <SegmentedControl
                 size="sm"
-                label="View"
+                label={t('View')}
                 value={viewMode}
                 onChange={setViewMode}
-                tabs={[{ value: 'by_branch', label: 'By branch', icon: Building2 }, { value: 'combined', label: 'Combined', icon: Layers }]}
+                tabs={[{ value: 'by_branch', label: t('By branch'), icon: Building2 }, { value: 'combined', label: t('Combined'), icon: Layers }]}
               />
             )}
-            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={fetchItems} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={fetchItems} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>
           </>}
         />
         {combined ? (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
-import { Field, PasswordInput } from '../ui';
+import { Field, PasswordInput } from '../ui';
+import { t } from '../../i18n';
 
 export const EMPTY_PASSWORDS = { current: '', next: '', confirm: '' };
 
@@ -21,11 +22,11 @@ export function usePasswordChange() {
 
   const submit = async () => {
     const errs = {};
-    if (!values.current) errs.current = 'Enter your current password.';
-    if (!values.next) errs.next = 'Choose a new password.';
-    else if (values.next.length < 6) errs.next = 'Use at least 6 characters.';
-    else if (values.next === values.current) errs.next = 'Choose a password different from the current one.';
-    if (values.next && values.confirm !== values.next) errs.confirm = 'Passwords do not match.';
+    if (!values.current) errs.current = t('Enter your current password.');
+    if (!values.next) errs.next = t('Choose a new password.');
+    else if (values.next.length < 6) errs.next = t('Use at least 6 characters.');
+    else if (values.next === values.current) errs.next = t('Choose a password different from the current one.');
+    if (values.next && values.confirm !== values.next) errs.confirm = t('Passwords do not match.');
     setErrors(errs);
     if (Object.keys(errs).length) return false;
 
@@ -38,7 +39,7 @@ export function usePasswordChange() {
       const { code, message } = err.response?.data || {};
       if (code === 'wrong_password') setErrors({ current: message });
       else if (code === 'same_password' || code === 'weak_password') setErrors({ next: message });
-      else setErrors({ form: message || 'Could not change the password. Please try again.' });
+      else setErrors({ form: message || t('Could not change the password. Please try again.') });
       return false;
     } finally {
       setSaving(false);
@@ -48,16 +49,16 @@ export function usePasswordChange() {
   return { values, errors, saving, set, submit };
 }
 
-export function PasswordChangeFields({ values, errors, set, currentLabel = 'Current password', inputClassName, labelClassName }) {
+export function PasswordChangeFields({ values, errors, set, currentLabel = t('Current password'), inputClassName, labelClassName }) {
   return (
     <div className="space-y-4">
       <Field label={currentLabel} labelClassName={labelClassName} error={errors.current}>
         <PasswordInput className={inputClassName} name="current-password" autoComplete="current-password" value={values.current} onChange={set('current')} autoFocus />
       </Field>
-      <Field label="New password" labelClassName={labelClassName} error={errors.next} hint={!errors.next ? 'At least 6 characters.' : undefined}>
+      <Field label={t('New password')} labelClassName={labelClassName} error={errors.next} hint={!errors.next ? t('At least 6 characters.') : undefined}>
         <PasswordInput className={inputClassName} name="new-password" autoComplete="new-password" value={values.next} onChange={set('next')} />
       </Field>
-      <Field label="Confirm new password" labelClassName={labelClassName} error={errors.confirm}>
+      <Field label={t('Confirm new password')} labelClassName={labelClassName} error={errors.confirm}>
         <PasswordInput className={inputClassName} name="confirm-password" autoComplete="new-password" value={values.confirm} onChange={set('confirm')} />
       </Field>
     </div>

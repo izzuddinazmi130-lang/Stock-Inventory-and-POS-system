@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from './cn';
-import { IconButton } from './Button';
+import { IconButton } from './Button';
+import { t } from '../../i18n';
 
 /**
  * Dropdown of actions (row "…" menus, user menu). Rendered in a portal so tables don't clip it.
@@ -16,7 +17,7 @@ import { IconButton } from './Button';
  * Custom trigger: trigger={({ ref, ...props }) => <button ref={ref} {...props}>…</button>}
  * Items with `hidden: true` are skipped, so role-based options can be listed inline.
  */
-export function Menu({ items, label = 'More actions', trigger, align = 'end', width = 'w-52', header, icon = MoreHorizontal, triggerVariant = 'ghost', triggerSize = 'sm' }) {
+export function Menu({ items, label = t('More actions'), trigger, align = 'end', width = 'w-52', header, icon = MoreHorizontal, triggerVariant = 'ghost', triggerSize = 'sm' }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
   const triggerRef = useRef(null);

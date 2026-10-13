@@ -8,7 +8,8 @@ import api from '../../services/api';
 import {
   Alert, Badge, Button, ButtonBase, Card, ChoiceCards, Field, IconButton, Input, Modal, PageHeader, Select, Skeleton,
   useConfirm, useToast, cn,
-} from '../../components/ui';
+} from '../../components/ui';
+import { t } from '../../i18n';
 
 const emptyField = { label: '', input_type: 'text', options: [] };
 
@@ -63,7 +64,7 @@ function FormPreview({ businessName, categories, fields }) {
   const size = fields.find(isSizeField);
 
   const draftRing = (f) => (f.isDraft ? 'rounded-lg outline-dashed outline-2 outline-warning outline-offset-2' : '');
-  const DraftTag = ({ f }) => (f.isDraft ? <Badge tone="warning" size="sm" className="ml-2">{f.id ? 'Editing' : 'Not saved yet'}</Badge> : null);
+  const DraftTag = ({ f }) => (f.isDraft ? <Badge tone="warning" size="sm" className="ml-2">{f.id ? t('Editing') : t('Not saved yet')}</Badge> : null);
   const Label = ({ children }) => <span className="block text-caption font-medium text-ink mb-1">{children}</span>;
 
   return (
@@ -71,45 +72,45 @@ function FormPreview({ businessName, categories, fields }) {
       <div className="flex items-center gap-2 px-4 py-3 bg-subtle border-b border-line-soft">
         <Eye className="w-4 h-4 text-accent" aria-hidden="true" />
         <div>
-          <div className="text-sm font-semibold text-ink">Live preview</div>
-          <div className="text-caption text-ink-muted">What staff see on “Add product” for {businessName || 'this business'}</div>
+          <div className="text-sm font-semibold text-ink">{t('Live preview')}</div>
+          <div className="text-caption text-ink-muted">{t('What staff see on “Add product” for')}{' '}{businessName || t('this business')}</div>
         </div>
       </div>
 
       <div className="p-4 space-y-3 pointer-events-none select-none" aria-hidden="true" inert="">
         <div>
-          <Label>Product name *</Label>
-          <Input size="sm" placeholder="e.g. Product name" readOnly tabIndex={-1} />
+          <Label>{t('Product name *')}</Label>
+          <Input size="sm" placeholder={t('e.g. Product name')} readOnly tabIndex={-1} />
         </div>
 
         <div className="rounded-lg ring-2 ring-accent-line ring-offset-2 p-1 -m-1">
-          <Label>Category * <span className="ml-1 text-[11px] font-semibold text-accent">from step 1</span></Label>
-          <Select size="sm" defaultValue="" tabIndex={-1}><option value="">Choose…</option></Select>
+          <Label>{t('Category *')}{' '}<span className="ml-1 text-[11px] font-semibold text-accent">{t('from step 1')}</span></Label>
+          <Select size="sm" defaultValue="" tabIndex={-1}><option value="">{t('Choose…')}</option></Select>
           {categories.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {categories.map(c => <Badge key={c.id} size="sm">{c.name}</Badge>)}
             </div>
           ) : (
-            <p className="mt-1 text-caption text-warning-fg">Empty: add categories in step 1, or staff can’t pick one.</p>
+            <p className="mt-1 text-caption text-warning-fg">{t('Empty: add categories in step 1, or staff can’t pick one.')}</p>
           )}
         </div>
 
         {(regular.length > 0 || size) && (
           <div className="rounded-lg ring-2 ring-accent-line ring-offset-2 p-1 -m-1 space-y-3">
             <div className="flex items-center gap-1.5 text-caption font-medium text-ink">
-              <Layers className="w-3.5 h-3.5 text-accent" /> Extra details
-              <span className="text-[11px] font-semibold text-accent">from step 2</span>
+              <Layers className="w-3.5 h-3.5 text-accent" />{' '}{t('Extra details')}
+              <span className="text-[11px] font-semibold text-accent">{t('from step 2')}</span>
             </div>
             {regular.map(f => (
               <div key={f.id || 'draft'} className={draftRing(f)}>
                 <Label>{f.label}<DraftTag f={f} /></Label>
                 {f.input_type === 'select' ? (
                   <>
-                    <Select size="sm" defaultValue="" tabIndex={-1}><option value="">Choose {f.label}</option></Select>
+                    <Select size="sm" defaultValue="" tabIndex={-1}><option value="">{t('Choose ')}{f.label}</option></Select>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {parseOptions(f.options).length > 0
                         ? parseOptions(f.options).map(o => <Badge key={o} size="sm">{o}</Badge>)
-                        : <span className="text-caption text-warning-fg">No options yet</span>}
+                        : <span className="text-caption text-warning-fg">{t('No options yet')}</span>}
                     </div>
                   </>
                 ) : (
@@ -125,7 +126,7 @@ function FormPreview({ businessName, categories, fields }) {
                     <span key={o} className={cn('min-w-10 h-8 px-2.5 inline-flex items-center justify-center rounded-lg border text-caption font-semibold', i === 0 ? 'border-accent bg-accent text-white' : 'border-line text-ink-secondary')}>{o}</span>
                   ))}
                 </div>
-                <p className="mt-1.5 text-caption text-ink-muted">Each size picked becomes its own SKU with its own stock and prices.</p>
+                <p className="mt-1.5 text-caption text-ink-muted">{t('Each size picked becomes its own SKU with its own stock and prices.')}</p>
               </div>
             )}
           </div>
@@ -133,10 +134,10 @@ function FormPreview({ businessName, categories, fields }) {
 
         <div className="pt-2 border-t border-dashed border-line">
           <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-muted mb-2">
-            <Lock className="w-3 h-3" /> Always included
+            <Lock className="w-3 h-3" />{' '}{t('Always included')}
           </div>
           <div className="grid grid-cols-2 gap-2 opacity-60">
-            {['Starting stock *', 'Low-stock alert', 'Customer price', 'Dealer price', 'Staff price', 'Cost price'].map(l => (
+            {[t('Starting stock *'), t('Low-stock alert'), t('Customer price'), t('Dealer price'), t('Staff price'), t('Cost price')].map(l => (
               <div key={l}>
                 <span className="block text-[11px] font-medium text-ink-secondary mb-0.5">{l}</span>
                 <div className="h-8 rounded-lg border border-line bg-subtle" />
@@ -174,9 +175,9 @@ function FieldEditor({ mode = 'add', original, otherFields, saving, onSubmit, on
   const fieldError = !label
     ? null
     : !fieldKey
-      ? 'Use letters or numbers in the field name.'
+      ? t('Use letters or numbers in the field name.')
       : otherFields.some(a => a.label.toLowerCase() === label.toLowerCase() || (!editing && a.attribute_key === fieldKey))
-        ? 'A field with this name already exists.'
+        ? t('A field with this name already exists.')
         : null;
   const pendingOptions = field.input_type === 'select' && optionDraft.trim()
     ? [...new Set([...field.options, ...optionDraft.split(',').map(v => v.trim()).filter(Boolean)])]
@@ -213,45 +214,45 @@ function FieldEditor({ mode = 'add', original, otherFields, saving, onSubmit, on
       onKeyDown={e => { if (editing && e.key === 'Escape') { e.stopPropagation(); onCancel(); } }}
       className={cn('rounded-xl border p-4 space-y-4', editing ? 'border-accent-line bg-surface shadow-card' : 'border-dashed border-line-strong')}
     >
-      <div className="text-sm font-semibold text-ink">{editing ? `Edit “${original.label}”` : 'Add a new field'}</div>
+      <div className="text-sm font-semibold text-ink">{editing ? t('Edit “{label}”', { label: original.label }) : t('Add a new field')}</div>
 
-      <Field label="Field name" hint={!fieldError ? 'What staff will see on the form.' : undefined} error={fieldError}>
-        <Input value={field.label} onChange={event => setField({ ...field, label: event.target.value })} placeholder="e.g. Material" maxLength={100} autoFocus={editing} />
+      <Field label={t('Field name')} hint={!fieldError ? t('What staff will see on the form.') : undefined} error={fieldError}>
+        <Input value={field.label} onChange={event => setField({ ...field, label: event.target.value })} placeholder={t('e.g. Material')} maxLength={100} autoFocus={editing} />
       </Field>
 
-      <Field label="How should staff answer?">
+      <Field label={t('How should staff answer?')}>
         <ChoiceCards
           name={editing ? `Answer type for ${original.label}` : 'Answer type'}
           value={field.input_type}
           onChange={v => setField({ ...field, input_type: v })}
           options={[
-            { value: 'text', icon: Type, label: 'Free text', description: 'Staff type anything. Good for Colour or Model number.' },
-            { value: 'select', icon: List, label: 'Dropdown list', description: 'Staff pick from options you set. Good for Material or Size.' },
+            { value: 'text', icon: Type, label: t('Free text'), description: t('Staff type anything. Good for Colour or Model number.') },
+            { value: 'select', icon: List, label: t('Dropdown list'), description: t('Staff pick from options you set. Good for Material or Size.') },
           ]}
         />
       </Field>
 
       {field.input_type === 'select' && (
-        <Field label="Dropdown options" hint={pendingOptions.length === 0 ? 'Add at least one option.' : 'Press Enter or type a comma after each option.'}>
+        <Field label={t('Dropdown options')} hint={pendingOptions.length === 0 ? t('Add at least one option.') : t('Press Enter or type a comma after each option.')}>
           <div className="flex gap-2">
             <Input
               value={optionDraft}
               onChange={e => setOptionDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addOption(); } }}
-              placeholder="Type an option, then press Enter"
+              placeholder={t('Type an option, then press Enter')}
               wrapperClassName="flex-1"
-              aria-label="New dropdown option"
+              aria-label={t('New dropdown option')}
             />
-            <Button variant="secondary" onClick={addOption} disabled={!optionDraft.trim()}>Add option</Button>
+            <Button variant="secondary" onClick={addOption} disabled={!optionDraft.trim()}>{t('Add option')}</Button>
           </div>
           {field.options.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {field.options.map(o => <Chip key={o} tone="accent" onRemove={() => removeOption(o)} removeLabel={`Remove option ${o}`}>{o}</Chip>)}
+              {field.options.map(o => <Chip key={o} tone="accent" onRemove={() => removeOption(o)} removeLabel={t('Remove option {o}', { o })}>{o}</Chip>)}
             </div>
           )}
           {fieldKey === 'size' && !editing && (
             <Alert tone="accent" icon={Info} className="mt-2">
-              A dropdown called “Size” is special: staff can tick several sizes at once, and each size becomes its own product (SKU) with its own stock and prices.
+              {t('A dropdown called “Size” is special: staff can tick several sizes at once, and each size becomes its own product (SKU) with its own stock and prices.')}
             </Alert>
           )}
         </Field>
@@ -260,28 +261,28 @@ function FieldEditor({ mode = 'add', original, otherFields, saving, onSubmit, on
       {editing && (
         sizeLosesSkus ? (
           <Alert tone="warning" icon={AlertTriangle}>
-            Size will stop being a dropdown, so new products won’t be split into one SKU per size any more. Existing products don’t change.
+            {t('Size will stop being a dropdown, so new products won’t be split into one SKU per size any more. Existing products don’t change.')}
           </Alert>
         ) : removedOptions.length > 0 ? (
           <Alert tone="warning" icon={AlertTriangle}>
-            Removing {removedOptions.map(o => `“${o}”`).join(', ')}. Products that already use {removedOptions.length === 1 ? 'it' : 'them'} keep the value, but staff can’t pick {removedOptions.length === 1 ? 'it' : 'them'} for new products.
+            {t('Removing {value}. Products that already use', { value: removedOptions.map(o => `“${o}”`).join(', ') })}{' '}{removedOptions.length === 1 ? t('it') : t('them')}{' '}{t('keep the value, but staff can’t pick')}{' '}{removedOptions.length === 1 ? t('it') : t('them')}{' '}{t('for new products.')}
           </Alert>
         ) : (
           <p className="flex items-start gap-1.5 text-caption text-ink-muted">
             <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            Products already saved keep their answers. Renaming only changes what staff see on the form.
+            {t('Products already saved keep their answers. Renaming only changes what staff see on the form.')}
           </p>
         )
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <p className="text-caption text-ink-muted">
-          {editing ? 'Press Esc to cancel.' : label ? 'Shown in the preview with a dashed outline until you save.' : 'Start typing to see it in the preview.'}
+          {editing ? t('Press Esc to cancel.') : label ? t('Shown in the preview with a dashed outline until you save.') : t('Start typing to see it in the preview.')}
         </p>
         <div className="flex gap-2 ml-auto">
-          {editing && <Button variant="secondary" onClick={onCancel}>Cancel</Button>}
+          {editing && <Button variant="secondary" onClick={onCancel}>{t('Cancel')}</Button>}
           <Button type="submit" icon={editing ? Check : Plus} loading={saving} disabled={!canSave}>
-            {editing ? 'Save changes' : 'Save field'}
+            {editing ? t('Save changes') : t('Save field')}
           </Button>
         </div>
       </div>
@@ -335,7 +336,7 @@ export default function BusinessFormManager() {
       setCategories(categoriesRes.data.categories || []);
       setAttributes(fieldsRes.data.attributes || []);
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Failed to load the form setup.');
+      setLoadError(err.response?.data?.message || t('Failed to load the form setup.'));
     } finally { setLoading(false); }
   };
 
@@ -351,7 +352,7 @@ export default function BusinessFormManager() {
     } catch { await loadConfig(); }
   };
 
-  useEffect(() => { loadBusinesses().catch(() => toast.error('Could not load businesses.')); }, [routeBusinessId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadBusinesses().catch(() => toast.error(t('Could not load businesses.'))); }, [routeBusinessId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadConfig();
     setCategory(''); setEditingId(null); setEditDraft(null); setAddDraft(null); setAddFormKey(k => k + 1);
@@ -362,14 +363,14 @@ export default function BusinessFormManager() {
     const name = category.trim();
     if (!name) return;
     if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-      toast.warning(`“${name}” is already a category.`);
+      toast.warning(t('“{name}” is already a category.', { name }));
       return;
     }
     setSaving(true);
     try {
       await api.post(`/businesses/${businessId}/categories`, { name, sort_order: categories.length * 10 });
-      setCategory(''); toast.success(`Category “${name}” added.`); await refresh();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add category'); }
+      setCategory(''); toast.success(t('Category “{name}” added.', { name })); await refresh();
+    } catch (err) { toast.error(err.response?.data?.message || t('Failed to add category')); }
     finally { setSaving(false); }
   };
 
@@ -378,17 +379,17 @@ export default function BusinessFormManager() {
     const name = renaming.value.trim();
     if (!name || name === renaming.name) { setRenaming(null); return; }
     if (categories.some(c => c.id !== renaming.id && c.name.toLowerCase() === name.toLowerCase())) {
-      toast.warning(`“${name}” is already a category.`);
+      toast.warning(t('“{name}” is already a category.', { name }));
       return;
     }
     setSaving(true);
     try {
       const res = await api.put(`/businesses/${businessId}/categories/${renaming.id}`, { name });
       const n = res.data.products_renamed || 0;
-      toast.success(`Renamed to “${name}”${n ? `. ${n} product${n === 1 ? '' : 's'} moved with it` : ''}.`);
+      toast.success(n ? t('Renamed to “{name}”. {n} {n|product|products} moved with it.', { name, n }) : t('Renamed to “{name}”.', { name }));
       setRenaming(null);
       await refresh();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to rename category'); }
+    } catch (err) { toast.error(err.response?.data?.message || t('Failed to rename category')); }
     finally { setSaving(false); }
   };
 
@@ -396,11 +397,11 @@ export default function BusinessFormManager() {
     setSaving(true);
     try {
       await api.post(`/businesses/${businessId}/variant-attributes`, { ...payload, sort_order: (attributes.length + 1) * 10 });
-      toast.success(`Field “${payload.label}” added to the product form.`);
+      toast.success(t('Field “{label}” added to the product form.', { label: payload.label }));
       setAddDraft(null);
       await refresh();
       return true;
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to add field'); return false; }
+    } catch (err) { toast.error(err.response?.data?.message || t('Failed to add field')); return false; }
     finally { setSaving(false); }
   };
 
@@ -408,14 +409,14 @@ export default function BusinessFormManager() {
     setSaving(true);
     try {
       const res = await api.put(`/businesses/${businessId}/variant-attributes/${item.id}`, payload);
-      toast.success(`Field “${payload.label}” updated.`);
+      toast.success(t('Field “{label}” updated.', { label: payload.label }));
       (res.data.removed_options_in_use || []).forEach(u => {
-        toast.warning(`“${u.value}” is still the ${payload.label} of ${u.products} product${u.products === 1 ? '' : 's'}. They keep it.`);
+        toast.warning(t('“{value}” is still the {label} of {products} product{value2}. They keep it.', { value: u.value, label: payload.label, products: u.products, value2: u.products === 1 ? '' : 's' }));
       });
       setEditingId(null); setEditDraft(null);
       await refresh();
       return true;
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update field'); return false; }
+    } catch (err) { toast.error(err.response?.data?.message || t('Failed to update field')); return false; }
     finally { setSaving(false); }
   };
 
@@ -431,16 +432,16 @@ export default function BusinessFormManager() {
     try {
       await api.put(`/businesses/${businessId}/variant-attributes/order`, { ids: next.map(f => f.id) });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not save the new order.');
+      toast.error(err.response?.data?.message || t('Could not save the new order.'));
       await refresh();
     }
   };
 
   const remove = async (path, label, note) => {
-    const ok = await confirm({ title: `Remove ${label}?`, message: note, confirmLabel: 'Remove', tone: 'danger' });
+    const ok = await confirm({ title: t('Remove {label}?', { label }), message: note, confirmLabel: t('Remove'), tone: 'danger' });
     if (!ok) return;
-    try { await api.delete(path); toast.success(`Removed ${label}.`); await refresh(); }
-    catch (err) { toast.error(err.response?.data?.message || `Failed to remove ${label}`); }
+    try { await api.delete(path); toast.success(t('Removed {label}.', { label })); await refresh(); }
+    catch (err) { toast.error(err.response?.data?.message || t('Failed to remove {label}', { label })); }
   };
 
   // The live preview shows saved fields, the field being edited (with its unsaved changes) and the new one
@@ -453,21 +454,21 @@ export default function BusinessFormManager() {
     <Layout>
       <PageHeader
         breadcrumbs={[
-          { label: 'Businesses', to: '/businesses' },
-          { label: businessName || 'Business', to: businessId ? `/businesses/${businessId}/branches` : undefined },
-          { label: 'Product form setup' },
+          { label: t('Businesses'), to: '/businesses' },
+          { label: businessName || t('Business'), to: businessId ? `/businesses/${businessId}/branches` : undefined },
+          { label: t('Product form setup') },
         ]}
-        title="Product form setup"
-        description={<>Choose what staff fill in when they add a product{businessName ? <> for <strong className="text-ink-secondary font-medium">{businessName}</strong></> : ''}. Changes apply right away.</>}
+        title={t('Product form setup')}
+        description={<>{t('Choose what staff fill in when they add a product')}{businessName ? <>{' '}{t('for')}{' '}<strong className="text-ink-secondary font-medium">{businessName}</strong></> : ''}{t('. Changes apply right away.')}</>}
       />
 
-      <Field label="Business you are setting up" className="mb-6 max-w-sm">
+      <Field label={t('Business you are setting up')} className="mb-6 max-w-sm">
         <Select value={businessId} onChange={event => setBusinessId(event.target.value)}>
           {businesses.map(business => <option key={business.id} value={business.id}>{business.name}</option>)}
         </Select>
       </Field>
 
-      {loadError && <Alert tone="danger" className="mb-4" action={<Button variant="secondary" size="sm" onClick={loadConfig}>Try again</Button>}>{loadError}</Alert>}
+      {loadError && <Alert tone="danger" className="mb-4" action={<Button variant="secondary" size="sm" onClick={loadConfig}>{t('Try again')}</Button>}>{loadError}</Alert>}
 
       {loading ? (
         <div className="grid gap-6 lg:grid-cols-5">
@@ -483,16 +484,16 @@ export default function BusinessFormManager() {
               <div className="flex items-start gap-3 mb-4">
                 <StepBadge n={1} />
                 <div>
-                  <h2 className="text-sm font-semibold text-ink flex items-center gap-2"><Tag className="w-4 h-4 text-accent" aria-hidden="true" /> Product categories</h2>
-                  <p className="text-caption text-ink-muted mt-0.5">The choices in the <strong className="font-medium">Category</strong> dropdown. Every product must belong to one, e.g. Kaftan, Blouse, Scarf.</p>
+                  <h2 className="text-sm font-semibold text-ink flex items-center gap-2"><Tag className="w-4 h-4 text-accent" aria-hidden="true" />{' '}{t('Product categories')}</h2>
+                  <p className="text-caption text-ink-muted mt-0.5">{t('The choices in the')}{' '}<strong className="font-medium">{t('Category')}</strong>{' '}{t('dropdown. Every product must belong to one, e.g. Kaftan, Blouse, Scarf.')}</p>
                 </div>
               </div>
               <form onSubmit={addCategory} className="flex gap-2 mb-3">
-                <Input value={category} onChange={event => setCategory(event.target.value)} placeholder="Type a category name, e.g. Kaftan" wrapperClassName="flex-1" className="flex-1" maxLength={100} aria-label="New category name" />
-                <Button type="submit" icon={Plus} loading={saving && Boolean(category.trim())} disabled={!category.trim()}>Add</Button>
+                <Input value={category} onChange={event => setCategory(event.target.value)} placeholder={t('Type a category name, e.g. Kaftan')} wrapperClassName="flex-1" className="flex-1" maxLength={100} aria-label={t('New category name')} />
+                <Button type="submit" icon={Plus} loading={saving && Boolean(category.trim())} disabled={!category.trim()}>{t('Add')}</Button>
               </form>
               {categories.length === 0 ? (
-                <Alert tone="warning">No categories yet. Add at least one: staff can’t save a product without a category.</Alert>
+                <Alert tone="warning">{t('No categories yet. Add at least one: staff can’t save a product without a category.')}</Alert>
               ) : (
                 <>
                   <div className="flex flex-wrap gap-2">
@@ -500,15 +501,15 @@ export default function BusinessFormManager() {
                       <Chip
                         key={item.id}
                         onEdit={() => setRenaming({ id: item.id, name: item.name, value: item.name })}
-                        editLabel={`Rename ${item.name}`}
-                        removeLabel={`Remove ${item.name}`}
-                        onRemove={() => remove(`/businesses/${businessId}/categories/${item.id}`, `category “${item.name}”`, 'Existing products keep their category; it just stops appearing in the dropdown.')}
+                        editLabel={t('Rename {name}', { name: item.name })}
+                        removeLabel={t('Remove {name}', { name: item.name })}
+                        onRemove={() => remove(`/businesses/${businessId}/categories/${item.id}`, t('category “{name}”', { name: item.name }), t('Existing products keep their category; it just stops appearing in the dropdown.'))}
                       >
                         {item.name}
                       </Chip>
                     ))}
                   </div>
-                  <p className="mt-3 text-caption text-ink-muted">Click a category to rename it.</p>
+                  <p className="mt-3 text-caption text-ink-muted">{t('Click a category to rename it.')}</p>
                 </>
               )}
             </Card>
@@ -518,8 +519,8 @@ export default function BusinessFormManager() {
               <div className="flex items-start gap-3 mb-4">
                 <StepBadge n={2} />
                 <div>
-                  <h2 className="text-sm font-semibold text-ink flex items-center gap-2"><ListChecks className="w-4 h-4 text-accent" aria-hidden="true" /> Extra details <span className="text-ink-muted font-normal">(optional)</span></h2>
-                  <p className="text-caption text-ink-muted mt-0.5">Extra questions staff answer for each product, such as Colour, Material or Model. Leave empty if name, category and prices are enough.</p>
+                  <h2 className="text-sm font-semibold text-ink flex items-center gap-2"><ListChecks className="w-4 h-4 text-accent" aria-hidden="true" />{' '}{t('Extra details')}{' '}<span className="text-ink-muted font-normal">{t('(optional)')}</span></h2>
+                  <p className="text-caption text-ink-muted mt-0.5">{t('Extra questions staff answer for each product, such as Colour, Material or Model. Leave empty if name, category and prices are enough.')}</p>
                 </div>
               </div>
 
@@ -547,8 +548,8 @@ export default function BusinessFormManager() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <strong className="text-sm font-medium text-ink">{item.label}</strong>
-                            <Badge size="sm" icon={item.input_type === 'select' ? List : Type}>{item.input_type === 'select' ? 'Dropdown' : 'Free text'}</Badge>
-                            {isSizeField(item) && <Badge size="sm" tone="accent">One SKU per size</Badge>}
+                            <Badge size="sm" icon={item.input_type === 'select' ? List : Type}>{item.input_type === 'select' ? t('Dropdown') : t('Free text')}</Badge>
+                            {isSizeField(item) && <Badge size="sm" tone="accent">{t('One SKU per size')}</Badge>}
                           </div>
                           {opts.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -557,15 +558,15 @@ export default function BusinessFormManager() {
                           )}
                         </div>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <IconButton icon={ArrowUp} label={`Move ${item.label} up`} size="sm" disabled={index === 0} onClick={() => moveField(index, -1)} />
-                          <IconButton icon={ArrowDown} label={`Move ${item.label} down`} size="sm" disabled={index === attributes.length - 1} onClick={() => moveField(index, 1)} />
-                          <IconButton icon={Pencil} label={`Edit ${item.label}`} size="sm" onClick={() => startEdit(item)} />
+                          <IconButton icon={ArrowUp} label={t('Move {label} up', { label: item.label })} size="sm" disabled={index === 0} onClick={() => moveField(index, -1)} />
+                          <IconButton icon={ArrowDown} label={t('Move {label} down', { label: item.label })} size="sm" disabled={index === attributes.length - 1} onClick={() => moveField(index, 1)} />
+                          <IconButton icon={Pencil} label={t('Edit {label}', { label: item.label })} size="sm" onClick={() => startEdit(item)} />
                           <IconButton
                             icon={Trash2}
-                            label={`Remove ${item.label}`}
+                            label={t('Remove {label}', { label: item.label })}
                             size="sm"
                             className="hover:bg-danger-muted hover:text-danger-fg"
-                            onClick={() => remove(`/businesses/${businessId}/variant-attributes/${item.id}`, `field “${item.label}”`, 'Products already saved keep their values; the field just stops appearing on the form.')}
+                            onClick={() => remove(`/businesses/${businessId}/variant-attributes/${item.id}`, t('field “{label}”', { label: item.label }), t('Products already saved keep their values; the field just stops appearing on the form.'))}
                           />
                         </div>
                       </li>
@@ -596,24 +597,24 @@ export default function BusinessFormManager() {
       <Modal
         open={Boolean(renaming)}
         onClose={() => setRenaming(null)}
-        title="Rename category"
+        title={t('Rename category')}
         icon={Pencil}
         onSubmit={renameCategory}
         footer={(
           <>
-            <Button variant="secondary" onClick={() => setRenaming(null)}>Cancel</Button>
-            <Button type="submit" loading={saving} disabled={!renaming?.value.trim() || renaming?.value.trim() === renaming?.name}>Rename</Button>
+            <Button variant="secondary" onClick={() => setRenaming(null)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving} disabled={!renaming?.value.trim() || renaming?.value.trim() === renaming?.name}>{t('Rename')}</Button>
           </>
         )}
       >
         {renaming && (
           <div className="space-y-3">
-            <Field label="Category name">
+            <Field label={t('Category name')}>
               <Input value={renaming.value} onChange={e => setRenaming(r => ({ ...r, value: e.target.value }))} maxLength={100} autoFocus />
             </Field>
             <p className="flex items-start gap-1.5 text-caption text-ink-muted">
               <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden="true" />
-              Products in “{renaming.name}” move to the new name too, so filters and reports keep them together.
+              {t('Products in “{name}” move to the new name too, so filters and reports keep them together.', { name: renaming.name })}
             </p>
           </div>
         )}

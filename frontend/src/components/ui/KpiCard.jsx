@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { cn, focusRing, prefersReducedMotion } from './cn';
-import { SkeletonKpi } from './Skeleton';
+import { SkeletonKpi } from './Skeleton';
+import { locale } from '../../i18n';
 
 /** Animate a number from 0 to `target` once (skipped when the user prefers reduced motion). */
 export function useCountUp(target, duration = 700) {
@@ -53,7 +54,7 @@ export default function KpiCard({ label, value, format, icon: Icon, tone = 'acce
   if (loading) return <SkeletonKpi className={className} />;
 
   const shown = numeric
-    ? (format ? format(animated) : Math.round(animated).toLocaleString('en-MY'))
+    ? (format ? format(animated) : Math.round(animated).toLocaleString(locale))
     : (value ?? '—');
 
   const Tag = to ? Link : onClick ? 'button' : 'div';

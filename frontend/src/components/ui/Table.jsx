@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useLayoutEffect, useRef } from 'react';
 import { cn } from './cn';
 import { SkeletonRows } from './Skeleton';
-import EmptyState, { ErrorState } from './EmptyState';
+import EmptyState, { ErrorState } from './EmptyState';
+import { t } from '../../i18n';
 
 const TableContext = createContext({ dense: false });
 
@@ -135,7 +136,7 @@ export function TD({ numeric = false, className, children, ...props }) {
  */
 export function TableState({
   colSpan, loading, error, empty, onRetry, rows = 5,
-  emptyIcon, emptyTitle = 'Nothing to show', emptyDescription, emptyAction, errorTitle = 'Could not load this list',
+  emptyIcon, emptyTitle = t('Nothing to show'), emptyDescription, emptyAction, errorTitle = t('Could not load this list'),
 }) {
   if (loading) return <SkeletonRows rows={rows} cols={colSpan} />;
   if (error) {

@@ -191,6 +191,15 @@ Open **http://localhost:5173**.
 
 ---
 
+## Languages (English and Bahasa Malaysia)
+
+Every user can choose **EN** or **BM** with the switch in the top bar (or on the sign-in page). The choice is remembered on that device.
+
+For developers:
+- Wrap on-screen text in `t()` from `src/i18n`, written in English: `t('Save')`, `t('Only {stock} in stock.', { stock })`. For plurals, use `{n|item|items}`.
+- Add the Malay version to `src/i18n/ms.js` (the English sentence is the key). Anything missing simply shows in English.
+- Messages from the server are written in English and translated on arrival; ones that contain names or numbers are matched by the patterns at the end of `ms.js`.
+
 ## Database file
 
 `database/hq_inventory_system.sql` holds the complete database structure (tables only, no data) in one file, including every past upgrade. Import it into an empty database for a fresh install. An existing database that is already running this version needs nothing.

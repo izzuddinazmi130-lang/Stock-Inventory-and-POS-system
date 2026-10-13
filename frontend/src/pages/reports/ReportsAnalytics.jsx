@@ -9,21 +9,22 @@ import {
   Button, BusinessBranchFilter, Card, CardHeader, FilterBar, KpiCard, PageHeader, ScopeBadge, SegmentedControl, Select, StatusPill,
   Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
+import { t, locale } from '../../i18n';
 
 const TIMELINE_OPTIONS = [
-  { value: 'all', label: 'All time' },
-  { value: 'today', label: 'Today' },
-  { value: '7days', label: '7 days' },
-  { value: '30days', label: '30 days' },
-  { value: '90days', label: '90 days' },
+  { value: 'all', label: t('All time') },
+  { value: 'today', label: t('Today') },
+  { value: '7days', label: t('7 days') },
+  { value: '30days', label: t('30 days') },
+  { value: '90days', label: t('90 days') },
 ];
 
 const TIMELINE_LABELS = {
-  all: 'All time',
-  today: 'Today',
-  '7days': 'Last 7 days',
-  '30days': 'Last 30 days',
-  '90days': 'Last 90 days'
+  all: t('All time'),
+  today: t('Today'),
+  '7days': t('Last 7 days'),
+  '30days': t('Last 30 days'),
+  '90days': t('Last 90 days')
 };
 
 const formatLocalDate = (date) => {
@@ -172,7 +173,7 @@ export default function ReportsAnalytics() {
       }
     } catch (err) {
       console.error('Fetch report error:', err);
-      setLoadError(err.response?.data?.message || 'Could not load the report.');
+      setLoadError(err.response?.data?.message || t('Could not load the report.'));
     } finally {
       setLoading(false);
     }
@@ -214,28 +215,28 @@ export default function ReportsAnalytics() {
   };
 
   const hasActiveFilters = Boolean(businessId || branchId || storeId || movementType !== 'all' || dateRange !== 'all');
-  const period = TIMELINE_LABELS[dateRange] || 'All time';
+  const period = TIMELINE_LABELS[dateRange] || t('All time');
   const firstLoad = loading && movements.length === 0;
 
   return (
     <Layout>
       <PageHeader
-        title="Stock reports"
-        description="Every stock change over time: stock added, sold or taken out, counted and damaged."
+        title={t('Stock reports')}
+        description={t('Every stock change over time: stock added, sold or taken out, counted and damaged.')}
         meta={isScopedAdmin ? <ScopeBadge /> : null}
-        actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
+        actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-sm font-semibold text-ink">Summary · <span className="font-normal text-ink-muted">{period}</span></h2>
-        <SegmentedControl label="Time period" value={dateRange} onChange={setDateRange} tabs={TIMELINE_OPTIONS} className="max-w-full overflow-x-auto" />
+        <h2 className="text-sm font-semibold text-ink">{t('Summary ·')}{' '}<span className="font-normal text-ink-muted">{period}</span></h2>
+        <SegmentedControl label={t('Time period')} value={dateRange} onChange={setDateRange} tabs={TIMELINE_OPTIONS} className="max-w-full overflow-x-auto" />
       </div>
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Stock changes" value={Number(summary.total_transactions) || 0} icon={Activity} tone="accent" meta="Records in this view" />
-        <KpiCard loading={firstLoad} label="Stock added" value={Number(summary.stock_in_qty) || 0} format={v => `+${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowDownToLine} tone="success" meta="Items added" />
-        <KpiCard loading={firstLoad} label="Stock out" value={Number(summary.stock_out_qty) || 0} format={v => `−${Math.round(v).toLocaleString('en-MY')}`} icon={ArrowUpFromLine} tone="info" meta="Items sold or taken out" />
-        <KpiCard loading={firstLoad} label="Damaged" value={Number(summary.damaged_qty) || 0} icon={AlertTriangle} tone="danger" meta={`${summary.damaged_count || 0} damage ${Number(summary.damaged_count) === 1 ? 'record' : 'records'}`} />
+        <KpiCard loading={firstLoad} label={t('Stock changes')} value={Number(summary.total_transactions) || 0} icon={Activity} tone="accent" meta={t('Records in this view')} />
+        <KpiCard loading={firstLoad} label={t('Stock added')} value={Number(summary.stock_in_qty) || 0} format={v => `+${Math.round(v).toLocaleString(locale)}`} icon={ArrowDownToLine} tone="success" meta={t('Items added')} />
+        <KpiCard loading={firstLoad} label={t('Stock out')} value={Number(summary.stock_out_qty) || 0} format={v => `−${Math.round(v).toLocaleString(locale)}`} icon={ArrowUpFromLine} tone="info" meta={t('Items sold or taken out')} />
+        <KpiCard loading={firstLoad} label={t('Damaged')} value={Number(summary.damaged_qty) || 0} icon={AlertTriangle} tone="danger" meta={t('{count} damage {count|record|records}', { count: Number(summary.damaged_count) || 0 })} />
       </div>
 
       <FilterBar onReset={handleResetFilters} resetVisible={hasActiveFilters}>
@@ -250,35 +251,35 @@ export default function ReportsAnalytics() {
             branchClassName="md:w-52"
           />
         )}
-        <Select wrapperClassName="md:w-44" aria-label="Pop-up store" value={storeId} onChange={(e) => setStoreId(e.target.value)} disabled={!storeBranchId || stores.length === 0}>
-          <option value="">{!storeBranchId ? 'Select branch first' : stores.length === 0 ? 'No pop-up stores' : 'All pop-up stores'}</option>
+        <Select wrapperClassName="md:w-44" aria-label={t('Pop-up store')} value={storeId} onChange={(e) => setStoreId(e.target.value)} disabled={!storeBranchId || stores.length === 0}>
+          <option value="">{!storeBranchId ? t('Select branch first') : stores.length === 0 ? t('No pop-up stores') : t('All pop-up stores')}</option>
           {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </Select>
-        <Select wrapperClassName="md:w-44" aria-label="Activity type" value={movementType} onChange={(e) => setMovementType(e.target.value)}>
-          <option value="all">All activity</option>
-          <option value="in">Stock in</option>
-          <option value="out">Stock out</option>
-          <option value="adjust">Adjustments</option>
-          <option value="damage">Damage write-offs</option>
+        <Select wrapperClassName="md:w-44" aria-label={t('Activity type')} value={movementType} onChange={(e) => setMovementType(e.target.value)}>
+          <option value="all">{t('All activity')}</option>
+          <option value="in">{t('Stock in')}</option>
+          <option value="out">{t('Stock out')}</option>
+          <option value="adjust">{t('Adjustments')}</option>
+          <option value="damage">{t('Damage write-offs')}</option>
         </Select>
       </FilterBar>
 
       <Card className="overflow-hidden">
         <CardHeader
           icon={History}
-          title="Stock history"
-          description={firstLoad ? 'Loading…' : `${movements.length} ${movements.length === 1 ? 'entry' : 'entries'}`}
+          title={t('Stock history')}
+          description={firstLoad ? t('Loading…') : t('{n} {n|entry|entries}', { n: movements.length })}
         />
         <Table minWidth="60rem">
           <THead>
             <TR>
-              <TH>Product</TH>
-              <TH>Where</TH>
-              <TH>Type</TH>
-              <TH numeric>Qty</TH>
-              <TH numeric>Stock</TH>
-              <TH>By</TH>
-              <TH className="text-right">When</TH>
+              <TH>{t('Product')}</TH>
+              <TH>{t('Where')}</TH>
+              <TH>{t('Type')}</TH>
+              <TH numeric>{t('Qty')}</TH>
+              <TH numeric>{t('Stock')}</TH>
+              <TH>{t('By')}</TH>
+              <TH className="text-right">{t('When')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -289,9 +290,9 @@ export default function ReportsAnalytics() {
               onRetry={fetchReports}
               empty={!loading && !loadError && movements.length === 0}
               emptyIcon={History}
-              emptyTitle="No movements found"
-              emptyDescription={hasActiveFilters ? 'Nothing matches these filters. Try a longer time period.' : 'Stock changes will appear here.'}
-              emptyAction={hasActiveFilters ? <Button variant="secondary" size="sm" onClick={handleResetFilters}>Clear filters</Button> : null}
+              emptyTitle={t('No movements found')}
+              emptyDescription={hasActiveFilters ? t('Nothing matches these filters. Try a longer time period.') : t('Stock changes will appear here.')}
+              emptyAction={hasActiveFilters ? <Button variant="secondary" size="sm" onClick={handleResetFilters}>{t('Clear filters')}</Button> : null}
             />
             {movements.map((m, i) => (
               <TR key={m.id} index={i}>
@@ -302,7 +303,7 @@ export default function ReportsAnalytics() {
                 <TD>
                   <div className="text-sm text-ink whitespace-nowrap">{m.branch_name}</div>
                   <div className="text-caption text-ink-muted whitespace-nowrap">
-                    {m.business_name || 'Business'}{m.store_name && <> · <span className="text-warning-fg">{m.store_name}</span></>}
+                    {m.business_name || t('Business')}{m.store_name && <> · <span className="text-warning-fg">{m.store_name}</span></>}
                   </div>
                 </TD>
                 <TD><StatusPill kind="movement" value={m.movement_type} size="sm" /></TD>
@@ -313,11 +314,11 @@ export default function ReportsAnalytics() {
                   <span className="text-ink-muted">{m.qty_before}</span> → <span className="font-semibold text-ink">{m.qty_after}</span>
                 </TD>
                 <TD>
-                  <div className="text-sm text-ink whitespace-nowrap">{m.performed_by_name || 'System'}</div>
+                  <div className="text-sm text-ink whitespace-nowrap">{m.performed_by_name || t('System')}</div>
                   <div className="text-caption text-ink-muted">{m.performed_by_email || '—'}</div>
                 </TD>
                 <TD className="text-right text-caption text-ink-muted whitespace-nowrap">
-                  {new Date(m.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date(m.created_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}
                 </TD>
               </TR>
             ))}

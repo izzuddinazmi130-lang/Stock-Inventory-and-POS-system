@@ -8,6 +8,7 @@ import {
   Modal, FormSection, Field, Input, Select, Textarea, Button, Card, CardHeader, Menu, PageHeader, StatusPill, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState, EmptyState, useConfirm, useToast, cn,
 } from '../../components/ui';
+import { t, locale } from '../../i18n';
 
 const PHASE_TO_STATUS = { during: 'active', before: 'upcoming', after: 'ended' };
 
@@ -16,7 +17,7 @@ function formatDateTime(val) {
   if (!val) return '—';
   const d = new Date(val);
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleString('en-MY', {
+  return d.toLocaleString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -73,30 +74,30 @@ function getTimingStatusText(store, phase) {
 
   if (phase === 'before') {
     const diffMs = sTime - now;
-    if (diffMs <= 0) return 'Starts shortly';
+    if (diffMs <= 0) return t('Starts shortly');
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     const remHours = hours % 24;
     if (days > 0) {
-      return `Starts in ${days} day${days > 1 ? 's' : ''}${remHours > 0 ? `, ${remHours}h` : ''}`;
+      return t('Starts in {days} day{value}{value2}', { days, value: days > 1 ? 's' : '', value2: remHours > 0 ? `, ${remHours}h` : '' });
     }
     const mins = Math.floor(diffMs / (1000 * 60));
-    if (hours > 0) return `Starts in ${hours}h ${mins % 60}m`;
-    return `Starts in ${Math.max(1, mins)} min${mins !== 1 ? 's' : ''}`;
+    if (hours > 0) return t('Starts in {hours}h {value}m', { hours, value: mins % 60 });
+    return t('Starts in {n} min{value}', { n: Math.max(1, mins), value: mins !== 1 ? 's' : '' });
   }
 
   if (phase === 'during') {
     const diffMs = eTime - now;
-    if (diffMs <= 0) return 'Ending now';
+    if (diffMs <= 0) return t('Ending now');
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     const remHours = hours % 24;
     if (days > 0) {
-      return `Live Now • Closes in ${days}d ${remHours}h`;
+      return t('Live Now • Closes in {days}d {remHours}h', { days, remHours });
     }
     const mins = Math.floor(diffMs / (1000 * 60));
-    if (hours > 0) return `Live Now • Ends in ${hours}h ${mins % 60}m`;
-    return `Live Now • Ends in ${Math.max(1, mins)} mins`;
+    if (hours > 0) return t('Live Now • Ends in {hours}h {value}m', { hours, value: mins % 60 });
+    return t('Live Now • Ends in {n} mins', { n: Math.max(1, mins) });
   }
 
   // Phase is 'after'
@@ -104,13 +105,13 @@ function getTimingStatusText(store, phase) {
     const closedTime = store.ended_at ? new Date(store.ended_at).getTime() : eTime;
     const diffMs = now - closedTime;
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (days > 0) return `Concluded ${days} day${days > 1 ? 's' : ''} ago`;
+    if (days > 0) return t('Concluded {days} day{value} ago', { days, value: days > 1 ? 's' : '' });
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (hours > 0) return `Concluded ${hours} hour${hours > 1 ? 's' : ''} ago`;
-    return 'Recently concluded';
+    if (hours > 0) return t('Concluded {hours} hour{value} ago', { hours, value: hours > 1 ? 's' : '' });
+    return t('Recently concluded');
   }
 
-  return 'Concluded';
+  return t('Concluded');
 }
 
 export default function StoreList() {
@@ -181,7 +182,7 @@ export default function StoreList() {
       if (brRes.data.success) setBranch(brRes.data.branch || brRes.data.data);
       if (stRes.data.success) setStores(stRes.data.stores || stRes.data.data || []);
     } catch (err) {
-      setLoadError(err.response?.data?.message || 'Could not load the pop-up stores.');
+      setLoadError(err.response?.data?.message || t('Could not load the pop-up stores.'));
     } finally {
       setLoading(false);
     }
@@ -216,7 +217,7 @@ export default function StoreList() {
       const endDateTime = `${addForm.end_date} ${addForm.end_time}:00`;
 
       if (new Date(endDateTime) < new Date(startDateTime)) {
-        setMessage({ type: 'danger', text: 'End date and time cannot be earlier than start date and time.' });
+        setMessage({ type: 'danger', text: t('End date and time cannot be earlier than start date and time.') });
         return;
       }
 
@@ -242,7 +243,7 @@ export default function StoreList() {
         });
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Could not create the pop-up store' });
+        setMessage({ type: 'danger', text: res.data.message || t('Could not create the pop-up store') });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
@@ -258,7 +259,7 @@ export default function StoreList() {
       const endDateTime = `${editForm.end_date} ${editForm.end_time}:00`;
 
       if (new Date(endDateTime) < new Date(startDateTime)) {
-        setMessage({ type: 'danger', text: 'End date and time cannot be earlier than start date and time.' });
+        setMessage({ type: 'danger', text: t('End date and time cannot be earlier than start date and time.') });
         return;
       }
 
@@ -280,7 +281,7 @@ export default function StoreList() {
         setShowEditModal(false);
         fetchData();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Could not save the pop-up store' });
+        setMessage({ type: 'danger', text: res.data.message || t('Could not save the pop-up store') });
       }
     } catch (err) {
       setMessage({ type: 'danger', text: err.response?.data?.message || err.message });
@@ -291,9 +292,9 @@ export default function StoreList() {
 
   const handleClose = async (storeId, storeName) => {
     const ok = await confirm({
-      title: `Close ${storeName} now?`,
-      message: 'The store closes straight away, before its planned end time.',
-      confirmLabel: 'Close store',
+      title: t('Close {storeName} now?', { storeName }),
+      message: t('The store closes straight away, before its planned end time.'),
+      confirmLabel: t('Close store'),
     });
     if (!ok) return;
     try {
@@ -312,14 +313,14 @@ export default function StoreList() {
   const handleDelete = async (s) => {
     const phase = getStorePhase(s);
     if (phase === 'during') {
-      toast.warning(`${s.name} is live right now. End the event first, then delete it.`);
+      toast.warning(t('{name} is live right now. End the event first, then delete it.', { name: s.name }));
       return;
     }
 
     const ok = await confirm({
-      title: `Delete ${s.name}?`,
-      message: 'This permanently deletes the pop-up store. It cannot be undone.',
-      confirmLabel: 'Delete event',
+      title: t('Delete {name}?', { name: s.name }),
+      message: t('This permanently deletes the pop-up store. It cannot be undone.'),
+      confirmLabel: t('Delete event'),
       tone: 'danger',
     });
     if (!ok) return;
@@ -357,10 +358,10 @@ export default function StoreList() {
 
   const openAdd = () => { setMessage(null); setShowAddModal(true); };
   const phaseTabs = [
-    { value: 'all', label: 'All', count: phaseCounts.all, icon: List },
-    { value: 'during', label: 'Live now', count: phaseCounts.during, icon: Radio },
-    { value: 'before', label: 'Upcoming', count: phaseCounts.before, icon: CalendarClock },
-    { value: 'after', label: 'Ended', count: phaseCounts.after, icon: CircleSlash },
+    { value: 'all', label: t('All'), count: phaseCounts.all, icon: List },
+    { value: 'during', label: t('Live now'), count: phaseCounts.during, icon: Radio },
+    { value: 'before', label: t('Upcoming'), count: phaseCounts.before, icon: CalendarClock },
+    { value: 'after', label: t('Ended'), count: phaseCounts.after, icon: CircleSlash },
   ];
 
   return (
@@ -368,45 +369,45 @@ export default function StoreList() {
       <PageHeader
         breadcrumbs={isSuperAdmin
           ? [
-            { label: 'Businesses', to: '/businesses' },
-            { label: branch?.business_name || 'Business', to: `/businesses/${branch?.business_id}/branches` },
-            { label: branch?.name || 'Branch', to: `/branches/${id}` },
-            { label: 'Pop-up stores' },
+            { label: t('Businesses'), to: '/businesses' },
+            { label: branch?.business_name || t('Business'), to: `/businesses/${branch?.business_id}/branches` },
+            { label: branch?.name || t('Branch'), to: `/branches/${id}` },
+            { label: t('Pop-up stores') },
           ]
-          : [{ label: 'Pop-up stores' }]}
-        title="Pop-up stores"
-        description={`Pop-ups, bazaars and booths run by ${branch?.name || 'this branch'}. Each event has its own sales report.`}
+          : [{ label: t('Pop-up stores') }]}
+        title={t('Pop-up stores')}
+        description={t('Pop-ups, bazaars and booths run by {name}. Each event has its own sales report.', { name: branch?.name || t('this branch') })}
         actions={<>
-          <Button variant="secondary" icon={FileBarChart} to={`/branches/${id}/floor-report`}>Branch counter sales</Button>
-          <Button icon={Plus} onClick={openAdd}>Add pop-up store</Button>
+          <Button variant="secondary" icon={FileBarChart} to={`/branches/${id}/floor-report`}>{t('Branch counter sales')}</Button>
+          <Button icon={Plus} onClick={openAdd}>{t('Add pop-up store')}</Button>
         </>}
       />
 
-      <Tabs value={filterTab} onChange={setFilterTab} tabs={phaseTabs} label="Filter pop-up stores" className="mb-4" />
+      <Tabs value={filterTab} onChange={setFilterTab} tabs={phaseTabs} label={t('Filter pop-up stores')} className="mb-4" />
 
       {!loading && !loadError && stores.length === 0 ? (
         <Card>
           <EmptyState
             icon={Store}
-            title="No pop-up stores yet"
-            description="Add a booth, bazaar or pop-up store to see its sales separately."
-            action={<Button icon={Plus} onClick={openAdd}>Add pop-up store</Button>}
+            title={t('No pop-up stores yet')}
+            description={t('Add a booth, bazaar or pop-up store to see its sales separately.')}
+            action={<Button icon={Plus} onClick={openAdd}>{t('Add pop-up store')}</Button>}
           />
         </Card>
       ) : (
         <Card className="overflow-hidden">
           <CardHeader
-            title="Schedule"
-            description={loading && stores.length === 0 ? 'Loading…' : `${filteredStores.length} ${filteredStores.length === 1 ? 'store' : 'stores'}`}
+            title={t('Schedule')}
+            description={loading && stores.length === 0 ? t('Loading…') : t('{n} {n|store|stores}', { n: filteredStores.length })}
           />
           <Table minWidth="54rem">
             <THead>
               <TR>
-                <TH>Event</TH>
-                <TH>When</TH>
-                <TH>Status</TH>
-                <TH>Person in charge</TH>
-                <TH className="w-px"><span className="sr-only">Actions</span></TH>
+                <TH>{t('Event')}</TH>
+                <TH>{t('When')}</TH>
+                <TH>{t('Status')}</TH>
+                <TH>{t('Person in charge')}</TH>
+                <TH className="w-px"><span className="sr-only">{t('Actions')}</span></TH>
               </TR>
             </THead>
             <TBody>
@@ -417,8 +418,8 @@ export default function StoreList() {
                 onRetry={fetchData}
                 empty={!loading && !loadError && stores.length > 0 && filteredStores.length === 0}
                 emptyIcon={Store}
-                emptyTitle="No pop-up stores here"
-                emptyAction={<Button variant="secondary" size="sm" onClick={() => setFilterTab('all')}>Show all</Button>}
+                emptyTitle={t('No pop-up stores here')}
+                emptyAction={<Button variant="secondary" size="sm" onClick={() => setFilterTab('all')}>{t('Show all')}</Button>}
               />
               {filteredStores.map((s, i) => {
                 const phase = getStorePhase(s);
@@ -437,13 +438,13 @@ export default function StoreList() {
                       </div>
                       <div className="flex items-center gap-1.5 text-caption text-ink-muted mt-0.5">
                         <MapPin className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                        <span className="truncate">{s.venue || 'No venue set'}</span>
+                        <span className="truncate">{s.venue || t('No venue set')}</span>
                       </div>
                     </TD>
                     <TD>
                       <dl className="text-caption space-y-0.5 tabular-nums">
-                        <div className="flex gap-2"><dt className="w-9 text-ink-muted">Start</dt><dd className="text-ink whitespace-nowrap">{formatDateTime(s.start_date)}</dd></div>
-                        <div className="flex gap-2"><dt className="w-9 text-ink-muted">End</dt><dd className="text-ink-secondary whitespace-nowrap">{formatDateTime(s.end_date)}</dd></div>
+                        <div className="flex gap-2"><dt className="w-9 text-ink-muted">{t('Start')}</dt><dd className="text-ink whitespace-nowrap">{formatDateTime(s.start_date)}</dd></div>
+                        <div className="flex gap-2"><dt className="w-9 text-ink-muted">{t('End')}</dt><dd className="text-ink-secondary whitespace-nowrap">{formatDateTime(s.end_date)}</dd></div>
                       </dl>
                     </TD>
                     <TD>
@@ -451,7 +452,7 @@ export default function StoreList() {
                       <div className="text-caption text-ink-muted mt-1">{getTimingStatusText(s, phase)}</div>
                     </TD>
                     <TD>
-                      <div className="text-sm text-ink">{s.person_in_charge || 'HQ staff'}</div>
+                      <div className="text-sm text-ink">{s.person_in_charge || t('HQ staff')}</div>
                       {s.contact_phone && (
                         <div className="text-caption text-ink-muted flex items-center gap-1 mt-0.5 tabular-nums">
                           <Phone className="w-3 h-3" aria-hidden="true" /> {s.contact_phone}
@@ -461,15 +462,15 @@ export default function StoreList() {
                     <TD>
                       <div className="flex items-center justify-end gap-1">
                         <Button variant={live ? 'primary' : 'secondary'} size="sm" icon={FileBarChart} onClick={() => navigate(`/stores/${s.id}/report`)}>
-                          {live ? 'Live report' : 'Report'}
+                          {live ? t('Live report') : t('Report')}
                         </Button>
                         <Menu
-                          label={`More actions for ${s.name}`}
+                          label={t('More actions for {name}', { name: s.name })}
                           items={[
-                            { label: 'Edit', icon: Pencil, onClick: () => openEditModal(s) },
-                            { label: 'Close store now', icon: CircleStop, onClick: () => handleClose(s.id, s.name), hidden: !live },
+                            { label: t('Edit'), icon: Pencil, onClick: () => openEditModal(s) },
+                            { label: t('Close store now'), icon: CircleStop, onClick: () => handleClose(s.id, s.name), hidden: !live },
                             { divider: true },
-                            { label: live ? 'Delete (end it first)' : 'Delete event', icon: Trash2, tone: 'danger', disabled: live, onClick: () => handleDelete(s) },
+                            { label: live ? t('Delete (end it first)') : t('Delete event'), icon: Trash2, tone: 'danger', disabled: live, onClick: () => handleDelete(s) },
                           ]}
                         />
                       </div>
@@ -486,15 +487,15 @@ export default function StoreList() {
       {showAddModal && (
         <Modal
           icon={Store}
-          title="Add a pop-up store"
-          description={`A pop-up, bazaar or booth run by ${branch?.name || 'this branch'}. Sales made during it are reported separately.`}
+          title={t('Add a pop-up store')}
+          description={t('A pop-up, bazaar or booth run by {name}. Sales made during it are reported separately.', { name: branch?.name || t('this branch') })}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Create pop-up store</Button>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Create pop-up store')}</Button>
           </>}
         >
           <StoreFields form={addForm} setForm={setAddForm} />
@@ -505,14 +506,14 @@ export default function StoreList() {
       {showEditModal && (
         <Modal
           icon={Pencil}
-          title={`Edit ${editForm.name || 'pop-up store'}`}
+          title={t('Edit {value}', { value: editForm.name || 'pop-up store' })}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleEditSubmit}
           error={message?.type === 'danger' ? message.text : null}
           onDismissError={() => setMessage(null)}
           footer={<>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button type="submit" loading={saving}>Save changes</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>{t('Cancel')}</Button>
+            <Button type="submit" loading={saving}>{t('Save changes')}</Button>
           </>}
         >
           <StoreFields form={editForm} setForm={setEditForm} showStatus />
@@ -526,7 +527,7 @@ export default function StoreList() {
 function formatScheduleEnd(date, time) {
   const d = new Date(`${date}T${time || '00:00'}`);
   if (isNaN(d.getTime())) return '';
-  return d.toLocaleString('en-MY', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+  return d.toLocaleString(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // Fields shared by the Add and Edit store-event forms
@@ -541,57 +542,57 @@ function StoreFields({ form, setForm, showStatus = false }) {
 
   return (
     <>
-      <FormSection title="Event">
-        <Field label="Store name" required>
-          <Input required placeholder="e.g. Ramadan Bazaar 2026" value={form.name} onChange={set('name')} />
+      <FormSection title={t('Event')}>
+        <Field label={t('Store name')} required>
+          <Input required placeholder={t('e.g. Ramadan Bazaar 2026')} value={form.name} onChange={set('name')} />
         </Field>
-        <Field label="Venue" optional>
-          <Input placeholder="e.g. Mid Valley Southkey, Ground Floor, Booth 12" value={form.venue} onChange={set('venue')} />
+        <Field label={t('Venue')} optional>
+          <Input placeholder={t('e.g. Mid Valley Southkey, Ground Floor, Booth 12')} value={form.venue} onChange={set('venue')} />
         </Field>
       </FormSection>
 
-      <FormSection title="Schedule" description="The store opens and closes by itself at these times.">
+      <FormSection title={t('Schedule')} description={t('The store opens and closes by itself at these times.')}>
         <div className="grid grid-cols-[4rem_1fr_7.5rem] gap-2 items-center">
-          <span className="text-sm font-medium text-ink">Starts<span className="text-danger-fg">*</span></span>
+          <span className="text-sm font-medium text-ink">{t('Starts')}<span className="text-danger-fg">*</span></span>
           <Input type="date" required value={form.start_date}
             onChange={e => setForm({ ...form, start_date: e.target.value, end_date: form.end_date || e.target.value })} />
           <Input type="time" required value={form.start_time} onChange={set('start_time')} />
 
-          <span className="text-sm font-medium text-ink">Ends<span className="text-danger-fg">*</span></span>
+          <span className="text-sm font-medium text-ink">{t('Ends')}<span className="text-danger-fg">*</span></span>
           <Input type="date" required min={form.start_date || undefined} value={form.end_date} onChange={set('end_date')} error={endBeforeStart} />
           <Input type="time" required value={form.end_time} onChange={set('end_time')} error={endBeforeStart} />
         </div>
         {endBeforeStart ? (
-          <p className="text-caption text-danger-fg">The end is before the start. Check the dates and times.</p>
+          <p className="text-caption text-danger-fg">{t('The end is before the start. Check the dates and times.')}</p>
         ) : days ? (
           <p className="text-caption text-ink-muted">
-            Runs {days === 1 ? '1 day' : `${days} days`}: {formatScheduleEnd(form.start_date, form.start_time)} → {formatScheduleEnd(form.end_date, form.end_time)}
+            {t('Runs')}{' '}{days === 1 ? t('1 day') : t('{days} days', { days })}: {formatScheduleEnd(form.start_date, form.start_time)} → {formatScheduleEnd(form.end_date, form.end_time)}
           </p>
         ) : null}
 
         {showStatus && (
-          <Field label="Status" hint="Leave on Automatic unless you need to open or close the store early.">
+          <Field label={t('Status')} hint={t('Leave on Automatic unless you need to open or close the store early.')}>
             <Select value={form.status} onChange={set('status')}>
-              <option value="auto">Automatic (follows the schedule above)</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="active">Live now</option>
-              <option value="ended">Ended</option>
+              <option value="auto">{t('Automatic (follows the schedule above)')}</option>
+              <option value="upcoming">{t('Upcoming')}</option>
+              <option value="active">{t('Live now')}</option>
+              <option value="ended">{t('Ended')}</option>
             </Select>
           </Field>
         )}
       </FormSection>
 
-      <FormSection title="Person in charge">
+      <FormSection title={t('Person in charge')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Name" optional>
-            <Input placeholder="Who runs the store" value={form.person_in_charge} onChange={set('person_in_charge')} />
+          <Field label={t('Name')} optional>
+            <Input placeholder={t('Who runs the store')} value={form.person_in_charge} onChange={set('person_in_charge')} />
           </Field>
-          <Field label="Phone" optional>
+          <Field label={t('Phone')} optional>
             <Input type="tel" placeholder="+60 12-345 6789" value={form.contact_phone} onChange={set('contact_phone')} />
           </Field>
         </div>
-        <Field label="Notes" optional>
-          <Textarea rows={2} placeholder="Booth size, expected crowd, special instructions…" value={form.notes} onChange={set('notes')} />
+        <Field label={t('Notes')} optional>
+          <Textarea rows={2} placeholder={t('Booth size, expected crowd, special instructions…')} value={form.notes} onChange={set('notes')} />
         </Field>
       </FormSection>
     </>

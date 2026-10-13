@@ -1,5 +1,6 @@
 import React from 'react';
 import { Select } from './controls';
+import { t } from '../../i18n';
 
 /**
  * Business first, then branch. The branch list stays locked until a business is chosen and then only
@@ -26,22 +27,22 @@ export default function BusinessBranchFilter({
   return (
     <>
       {showBusiness && (
-        <Select wrapperClassName={businessClassName} aria-label="Business" value={businessId} onChange={e => onBusinessChange(e.target.value)}>
-          <option value="">All businesses</option>
+        <Select wrapperClassName={businessClassName} aria-label={t('Business')} value={businessId} onChange={e => onBusinessChange(e.target.value)}>
+          <option value="">{t('All businesses')}</option>
           {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </Select>
       )}
       <Select
         wrapperClassName={branchClassName}
-        aria-label="Branch"
+        aria-label={t('Branch')}
         value={locked ? '' : branchId}
         onChange={e => onBranchChange(e.target.value)}
         disabled={locked}
-        title={locked ? 'Select a business first to choose its branch' : undefined}
+        title={locked ? t('Select a business first to choose its branch') : undefined}
       >
         {locked
-          ? <option value="">Select business first</option>
-          : <option value="">All branches</option>}
+          ? <option value="">{t('Select business first')}</option>
+          : <option value="">{t('All branches')}</option>}
         {!locked && options.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
       </Select>
     </>

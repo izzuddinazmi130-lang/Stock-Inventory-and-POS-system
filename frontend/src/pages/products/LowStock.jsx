@@ -10,11 +10,12 @@ import {
   Button, BusinessBranchFilter, Card, FilterBar, KpiCard, PageHeader, SearchInput, StatusPill, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState, cn,
 } from '../../components/ui';
+import { t as tr } from '../../i18n';
 
 const TABS = [
-  { value: 'all', label: 'All alerts' },
-  { value: 'out', label: 'Out of stock' },
-  { value: 'low', label: 'Running low' },
+  { value: 'all', label: tr('All alerts') },
+  { value: 'out', label: tr('Out of stock') },
+  { value: 'low', label: tr('Running low') },
 ];
 
 
@@ -60,7 +61,7 @@ export default function LowStock() {
         setCounts(res.data.counts || { out: 0, low: 0, total: 0 });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not load low-stock products.');
+      setError(err.response?.data?.message || tr('Could not load low-stock products.'));
     } finally {
       setLoading(false);
     }
@@ -92,22 +93,22 @@ export default function LowStock() {
   return (
     <Layout>
       <PageHeader
-        title="Low stock"
-        description={`Products at or below their “alert at” level${isSuperAdmin ? ' in each branch' : ''}. Restock them before customers find the shelf empty.`}
+        title={tr('Low stock')}
+        description={isSuperAdmin ? tr('Products at or below their “alert at” level in each branch. Restock them before customers find the shelf empty.') : tr('Products at or below their “alert at” level. Restock them before customers find the shelf empty.')}
         actions={!isSuperAdmin && shown.length > 0 && (
           <Button variant="success" icon={PackagePlus} onClick={() => navigate(receiveLink(shown))}>
-            Restock {shown.length === 1 ? 'this item' : `all ${shown.length}`}
+            {tr('Restock')}{' '}{shown.length === 1 ? tr('this item') : tr('all {length}', { length: shown.length })}
           </Button>
         )}
       />
 
       <div className="kpi-grid grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={loading && items.length === 0} label="Out of stock" value={counts.out} icon={PackageX} tone="danger" meta="Can't be sold right now" onClick={() => setTab('out')} className={cn(tab === 'out' && 'ring-1 ring-danger-line border-danger-line')} />
-        <KpiCard loading={loading && items.length === 0} label="Running low" value={counts.low} icon={PackageMinus} tone="warning" meta="At or below the alert level" onClick={() => setTab('low')} className={cn(tab === 'low' && 'ring-1 ring-warning-line border-warning-line')} />
+        <KpiCard loading={loading && items.length === 0} label={tr('Out of stock')} value={counts.out} icon={PackageX} tone="danger" meta={tr('Can\'t be sold right now')} onClick={() => setTab('out')} className={cn(tab === 'out' && 'ring-1 ring-danger-line border-danger-line')} />
+        <KpiCard loading={loading && items.length === 0} label={tr('Running low')} value={counts.low} icon={PackageMinus} tone="warning" meta={tr('At or below the alert level')} onClick={() => setTab('low')} className={cn(tab === 'low' && 'ring-1 ring-warning-line border-warning-line')} />
       </div>
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
-        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, SKU, size or category…" aria-label="Search low-stock products" />
+        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('Search by name, SKU, size or category…')} aria-label={tr('Search low-stock products')} />
         {isSuperAdmin && (
           <BusinessBranchFilter
             businesses={businesses}
@@ -125,7 +126,7 @@ export default function LowStock() {
       <Card className="overflow-hidden">
         <div className="px-5 pt-3 border-b border-line-soft">
           <Tabs
-            label="Alert type"
+            label={tr('Alert type')}
             value={tab}
             onChange={setTab}
             className="border-b-0"
@@ -135,12 +136,12 @@ export default function LowStock() {
         <Table minWidth={isSuperAdmin ? '52rem' : '44rem'}>
           <THead>
             <TR>
-              <TH>Product</TH>
-              {isSuperAdmin && <TH>Branch</TH>}
-              <TH>In stock</TH>
-              <TH numeric>Alert at</TH>
-              <TH numeric>Suggested restock</TH>
-              <TH className="w-px"><span className="sr-only">Action</span></TH>
+              <TH>{tr('Product')}</TH>
+              {isSuperAdmin && <TH>{tr('Branch')}</TH>}
+              <TH>{tr('In stock')}</TH>
+              <TH numeric>{tr('Alert at')}</TH>
+              <TH numeric>{tr('Suggested restock')}</TH>
+              <TH className="w-px"><span className="sr-only">{tr('Action')}</span></TH>
             </TR>
           </THead>
           <TBody>
@@ -151,8 +152,8 @@ export default function LowStock() {
               onRetry={load}
               empty={!loading && !error && shown.length === 0}
               emptyIcon={PackageCheck}
-              emptyTitle={items.length === 0 ? 'All stocked up' : 'Nothing matches'}
-              emptyDescription={items.length === 0 ? 'No product is at or below its alert level.' : 'Try another tab or clear the search.'}
+              emptyTitle={items.length === 0 ? tr('All stocked up') : tr('Nothing matches')}
+              emptyDescription={items.length === 0 ? tr('No product is at or below its alert level.') : tr('Try another tab or clear the search.')}
             />
             {shown.map((i, idx) => (
               <TR key={`${i.id}-${i.branch_id}`} index={idx}>
@@ -160,21 +161,21 @@ export default function LowStock() {
                   <p className="font-medium text-ink">{i.name}</p>
                   <p className="text-caption text-ink-muted">
                     <span className="font-mono">{i.sku}</span>
-                    {i.size && <> · Size {i.size}</>}
+                    {i.size && <>{' '}{tr('· Size ')}{i.size}</>}
                     {i.category && <> · {i.category}</>}
                   </p>
                 </TD>
                 {isSuperAdmin && <TD className="text-ink-secondary whitespace-nowrap">{i.branch_name}</TD>}
                 <TD className="whitespace-nowrap">
-                  <StatusPill kind="stock" value={i.stock_status} size="sm" label={i.stock_status === 'out' ? 'Out of stock' : `${i.quantity} left`} />
+                  <StatusPill kind="stock" value={i.stock_status} size="sm" label={i.stock_status === 'out' ? tr('Out of stock') : tr('{quantity} left', { quantity: i.quantity })} />
                 </TD>
                 <TD numeric className="text-ink-secondary">{i.min_quantity}</TD>
                 <TD numeric className="font-semibold text-ink">+{i.suggested_restock}</TD>
                 <TD className="text-right whitespace-nowrap">
                   {isSuperAdmin ? (
-                    <Button variant="ghost" size="sm" iconRight={ArrowRight} to={`/products?search=${encodeURIComponent(i.sku)}`}>View product</Button>
+                    <Button variant="ghost" size="sm" iconRight={ArrowRight} to={`/products?search=${encodeURIComponent(i.sku)}`}>{tr('View product')}</Button>
                   ) : (
-                    <Button variant="secondary" size="sm" icon={PackagePlus} to={receiveLink([i])}>Restock</Button>
+                    <Button variant="secondary" size="sm" icon={PackagePlus} to={receiveLink([i])}>{tr('Restock')}</Button>
                   )}
                 </TD>
               </TR>
@@ -185,8 +186,7 @@ export default function LowStock() {
 
       {!isSuperAdmin && shown.length > 0 && (
         <p className="text-caption text-ink-muted mt-3">
-          “Restock” opens the point of sale in <strong className="font-medium text-ink-secondary">Receive stock</strong> mode with the suggested quantity filled in. Change it to what actually arrived, then confirm.
-          The suggestion brings stock back to twice the alert level. Change the alert level in <Link to="/products" className="text-accent font-medium hover:underline">Products</Link>.
+          {tr('“Restock” opens the point of sale in')}{' '}<strong className="font-medium text-ink-secondary">{tr('Receive stock')}</strong>{' '}{tr('mode with the suggested quantity filled in. Change it to what actually arrived, then confirm. The suggestion brings stock back to twice the alert level. Change the alert level in')}{' '}<Link to="/products" className="text-accent font-medium hover:underline">{tr('Products')}</Link>.
         </p>
       )}
     </Layout>

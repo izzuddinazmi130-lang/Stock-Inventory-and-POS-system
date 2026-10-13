@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
-import { cn, focusRing } from './cn';
+import { cn, focusRing } from './cn';
+import { t as tr } from '../../i18n';
 
 const ToastContext = createContext(null);
 
@@ -93,7 +94,7 @@ function ToastItem({ toast, onDismiss }) {
         type="button"
         onClick={() => onDismiss(toast.id)}
         className={cn('p-1 -m-1 rounded-md text-ink-muted hover:text-ink hover:bg-sunken transition-colors', focusRing)}
-        aria-label="Dismiss notification"
+        aria-label={tr('Dismiss notification')}
       >
         <X className="w-4 h-4" aria-hidden="true" />
       </button>

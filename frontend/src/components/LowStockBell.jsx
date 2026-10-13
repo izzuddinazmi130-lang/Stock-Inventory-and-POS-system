@@ -5,11 +5,12 @@ import { cn } from './ui/cn';
 import { ButtonBase } from './ui/Button';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../context/ToastContext';
+import { t as tr } from '../i18n';
 
 const PREVIEW = 5;
 const rowKey = (i) => `${i.id}-${i.branch_id}`;
-const label = (i) => `${i.name}${i.size ? ` (Size ${i.size})` : ''}`;
+const label = (i) => (i.size ? tr('{name} (Size {size})', { name: i.name, size: i.size }) : i.name);
 
 /**
  * Header bell: how many products are out of stock / running low, the most urgent few,
@@ -38,8 +39,8 @@ export default function LowStockBell() {
         all.forEach(i => {
           const before = knownRef.current.get(rowKey(i));
           if (before === i.stock_status) return;
-          if (i.stock_status === 'out') addToast(`${label(i)} is now out of stock${i.branch_name ? ` at ${i.branch_name}` : ''}.`, 'error');
-          else if (!before) addToast(`${label(i)} is running low: ${i.quantity} left.`, 'warning');
+          if (i.stock_status === 'out') addToast(i.branch_name ? tr('{name} is now out of stock at {branch}.', { name: label(i), branch: i.branch_name }) : tr('{name} is now out of stock.', { name: label(i) }), 'error');
+          else if (!before) addToast(tr('{name} is running low: {quantity} left.', { name: label(i), quantity: i.quantity }), 'warning');
         });
       }
       knownRef.current = next;
@@ -77,7 +78,7 @@ export default function LowStockBell() {
       <ButtonBase
         onClick={() => setOpen(o => !o)}
         className={cn('relative w-10 h-10 flex items-center justify-center rounded-lg text-ink-secondary hover:text-ink hover:bg-sunken transition-colors')}
-        aria-label={`Stock alerts: ${counts.total}`}
+        aria-label={tr('Stock alerts: {total}', { total: counts.total })}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -95,21 +96,21 @@ export default function LowStockBell() {
       {open && (
         <div
           role="dialog"
-          aria-label="Stock alerts"
+          aria-label={tr('Stock alerts')}
           className="absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] bg-surface border border-line rounded-xl shadow-popover overflow-hidden z-50 animate-scale-in origin-top-right"
         >
           <div className="px-4 py-3 border-b border-line-soft">
-            <p className="text-sm font-semibold text-ink">Stock alerts</p>
+            <p className="text-sm font-semibold text-ink">{tr('Stock alerts')}</p>
             <p className="text-caption text-ink-muted mt-0.5">
               {counts.total === 0
-                ? 'Everything is above its alert level.'
-                : <><span className="font-semibold text-danger-fg tabular-nums">{counts.out}</span> out of stock · <span className="font-semibold text-warning-fg tabular-nums">{counts.low}</span> running low</>}
+                ? tr('Everything is above its alert level.')
+                : <><span className="font-semibold text-danger-fg tabular-nums">{counts.out}</span>{' '}{tr('out of stock ·')}{' '}<span className="font-semibold text-warning-fg tabular-nums">{counts.low}</span>{' '}{tr('running low')}</>}
             </p>
           </div>
           {items.length === 0 ? (
             <div className="px-4 py-6 flex flex-col items-center text-center">
               <PackageCheck className="w-6 h-6 text-success mb-1.5" aria-hidden="true" />
-              <p className="text-caption text-ink-muted">No stock alerts right now.</p>
+              <p className="text-caption text-ink-muted">{tr('No stock alerts right now.')}</p>
             </div>
           ) : (
             <ul className="divide-y divide-line-soft max-h-72 overflow-y-auto">
@@ -125,7 +126,7 @@ export default function LowStockBell() {
                     </p>
                   </div>
                   <span className={cn('text-caption font-semibold whitespace-nowrap tabular-nums', i.stock_status === 'out' ? 'text-danger-fg' : 'text-warning-fg')}>
-                    {i.stock_status === 'out' ? 'Out' : `${i.quantity} left`}
+                    {i.stock_status === 'out' ? tr('Out') : tr('{quantity} left', { quantity: i.quantity })}
                   </span>
                 </li>
               ))}
@@ -136,7 +137,7 @@ export default function LowStockBell() {
             onClick={() => setOpen(false)}
             className={cn('flex items-center justify-center gap-1 px-4 py-2.5 text-caption font-semibold text-accent hover:bg-accent-soft border-t border-line-soft transition-colors')}
           >
-            {counts.total > PREVIEW ? `View all ${counts.total}` : 'Open low stock list'} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            {counts.total > PREVIEW ? tr('View all {total}', { total: counts.total }) : tr('Open low stock list')} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>
         </div>
       )}

@@ -6,7 +6,8 @@ import { navigationFor, isItemActive } from './navigation';
 import BrandMark from './BrandMark';
 import { cn } from './ui/cn';
 import { ButtonBase } from './ui/Button';
-import { Tooltip } from './ui/Tooltip';
+import { Tooltip } from './ui/Tooltip';
+import { t } from '../i18n';
 
 /**
  * Navigation list. Used in the desktop sidebar (optionally collapsed to icons) and in the mobile drawer.
@@ -35,7 +36,7 @@ export function NavList({ collapsed = false, onNavigate }) {
   }, [pathname, collapsed, groups.length]);
 
   return (
-    <nav ref={listRef} aria-label="Main" className="relative px-3 py-2">
+    <nav ref={listRef} aria-label={t('Main')} className="relative px-3 py-2">
       {bar && (
         <span
           aria-hidden="true"
@@ -136,7 +137,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
       >
         <div className={cn('h-16 flex items-center border-b border-line-soft flex-shrink-0', expanded ? 'px-5' : 'justify-center')}>
-          <Link to="/dashboard" className="rounded-lg" aria-label="HQ Inventory home">
+          <Link to="/dashboard" className="rounded-lg" aria-label={t('HQ Inventory home')}>
             <BrandMark withName={expanded} />
           </Link>
         </div>
@@ -150,11 +151,11 @@ export default function Sidebar({ collapsed, onToggle }) {
               'flex items-center gap-3 h-9 rounded-lg text-sm text-ink-muted hover:text-ink hover:bg-subtle transition-colors whitespace-nowrap',
               expanded ? 'w-full px-3' : 'w-10 justify-center'
             )}
-            aria-label={collapsed ? 'Keep sidebar open' : 'Collapse sidebar'}
+            aria-label={collapsed ? t('Keep sidebar open') : t('Collapse sidebar')}
             aria-expanded={expanded}
           >
             {collapsed ? <PanelLeftOpen className="w-[18px] h-[18px] flex-shrink-0" aria-hidden="true" /> : <PanelLeftClose className="w-[18px] h-[18px] flex-shrink-0" aria-hidden="true" />}
-            {expanded && <span>{collapsed ? 'Keep open' : 'Collapse'}</span>}
+            {expanded && <span>{collapsed ? t('Keep open') : t('Collapse')}</span>}
           </ButtonBase>
         </div>
       </div>

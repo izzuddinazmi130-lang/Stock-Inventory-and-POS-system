@@ -8,6 +8,7 @@ import {
   Table, THead, TBody, TH, TR, TD, TableState, Tooltip, useConfirm, useToast,
 } from '../../components/ui';
 import { ReasonBadge, ReportDamageModal, DamageDetailModal, PhotoViewer } from './components/DamageModals';
+import { t, locale } from '../../i18n';
 
 export default function DamageProducts() {
   const { user } = useAuth();
@@ -114,11 +115,11 @@ export default function DamageProducts() {
         setReports(res.data.reports || []);
         setStats(res.data.stats || { totalReports: 0, totalQuantity: 0, totalValue: 0 });
       } else {
-        setLoadError(res.data.message || 'Failed to load damage reports.');
+        setLoadError(res.data.message || t('Failed to load damage reports.'));
       }
     } catch (err) {
       console.error('Error fetching damage reports:', err);
-      setLoadError(err.response?.data?.message || 'Could not reach the damage records service.');
+      setLoadError(err.response?.data?.message || t('Could not reach the damage records service.'));
     } finally {
       setLoading(false);
     }
@@ -134,23 +135,23 @@ export default function DamageProducts() {
   // Delete a damage report
   const handleDeleteReport = async (target) => {
     const ok = await confirm({
-      title: `Delete damage report #DR-${target.id}?`,
-      message: `This permanently deletes the record for ${target.item_name} and its photos.\n${target.quantity} unit(s) will be put back into ${target.branch_name}'s stock. This cannot be undone.`,
-      confirmLabel: 'Delete report',
+      title: t('Delete damage report #DR-{id}?', { id: target.id }),
+      message: t('This permanently deletes the record for {item_name} and its photos.\n{quantity} unit(s) will be put back into {branch_name}\'s stock. This cannot be undone.', { item_name: target.item_name, quantity: target.quantity, branch_name: target.branch_name }),
+      confirmLabel: t('Delete report'),
       tone: 'danger',
     });
     if (!ok) return;
     try {
       const res = await api.delete(`/damage-reports/${target.id}`);
       if (res.data.success) {
-        toast.success(res.data.message || `Damage report #${target.id} deleted.`);
+        toast.success(res.data.message || t('Damage report #{id} deleted.', { id: target.id }));
         fetchDamageReports();
       } else {
-        toast.error(res.data.message || 'Failed to delete damage report.');
+        toast.error(res.data.message || t('Failed to delete damage report.'));
       }
     } catch (err) {
       console.error('Error deleting damage report:', err);
-      toast.error(err.response?.data?.message || 'Could not reach the damage records service.');
+      toast.error(err.response?.data?.message || t('Could not reach the damage records service.'));
     }
   };
 
@@ -180,7 +181,7 @@ export default function DamageProducts() {
     if (!files.length) return;
 
     if (selectedPhotos.length + files.length > 5) {
-      setMessage({ type: 'danger', text: 'You can upload a maximum of 5 evidence photos per report.' });
+      setMessage({ type: 'danger', text: t('You can upload a maximum of 5 evidence photos per report.') });
       return;
     }
 
@@ -248,18 +249,18 @@ export default function DamageProducts() {
     const effectiveBranch = isSuperAdmin ? modalBranchId : user?.branch_id;
 
     if (!effectiveBranch) {
-      setMessage({ type: 'danger', text: 'Please select a branch location.' });
+      setMessage({ type: 'danger', text: t('Please select a branch location.') });
       return;
     }
 
     if (!selectedProduct) {
-      setMessage({ type: 'danger', text: 'Please select a product from the list.' });
+      setMessage({ type: 'danger', text: t('Please select a product from the list.') });
       return;
     }
 
     const qty = parseInt(formData.quantity, 10);
     if (!qty || qty <= 0) {
-      setMessage({ type: 'danger', text: 'Damage quantity must be at least 1 unit.' });
+      setMessage({ type: 'danger', text: t('Damage quantity must be at least 1 unit.') });
       return;
     }
 
@@ -267,7 +268,7 @@ export default function DamageProducts() {
     if (qty > availableStock) {
       setMessage({ 
         type: 'danger', 
-        text: `Cannot report ${qty} units. Branch currently only has ${availableStock} units available.` 
+        text: t('Cannot report {qty} units. Branch currently only has {availableStock} units available.', { qty, availableStock }) 
       });
       return;
     }
@@ -293,16 +294,16 @@ export default function DamageProducts() {
       });
 
       if (res.data.success) {
-        toast.success(res.data.message || 'Damage report logged.');
+        toast.success(res.data.message || t('Damage report logged.'));
         setMessage(null);
         setShowAddModal(false);
         fetchDamageReports();
       } else {
-        setMessage({ type: 'danger', text: res.data.message || 'Failed to submit damage report.' });
+        setMessage({ type: 'danger', text: res.data.message || t('Failed to submit damage report.') });
       }
     } catch (err) {
       console.error('Submission error:', err);
-      const errMsg = err.response?.data?.message || err.message || 'An unexpected error occurred.';
+      const errMsg = err.response?.data?.message || err.message || t('An unexpected error occurred.');
       setMessage({ type: 'danger', text: errMsg });
     } finally {
       setSubmitting(false);
@@ -324,25 +325,25 @@ export default function DamageProducts() {
   return (
     <Layout>
       <PageHeader
-        title="Damage records"
-        description="Log damaged items, record the loss and keep photo evidence."
+        title={t('Damage records')}
+        description={t('Log damaged items, record the loss and keep photo evidence.')}
         actions={<>
-          <Button variant="ghost" icon={RefreshCw} onClick={fetchDamageReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
-          <Button variant="danger" icon={Plus} onClick={openAddModal}>Report damage</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchDamageReports} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>
+          <Button variant="danger" icon={Plus} onClick={openAddModal}>{t('Report damage')}</Button>
         </>}
       />
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={loading && reports.length === 0} label="Reports" value={stats.totalReports} icon={AlertTriangle} tone="warning" meta={hasActiveFilters ? 'Matching the filters' : 'All time'} />
-        <KpiCard loading={loading && reports.length === 0} label="Items written off" value={stats.totalQuantity} icon={PackageX} tone="danger" meta="Removed from stock" />
+        <KpiCard loading={loading && reports.length === 0} label={t('Reports')} value={stats.totalReports} icon={AlertTriangle} tone="warning" meta={hasActiveFilters ? t('Matching the filters') : t('All time')} />
+        <KpiCard loading={loading && reports.length === 0} label={t('Items written off')} value={stats.totalQuantity} icon={PackageX} tone="danger" meta={t('Removed from stock')} />
         <KpiCard
           loading={loading && reports.length === 0}
-          label="Value lost"
+          label={t('Value lost')}
           value={stats.totalValue}
-          format={v => `RM ${v.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          format={v => `RM ${v.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           icon={Coins}
           tone="neutral"
-          meta="At recorded cost"
+          meta={t('At recorded cost')}
         />
       </div>
 
@@ -351,8 +352,8 @@ export default function DamageProducts() {
           wrapperClassName="md:flex-1 md:min-w-[14rem]"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search product, SKU, notes, reporter…"
-          aria-label="Search damage records"
+          placeholder={t('Search product, SKU, notes, reporter…')}
+          aria-label={t('Search damage records')}
         />
         <BusinessBranchFilter
           showBusiness={isSuperAdmin}
@@ -364,26 +365,26 @@ export default function DamageProducts() {
           onBranchChange={setFilterBranch}
           businessClassName="md:w-44"
         />
-        <Input type="date" wrapperClassName="md:w-40" className="md:w-40" aria-label="From date" value={startDate} max={endDate || undefined} onChange={e => setStartDate(e.target.value)} />
-        <Input type="date" className="md:w-40" aria-label="To date" value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} />
+        <Input type="date" wrapperClassName="md:w-40" className="md:w-40" aria-label={t('From date')} value={startDate} max={endDate || undefined} onChange={e => setStartDate(e.target.value)} />
+        <Input type="date" className="md:w-40" aria-label={t('To date')} value={endDate} min={startDate || undefined} onChange={e => setEndDate(e.target.value)} />
       </FilterBar>
 
       <Card className="overflow-hidden">
         <CardHeader
-          title="Damage reports"
-          description={loading && reports.length === 0 ? 'Loading…' : `${reports.length} ${reports.length === 1 ? 'record' : 'records'}`}
+          title={t('Damage reports')}
+          description={loading && reports.length === 0 ? t('Loading…') : t('{n} {n|record|records}', { n: reports.length })}
         />
         <Table minWidth="58rem">
           <THead>
             <TR>
-              <TH>Report</TH>
-              <TH>Product</TH>
-              <TH>Location</TH>
-              <TH numeric>Qty</TH>
-              <TH numeric>Value lost</TH>
-              <TH>Reason</TH>
-              <TH>Reported by</TH>
-              <TH className="w-px"><span className="sr-only">Actions</span></TH>
+              <TH>{t('Report')}</TH>
+              <TH>{t('Product')}</TH>
+              <TH>{t('Location')}</TH>
+              <TH numeric>{t('Qty')}</TH>
+              <TH numeric>{t('Value lost')}</TH>
+              <TH>{t('Reason')}</TH>
+              <TH>{t('Reported by')}</TH>
+              <TH className="w-px"><span className="sr-only">{t('Actions')}</span></TH>
             </TR>
           </THead>
           <TBody>
@@ -394,11 +395,11 @@ export default function DamageProducts() {
               onRetry={fetchDamageReports}
               empty={!loading && !loadError && reports.length === 0}
               emptyIcon={PackageX}
-              emptyTitle={hasActiveFilters ? 'No records match these filters' : 'No damage reported yet'}
-              emptyDescription={hasActiveFilters ? 'Try another date range or search.' : 'When something arrives broken or gets written off, report it here.'}
+              emptyTitle={hasActiveFilters ? t('No records match these filters') : t('No damage reported yet')}
+              emptyDescription={hasActiveFilters ? t('Try another date range or search.') : t('When something arrives broken or gets written off, report it here.')}
               emptyAction={hasActiveFilters
-                ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button>
-                : <Button variant="danger" size="sm" icon={Plus} onClick={openAddModal}>Report damage</Button>}
+                ? <Button variant="secondary" size="sm" onClick={resetFilters}>{t('Clear filters')}</Button>
+                : <Button variant="danger" size="sm" icon={Plus} onClick={openAddModal}>{t('Report damage')}</Button>}
             />
             {reports.map((r, i) => {
               const photoCount = r.photos?.length || 0;
@@ -407,9 +408,9 @@ export default function DamageProducts() {
               return (
                 <TR key={r.id} index={i} onClick={() => setViewReport(r)}>
                   <TD>
-                    <div className="font-mono text-caption font-semibold text-accent">#DR-{r.id}</div>
+                    <div className="font-mono text-caption font-semibold text-accent">{t('#DR-{id}', { id: r.id })}</div>
                     <div className="text-caption text-ink-muted mt-0.5 whitespace-nowrap">
-                      {when.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
+                      {when.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     {photoCount > 0 && <Badge tone="neutral" size="sm" icon={Camera} className="mt-1">{photoCount} {photoCount === 1 ? 'photo' : 'photos'}</Badge>}
                   </TD>
@@ -425,28 +426,28 @@ export default function DamageProducts() {
                   </TD>
                   <TD numeric className="font-semibold text-danger-fg">−{r.quantity}</TD>
                   <TD numeric>
-                    <div className="font-semibold text-ink">RM {parseFloat(r.total_value || 0).toFixed(2)}</div>
-                    <div className="text-caption text-ink-muted">@ RM {parseFloat(r.cost_per_unit || 0).toFixed(2)}</div>
+                    <div className="font-semibold text-ink">{t('RM ')}{parseFloat(r.total_value || 0).toFixed(2)}</div>
+                    <div className="text-caption text-ink-muted">{t('@ RM ')}{parseFloat(r.cost_per_unit || 0).toFixed(2)}</div>
                   </TD>
                   <TD className="max-w-[14rem]">
                     <ReasonBadge value={r.reason_category} />
                     {r.reason_details && <div className="text-caption text-ink-muted mt-1 truncate" title={r.reason_details}>{r.reason_details}</div>}
                   </TD>
                   <TD>
-                    <div className="text-sm text-ink">{r.reported_by_name || 'System admin'}</div>
+                    <div className="text-sm text-ink">{r.reported_by_name || t('System admin')}</div>
                     {r.reported_by_email && <div className="text-caption text-ink-muted">{r.reported_by_email}</div>}
                   </TD>
                   <TD onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
-                      <IconButton icon={Eye} label="View report" onClick={() => setViewReport(r)} />
+                      <IconButton icon={Eye} label={t('View report')} onClick={() => setViewReport(r)} />
                       {canDelete ? (
                         <Menu
-                          label={`More actions for report ${r.id}`}
-                          items={[{ label: 'Delete report', icon: Trash2, tone: 'danger', onClick: () => handleDeleteReport(r) }]}
+                          label={t('More actions for report {id}', { id: r.id })}
+                          items={[{ label: t('Delete report'), icon: Trash2, tone: 'danger', onClick: () => handleDeleteReport(r) }]}
                         />
                       ) : (
-                        <Tooltip content="Records from other branches are read-only">
-                          <span className="w-8 h-8 inline-flex items-center justify-center text-ink-subtle" tabIndex={0} aria-label="Read-only">
+                        <Tooltip content={t('Records from other branches are read-only')}>
+                          <span className="w-8 h-8 inline-flex items-center justify-center text-ink-subtle" tabIndex={0} aria-label={t('Read-only')}>
                             <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                           </span>
                         </Tooltip>

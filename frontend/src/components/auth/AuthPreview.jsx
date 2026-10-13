@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { ButtonBase, cn, prefersReducedMotion } from '../ui';
 import BrandMark from '../BrandMark';
 import gradientImg from '../../assets/auth/gradient.jpg';
+import { t as tr } from '../../i18n';
 
 const SLIDES = [
-  { eyebrow: 'Receiving & stock counts', title: 'Every item accounted for', text: 'Receive, count and restock with QR labels.' },
-  { eyebrow: 'Multi-site', title: 'One stock, every site', text: 'Map products and keep stock in sync across all stores.' },
-  { eyebrow: 'Low-stock alerts', title: 'Never run out', text: 'Low-stock alerts before shelves go empty.' },
+  { eyebrow: tr('Receiving & stock counts'), title: tr('Every item accounted for'), text: tr('Receive, count and restock with QR labels.') },
+  { eyebrow: tr('Multi-site'), title: tr('One stock, every site'), text: tr('Map products and keep stock in sync across all stores.') },
+  { eyebrow: tr('Low-stock alerts'), title: tr('Never run out'), text: tr('Low-stock alerts before shelves go empty.') },
 ];
 const SLIDE_MS = 5000;
 
@@ -56,7 +57,7 @@ export default function AuthPreview({ className }) {
         <BrandMark size="lg" className="[&_img]:brightness-0 [&_img]:invert" />
       </div>
 
-      <section aria-roledescription="carousel" aria-label="HQ Inventory features" className="relative p-9 xl:p-10">
+      <section aria-roledescription="carousel" aria-label={tr('HQ Inventory features')} className="relative p-9 xl:p-10">
         <div className="relative h-[9.5rem]">
           {SLIDES.map((s, i) => (
             <div
@@ -81,7 +82,7 @@ export default function AuthPreview({ className }) {
             <ButtonBase
               key={s.title}
               onClick={() => setActive(i)}
-              aria-label={`Show slide ${i + 1} of ${SLIDES.length}: ${s.title}`}
+              aria-label={tr('Show slide {value} of {length}: {title}', { value: i + 1, length: SLIDES.length, title: s.title })}
               aria-current={i === active ? 'true' : undefined}
               className="group rounded-full px-0.5 py-2 focus-visible:ring-white/70 focus-visible:ring-offset-0"
             >

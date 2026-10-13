@@ -8,14 +8,15 @@ import {
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { SaleReceipt, ReceiptModal } from '../../components/pos/Receipt';
+import { SaleReceipt, ReceiptModal } from '../../components/pos/Receipt';
+import { t, locale } from '../../i18n';
 
 function formatDateTime(val) {
   if (!val) return '-';
   // "2026-10-04 09:00:00" → ISO-like, so Safari (iPhone) can read it too
   const d = new Date(typeof val === 'string' ? val.replace(' ', 'T') : val);
   if (isNaN(d.getTime())) return String(val);
-  return d.toLocaleString('en-MY', {
+  return d.toLocaleString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -45,7 +46,7 @@ export default function FloorReport() {
       const res = await api.get(`/sales/${saleId}`);
       if (res.data.success) setOpenSale(res.data.sale);
     } catch (err) {
-      setMessage({ type: 'danger', text: err.response?.data?.message || 'Could not open that receipt.' });
+      setMessage({ type: 'danger', text: err.response?.data?.message || t('Could not open that receipt.') });
     } finally {
       setOpeningId(null);
     }
@@ -95,7 +96,7 @@ export default function FloorReport() {
     } catch (err) {
       setMessage({
         type: 'danger',
-        text: err.response?.data?.message || err.message || 'Failed to load branch floor report'
+        text: err.response?.data?.message || err.message || t('Failed to load branch floor report')
       });
     } finally {
       setLoading(false);
@@ -115,61 +116,61 @@ export default function FloorReport() {
       <PageHeader
         breadcrumbs={isSuperAdmin
           ? [
-            { label: 'Businesses', to: '/businesses' },
-            { label: branch?.business_name || 'Business', to: branch ? `/businesses/${branch.business_id}/branches` : undefined },
-            { label: branch?.name || 'Branch', to: `/branches/${id}` },
-            { label: 'Pop-up stores', to: `/branches/${id}/stores` },
-            { label: 'Branch counter sales' },
+            { label: t('Businesses'), to: '/businesses' },
+            { label: branch?.business_name || t('Business'), to: branch ? `/businesses/${branch.business_id}/branches` : undefined },
+            { label: branch?.name || t('Branch'), to: `/branches/${id}` },
+            { label: t('Pop-up stores'), to: `/branches/${id}/stores` },
+            { label: t('Branch counter sales') },
           ]
-          : [{ label: 'Pop-up stores', to: `/branches/${id}/stores` }, { label: 'Branch counter sales' }]}
-        title="Branch counter sales"
-        description={`Sales made at ${branch?.name || 'this branch'} itself, not at a pop-up store.`}
+          : [{ label: t('Pop-up stores'), to: `/branches/${id}/stores` }, { label: t('Branch counter sales') }]}
+        title={t('Branch counter sales')}
+        description={t('Sales made at {name} itself, not at a pop-up store.', { name: branch?.name || t('this branch') })}
         actions={<>
-          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${id}/stores`}>Pop-up stores</Button>
-          <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>
+          <Button variant="secondary" icon={ArrowLeft} to={`/branches/${id}/stores`}>{t('Pop-up stores')}</Button>
+          <Button variant="ghost" icon={RefreshCw} onClick={fetchReport} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{t('Refresh')}</Button>
         </>}
       />
 
       <div className="kpi-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Total sales" value={Number(summary.total_sales) || 0} format={money} icon={TrendingUp} tone="accent" className="col-span-2 lg:col-span-1" />
-        <KpiCard loading={firstLoad} label="Cash" value={Number(summary.total_cash) || 0} format={money} icon={Banknote} tone="neutral" />
-        <KpiCard loading={firstLoad} label="QR / e-Wallet" value={Number(summary.total_qr) || 0} format={money} icon={QrCode} tone="neutral" />
-        <KpiCard loading={firstLoad} label="Card / Online" value={Number(summary.total_online) || 0} format={money} icon={CreditCard} tone="neutral" />
-        <KpiCard loading={firstLoad} label="Items sold" value={Number(summary.total_items_sold) || 0} icon={ShoppingBag} tone="success" />
-        <KpiCard loading={firstLoad} label="Receipts" value={Number(summary.total_transactions) || 0} icon={Hash} tone="neutral" />
+        <KpiCard loading={firstLoad} label={t('Total sales')} value={Number(summary.total_sales) || 0} format={money} icon={TrendingUp} tone="accent" className="col-span-2 lg:col-span-1" />
+        <KpiCard loading={firstLoad} label={t('Cash')} value={Number(summary.total_cash) || 0} format={money} icon={Banknote} tone="neutral" />
+        <KpiCard loading={firstLoad} label={t('QR / e-Wallet')} value={Number(summary.total_qr) || 0} format={money} icon={QrCode} tone="neutral" />
+        <KpiCard loading={firstLoad} label={t('Card / Online')} value={Number(summary.total_online) || 0} format={money} icon={CreditCard} tone="neutral" />
+        <KpiCard loading={firstLoad} label={t('Items sold')} value={Number(summary.total_items_sold) || 0} icon={ShoppingBag} tone="success" />
+        <KpiCard loading={firstLoad} label={t('Receipts')} value={Number(summary.total_transactions) || 0} icon={Hash} tone="neutral" />
       </div>
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
-        <Input type="date" className="md:w-40" aria-label="From date" value={filters.start_date} max={filters.end_date || undefined} onChange={e => setFilters(f => ({ ...f, start_date: e.target.value }))} />
-        <Input type="date" className="md:w-40" aria-label="To date" value={filters.end_date} min={filters.start_date || undefined} onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))} />
-        <Select wrapperClassName="md:w-44" aria-label="Payment method" value={filters.payment_method} onChange={e => setFilters(f => ({ ...f, payment_method: e.target.value }))}>
-          <option value="all">All payments</option>
-          <option value="cash">Cash</option>
-          <option value="qr">QR / e-Wallet</option>
-          <option value="online_banking">Card / Online</option>
+        <Input type="date" className="md:w-40" aria-label={t('From date')} value={filters.start_date} max={filters.end_date || undefined} onChange={e => setFilters(f => ({ ...f, start_date: e.target.value }))} />
+        <Input type="date" className="md:w-40" aria-label={t('To date')} value={filters.end_date} min={filters.start_date || undefined} onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))} />
+        <Select wrapperClassName="md:w-44" aria-label={t('Payment method')} value={filters.payment_method} onChange={e => setFilters(f => ({ ...f, payment_method: e.target.value }))}>
+          <option value="all">{t('All payments')}</option>
+          <option value="cash">{t('Cash')}</option>
+          <option value="qr">{t('QR / e-Wallet')}</option>
+          <option value="online_banking">{t('Card / Online')}</option>
         </Select>
-        <Select wrapperClassName="md:w-48" aria-label="Sort by" value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}>
-          <option value="date_desc">Newest first</option>
-          <option value="date_asc">Oldest first</option>
-          <option value="amount_desc">Highest amount</option>
-          <option value="amount_asc">Lowest amount</option>
-          <option value="qty_desc">Most items</option>
-          <option value="qty_asc">Fewest items</option>
+        <Select wrapperClassName="md:w-48" aria-label={t('Sort by')} value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}>
+          <option value="date_desc">{t('Newest first')}</option>
+          <option value="date_asc">{t('Oldest first')}</option>
+          <option value="amount_desc">{t('Highest amount')}</option>
+          <option value="amount_asc">{t('Lowest amount')}</option>
+          <option value="qty_desc">{t('Most items')}</option>
+          <option value="qty_asc">{t('Fewest items')}</option>
         </Select>
       </FilterBar>
 
       <Card className="overflow-hidden">
-        <CardHeader icon={Receipt} title="Items sold" description={firstLoad ? 'Loading…' : `${movements.length} ${movements.length === 1 ? 'line' : 'lines'} · click a line to open its receipt`} />
+        <CardHeader icon={Receipt} title={t('Items sold')} description={firstLoad ? t('Loading…') : t('{length} {length|line|lines} · click a line to open its receipt', { length: movements.length })} />
         <Table minWidth="52rem">
           <THead>
             <TR>
-              <TH>When</TH>
-              <TH>Receipt</TH>
-              <TH>Item</TH>
-              <TH>Payment</TH>
-              <TH numeric>Qty</TH>
-              <TH numeric>Amount</TH>
-              <TH>Served by</TH>
+              <TH>{t('When')}</TH>
+              <TH>{t('Receipt')}</TH>
+              <TH>{t('Item')}</TH>
+              <TH>{t('Payment')}</TH>
+              <TH numeric>{t('Qty')}</TH>
+              <TH numeric>{t('Amount')}</TH>
+              <TH>{t('Served by')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -180,8 +181,8 @@ export default function FloorReport() {
               onRetry={fetchReport}
               empty={!loading && !message && movements.length === 0}
               emptyIcon={Receipt}
-              emptyTitle="No branch counter sales"
-              emptyDescription={hasFilters ? 'Nothing matches these filters.' : 'Sales made at the branch (not at a pop-up store) appear here.'}
+              emptyTitle={t('No branch counter sales')}
+              emptyDescription={hasFilters ? t('Nothing matches these filters.') : t('Sales made at the branch (not at a pop-up store) appear here.')}
             />
             {movements.map((m, i) => {
               const amount = m.line_total ?? Number(m.selling_price || 0) * Number(m.quantity || 0);
@@ -193,23 +194,23 @@ export default function FloorReport() {
                     {openingId === m.sale_id && <Spinner className="w-3 h-3 ml-1.5 text-ink-muted" />}
                   </TD>
                   <TD>
-                    <div className="font-medium text-ink">{m.item_name || 'Unknown item'}</div>
+                    <div className="font-medium text-ink">{m.item_name || t('Unknown item')}</div>
                     <div className="font-mono text-caption text-ink-muted">{m.item_code || '-'}</div>
                   </TD>
-                  <TD><StatusPill kind="payment" value={m.payment_method} size="sm" label={m.payment_method ? undefined : 'Not recorded'} /></TD>
+                  <TD><StatusPill kind="payment" value={m.payment_method} size="sm" label={m.payment_method ? undefined : t('Not recorded')} /></TD>
                   <TD numeric className="font-semibold">{m.quantity}</TD>
                   <TD numeric className="font-semibold">{money(amount)}</TD>
-                  <TD className="text-ink-secondary">{m.performed_by_name || 'System'}</TD>
+                  <TD className="text-ink-secondary">{m.performed_by_name || t('System')}</TD>
                 </TR>
               );
             })}
           </TBody>
         </Table>
-        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">Showing 500 lines. The totals above include every matching sale.</p>}
+        {truncated && <p className="px-5 py-3 border-t border-line-soft text-caption text-ink-muted">{t('Showing 500 lines. The totals above include every matching sale.')}</p>}
       </Card>
 
       {openSale && (
-        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel="Close" closeVariant="secondary">
+        <ReceiptModal onClose={() => setOpenSale(null)} closeLabel={t('Close')} closeVariant="secondary">
           <SaleReceipt sale={openSale} />
         </ReceiptModal>
       )}

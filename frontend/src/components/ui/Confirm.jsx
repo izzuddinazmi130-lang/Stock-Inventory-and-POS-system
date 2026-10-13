@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { AlertTriangle, HelpCircle } from 'lucide-react';
 import { Modal } from './Modal';
-import Button from './Button';
+import Button from './Button';
+import { t } from '../../i18n';
 
 const ConfirmContext = createContext(null);
 
@@ -29,7 +30,7 @@ export function ConfirmProvider({ children }) {
     setState(s => ({ ...s, open: false }));
   };
 
-  const { title = 'Are you sure?', message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'default' } = state.options;
+  const { title = t('Are you sure?'), message, confirmLabel = t('Confirm'), cancelLabel = t('Cancel'), tone = 'default' } = state.options;
   const danger = tone === 'danger';
 
   return (
@@ -60,7 +61,7 @@ export function ConfirmProvider({ children }) {
 export function useConfirm() {
   const confirm = useContext(ConfirmContext);
   // Outside the provider (shouldn't happen) fall back to the browser dialog rather than silently proceeding
-  return confirm || ((o) => Promise.resolve(window.confirm(typeof o === 'string' ? o : o?.message || 'Are you sure?')));
+  return confirm || ((o) => Promise.resolve(window.confirm(typeof o === 'string' ? o : o?.message || t('Are you sure?'))));
 }
 
 export default ConfirmProvider;

@@ -1,7 +1,8 @@
 import React from 'react';
 import { KeyRound } from 'lucide-react';
 import { Alert, Button, Modal, useToast } from '../ui';
-import { PasswordChangeFields, usePasswordChange } from './PasswordChangeFields';
+import { PasswordChangeFields, usePasswordChange } from './PasswordChangeFields';
+import { t } from '../../i18n';
 
 /** "Change password" from the account menu. */
 export default function ChangePasswordModal({ open, onClose }) {
@@ -11,7 +12,7 @@ export default function ChangePasswordModal({ open, onClose }) {
   const save = async (e) => {
     e.preventDefault();
     if (await pw.submit()) {
-      toast.success('Password changed. Use the new one next time you sign in.');
+      toast.success(t('Password changed. Use the new one next time you sign in.'));
       onClose();
     }
   };
@@ -21,14 +22,14 @@ export default function ChangePasswordModal({ open, onClose }) {
       open={open}
       onClose={onClose}
       size="sm"
-      title="Change password"
-      description="You stay signed in on this device."
+      title={t('Change password')}
+      description={t('You stay signed in on this device.')}
       icon={KeyRound}
       onSubmit={save}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={pw.saving}>Change password</Button>
+          <Button variant="secondary" onClick={onClose}>{t('Cancel')}</Button>
+          <Button type="submit" loading={pw.saving}>{t('Change password')}</Button>
         </>
       )}
     >

@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 import { rm } from '../../components/pos/Receipt';
 import { Badge, Button, Card, CardHeader, EmptyState, Skeleton, cn, focusRing } from '../../components/ui';
+import { t } from '../../i18n';
 
 /** Overview card (head office): pop-up stores running right now, today's sales, one click to each report. */
 export default function LivePopUpsCard({ businessId }) {
@@ -30,15 +31,15 @@ export default function LivePopUpsCard({ businessId }) {
     <Card>
       <CardHeader
         icon={Radio}
-        title="Live pop-up stores"
-        description={live && live.length > 0 ? `${rm(today)} taken today` : undefined}
-        actions={live && live.length > 0 && <Badge tone="success" size="sm">{live.length} live</Badge>}
+        title={t('Live pop-up stores')}
+        description={live && live.length > 0 ? t('{today} taken today', { today: rm(today) }) : undefined}
+        actions={live && live.length > 0 && <Badge tone="success" size="sm">{live.length}{t(' live')}</Badge>}
       />
       <div className="p-2">
         {live === null ? (
           <div className="space-y-3 p-3">{[0, 1].map(i => <Skeleton key={i} className="h-8" />)}</div>
         ) : live.length === 0 ? (
-          <EmptyState compact icon={Radio} title="No pop-up store is live right now" />
+          <EmptyState compact icon={Radio} title={t('No pop-up store is live right now')} />
         ) : (
           <ul>
             {live.slice(0, 5).map(s => (
@@ -50,7 +51,7 @@ export default function LivePopUpsCard({ businessId }) {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold tabular-nums text-ink">{rm(s.today_revenue)}</p>
-                    <p className="text-[11px] text-ink-muted tabular-nums">{s.today_sales} {s.today_sales === 1 ? 'receipt' : 'receipts'} today</p>
+                    <p className="text-[11px] text-ink-muted tabular-nums">{s.today_sales} {s.today_sales === 1 ? 'receipt' : 'receipts'}{' '}{t('today')}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-ink-subtle flex-shrink-0" aria-hidden="true" />
                 </Link>
@@ -58,7 +59,7 @@ export default function LivePopUpsCard({ businessId }) {
             ))}
           </ul>
         )}
-        <div className="px-3 pt-1 pb-2"><Button variant="link" size="sm" iconRight={ArrowRight} to="/stores">All pop-up stores</Button></div>
+        <div className="px-3 pt-1 pb-2"><Button variant="link" size="sm" iconRight={ArrowRight} to="/stores">{t('All pop-up stores')}</Button></div>
       </div>
     </Card>
   );

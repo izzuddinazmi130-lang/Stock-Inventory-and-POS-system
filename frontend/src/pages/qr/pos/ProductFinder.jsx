@@ -1,6 +1,7 @@
 import React from 'react';
 import { Camera, ImageUp, Package, RefreshCw, ScanLine, Search, X } from 'lucide-react';
-import { Button, ButtonBase, Card, EmptyState, IconButton, Input, Select, Skeleton, cn } from '../../../components/ui';
+import { Button, ButtonBase, Card, EmptyState, IconButton, Input, Select, Skeleton, cn } from '../../../components/ui';
+import { t } from '../../../i18n';
 
 const rm = (n) => `RM ${(Number(n) || 0).toFixed(2)}`;
 
@@ -26,16 +27,16 @@ export default function ProductFinder({
               icon={ScanLine}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Scan a barcode, or search by name or SKU…"
+              placeholder={t('Scan a barcode, or search by name or SKU…')}
               className="bg-subtle focus:bg-surface pr-12"
-              aria-label="Scan or search products"
+              aria-label={t('Scan or search products')}
             />
             {looking
-              ? <RefreshCw className="w-4 h-4 text-accent animate-spin absolute right-3.5 top-1/2 -translate-y-1/2" aria-label="Looking up" />
+              ? <RefreshCw className="w-4 h-4 text-accent animate-spin absolute right-3.5 top-1/2 -translate-y-1/2" aria-label={t('Looking up')} />
               : search && (
                 <IconButton
                   icon={X}
-                  label="Clear search"
+                  label={t('Clear search')}
                   tooltip={false}
                   className="absolute right-1.5 top-1/2 -translate-y-1/2"
                   onClick={() => { setSearch(''); searchInputRef.current?.focus(); }}
@@ -49,11 +50,11 @@ export default function ProductFinder({
             className={cn('h-12 px-3 sm:px-4', cameraOpen && 'bg-ink hover:bg-ink-hover')}
             onClick={() => setCameraOpen(o => !o)}
             aria-pressed={cameraOpen}
-            aria-label={cameraOpen ? 'Close camera scanner' : 'Scan with camera'}
+            aria-label={cameraOpen ? t('Close camera scanner') : t('Scan with camera')}
           >
-            <span className="hidden sm:inline">Camera</span>
+            <span className="hidden sm:inline">{t('Camera')}</span>
           </Button>
-          <IconButton icon={ImageUp} label="Scan a QR code from a photo" variant="secondary" size="lg" className="h-12 w-12" onClick={() => fileInputRef.current?.click()} />
+          <IconButton icon={ImageUp} label={t('Scan a QR code from a photo')} variant="secondary" size="lg" className="h-12 w-12" onClick={() => fileInputRef.current?.click()} />
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => onImage(e.target.files?.[0])} />
         </form>
 
@@ -64,19 +65,19 @@ export default function ProductFinder({
               <span className="min-w-0 leading-snug" aria-live="polite">{cameraStatus}</span>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {cameras.length > 1 && (
-                  <Select size="sm" value={selectedCamId} onChange={e => setSelectedCamId(e.target.value)} aria-label="Camera" className="max-w-[10rem] bg-ink-hover border-ink-secondary text-white">
-                    <option value="">Back camera (auto)</option>
-                    {cameras.map((c, i) => <option key={c.id} value={c.id}>{c.label || `Camera ${i + 1}`}</option>)}
+                  <Select size="sm" value={selectedCamId} onChange={e => setSelectedCamId(e.target.value)} aria-label={t('Camera')} className="max-w-[10rem] bg-ink-hover border-ink-secondary text-white">
+                    <option value="">{t('Back camera (auto)')}</option>
+                    {cameras.map((c, i) => <option key={c.id} value={c.id}>{c.label || t('Camera {value}', { value: i + 1 })}</option>)}
                   </Select>
                 )}
-                <Button size="sm" variant="secondary" onClick={() => setCameraOpen(false)}>Close</Button>
+                <Button size="sm" variant="secondary" onClick={() => setCameraOpen(false)}>{t('Close')}</Button>
               </div>
             </div>
           </div>
         )}
 
         {categories.length > 2 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1" role="group" aria-label="Category">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1" role="group" aria-label={t('Category')}>
             {categories.map(c => (
               <ButtonBase
                 key={c}
@@ -87,7 +88,7 @@ export default function ProductFinder({
                   category === c ? 'bg-ink text-white border-ink' : 'bg-surface text-ink-secondary border-line hover:border-line-strong hover:text-ink'
                 )}
               >
-                {c}
+                {c === 'All' ? t('All') : c}
               </ButtonBase>
             ))}
           </div>
@@ -100,12 +101,12 @@ export default function ProductFinder({
             {Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-[7.5rem] rounded-lg" />)}
           </div>
         ) : products.length === 0 ? (
-          <EmptyState icon={Package} title="No products in this branch yet" description="Add products or receive stock to start selling." />
+          <EmptyState icon={Package} title={t('No products in this branch yet')} description={t('Add products or receive stock to start selling.')} />
         ) : filteredProducts.length === 0 ? (
           <EmptyState
             icon={Search}
-            title={`No products match “${search}”`}
-            description={<>Press <kbd className="px-1.5 py-0.5 rounded border border-line-strong text-caption">Enter</kbd> to look the code up anyway.</>}
+            title={t('No products match “{search}”', { search })}
+            description={<>{t('Press')}{' '}<kbd className="px-1.5 py-0.5 rounded border border-line-strong text-caption">{t('Enter')}</kbd>{' '}{t('to look the code up anyway.')}</>}
           />
         ) : (
           <>
@@ -126,19 +127,19 @@ export default function ProductFinder({
                       inCart ? 'border-accent bg-accent-soft/60 ring-1 ring-accent' : 'border-line bg-surface hover:border-accent-line hover:shadow-card hover:-translate-y-px',
                       'disabled:opacity-50 disabled:hover:shadow-none disabled:hover:translate-y-0'
                     )}
-                    aria-label={`${item.name}${item.size ? `, size ${item.size}` : ''}, ${rm(unitPrice(item))}${inCart ? `, ${inCart} in the order` : ''}`}
+                    aria-label={[item.name, item.size && t('size {size}', { size: item.size }), rm(unitPrice(item)), inCart && t('{n} in the order', { n: inCart })].filter(Boolean).join(', ')}
                   >
                     {inCart > 0 && (
                       <span className="absolute -top-2 -right-2 min-w-6 h-6 px-1.5 rounded-full bg-accent text-white text-caption font-semibold flex items-center justify-center shadow-xs animate-scale-in tabular-nums">{inCart}</span>
                     )}
                     <span className="text-sm font-medium text-ink leading-snug line-clamp-2">{item.name}</span>
                     {(item.size || item.colour) && (
-                      <span className="text-caption text-ink-muted truncate">{[item.size && `Size ${item.size}`, item.colour].filter(Boolean).join(' · ')}</span>
+                      <span className="text-caption text-ink-muted truncate">{[item.size && t('Size {size}', { size: item.size }), item.colour].filter(Boolean).join(' · ')}</span>
                     )}
                     <span className="mt-auto">
                       <span className="block text-base font-semibold text-ink tabular-nums whitespace-nowrap">{rm(unitPrice(item))}</span>
                       <span className={cn('block text-caption font-medium whitespace-nowrap tabular-nums', item.in_stock <= 0 ? 'text-danger-fg' : low ? 'text-warning-fg' : 'text-ink-muted')}>
-                        {item.in_stock <= 0 ? 'Out of stock' : `${item.in_stock} left`}
+                        {item.in_stock <= 0 ? t('Out of stock') : t('{in_stock} left', { in_stock: item.in_stock })}
                       </span>
                     </span>
                   </ButtonBase>
@@ -146,7 +147,7 @@ export default function ProductFinder({
               })}
             </div>
             {filteredProducts.length > maxTiles && (
-              <p className="text-caption text-ink-muted text-center mt-3">Showing {maxTiles} of {filteredProducts.length}. Type in the search box to narrow down.</p>
+              <p className="text-caption text-ink-muted text-center mt-3">{t('Showing {maxTiles} of {length}. Type in the search box to narrow down.', { maxTiles, length: filteredProducts.length })}</p>
             )}
           </>
         )}

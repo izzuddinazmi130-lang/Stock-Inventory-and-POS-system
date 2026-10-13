@@ -1,6 +1,7 @@
 import React, { createContext, forwardRef, useContext, useId, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronDown, Eye, EyeOff, Info, Search, X, XCircle } from 'lucide-react';
-import { cn, focusRing } from './cn';
+import { cn, focusRing } from './cn';
+import { t as tr } from '../../i18n';
 
 // ── Shared input styling ────────────────────────────────────────────────────
 export const inputClass = cn(
@@ -52,7 +53,7 @@ export function Field({ label, required, optional, hint, error, children, classN
             <label htmlFor={id} className={cn('block text-sm font-medium text-ink', labelClassName)}>
               {label}
               {required && !hideRequiredMark && <span className="text-danger-fg ml-0.5" aria-hidden="true">*</span>}
-              {optional && <span className="text-ink-muted font-normal ml-1">(optional)</span>}
+              {optional && <span className="text-ink-muted font-normal ml-1">{tr('(optional)')}</span>}
             </label>
             {labelAction}
           </div>
@@ -107,7 +108,7 @@ export const PasswordInput = forwardRef(function PasswordInput(rawProps, ref) {
       <button
         type="button"
         onClick={() => setVisible(v => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? tr('Hide password') : tr('Show password')}
         aria-pressed={visible}
         className={cn(
           'absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center',
@@ -147,7 +148,7 @@ export const MoneyInput = forwardRef(function MoneyInput(rawProps, ref) {
   const { error, className, size = 'md', ...props } = useFieldProps(rawProps);
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-caption font-semibold pointer-events-none">RM</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-caption font-semibold pointer-events-none">{tr('RM')}</span>
       <input
         ref={ref}
         type="number"
@@ -187,7 +188,7 @@ export const SearchInput = forwardRef(function SearchInput({ value, onChange, on
           type="button"
           onClick={clear}
           className={cn('absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-ink-muted hover:text-ink hover:bg-sunken transition-colors', focusRing)}
-          aria-label="Clear search"
+          aria-label={tr('Clear search')}
         >
           <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
@@ -267,13 +268,13 @@ export function Switch({ checked, onChange, label, description, disabled, classN
  *   <QuantityStepper value={qty} onChange={setQty} min={1} label="Quantity of Kaftan" size="lg" />
  * `size="lg"` gives 44 px touch targets (POS).
  */
-export function QuantityStepper({ value, onChange, min = 0, max = Infinity, label = 'Quantity', size = 'md', className }) {
+export function QuantityStepper({ value, onChange, min = 0, max = Infinity, label = tr('Quantity'), size = 'md', className }) {
   const box = size === 'lg' ? 'w-11 h-11' : 'w-10 h-10';
   const clamp = (n) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
   const btn = cn(box, 'flex items-center justify-center text-ink-secondary hover:bg-subtle hover:text-ink transition-colors disabled:opacity-40 disabled:pointer-events-none', focusRing);
   return (
     <div className={cn('inline-flex items-center rounded-lg border border-line bg-surface shadow-xs', className)} role="group" aria-label={label}>
-      <button type="button" className={cn(btn, 'rounded-l-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) - 1))} disabled={(parseInt(value, 10) || 0) <= min} aria-label={`Decrease ${label.toLowerCase()}`}>
+      <button type="button" className={cn(btn, 'rounded-l-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) - 1))} disabled={(parseInt(value, 10) || 0) <= min} aria-label={tr('Decrease {value}', { value: label.toLowerCase() })}>
         <span aria-hidden="true" className="text-lg leading-none">−</span>
       </button>
       <input
@@ -286,7 +287,7 @@ export function QuantityStepper({ value, onChange, min = 0, max = Infinity, labe
         className={cn(size === 'lg' ? 'h-11 w-12' : 'h-10 w-14', 'text-center tabular-nums font-semibold text-sm text-ink border-x border-line bg-transparent focus:outline-none focus:bg-accent-soft/40')}
         aria-label={label}
       />
-      <button type="button" className={cn(btn, 'rounded-r-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) + 1))} disabled={(parseInt(value, 10) || 0) >= max} aria-label={`Increase ${label.toLowerCase()}`}>
+      <button type="button" className={cn(btn, 'rounded-r-lg')} onClick={() => onChange(clamp((parseInt(value, 10) || 0) + 1))} disabled={(parseInt(value, 10) || 0) >= max} aria-label={tr('Increase {value}', { value: label.toLowerCase() })}>
         <span aria-hidden="true" className="text-lg leading-none">+</span>
       </button>
     </div>
@@ -368,7 +369,7 @@ export function Alert({ tone = 'info', title, children, onClose, icon, className
       </div>
       {action}
       {onClose && (
-        <button type="button" onClick={onClose} className={cn('p-0.5 -m-0.5 rounded-md opacity-70 hover:opacity-100 transition-opacity', focusRing)} aria-label="Dismiss">
+        <button type="button" onClick={onClose} className={cn('p-0.5 -m-0.5 rounded-md opacity-70 hover:opacity-100 transition-opacity', focusRing)} aria-label={tr('Dismiss')}>
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       )}

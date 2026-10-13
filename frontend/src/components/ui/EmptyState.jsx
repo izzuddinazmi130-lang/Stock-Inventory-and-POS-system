@@ -1,7 +1,8 @@
 import React from 'react';
 import { AlertOctagon, Inbox, RefreshCw } from 'lucide-react';
 import { cn } from './cn';
-import Button from './Button';
+import Button from './Button';
+import { t } from '../../i18n';
 
 /**
  * Friendly "nothing here" block.
@@ -10,7 +11,7 @@ import Button from './Button';
  * `message` / `action` + `actionLabel` (older API) still work.
  */
 export default function EmptyState({ icon: Icon = Inbox, title, description, message, action, actionLabel, compact = false, className }) {
-  const heading = title || message || 'Nothing here yet';
+  const heading = title || message || t('Nothing here yet');
   let actionNode = action;
   if (typeof action === 'function') {
     actionNode = actionLabel ? <Button variant="secondary" size="sm" onClick={action}>{actionLabel}</Button> : null;
@@ -29,7 +30,7 @@ export default function EmptyState({ icon: Icon = Inbox, title, description, mes
 export { EmptyState };
 
 /** Loading failed: explain and offer a retry. */
-export function ErrorState({ title = 'Something went wrong', description, onRetry, compact = false, className }) {
+export function ErrorState({ title = t('Something went wrong'), description, onRetry, compact = false, className }) {
   return (
     <div role="alert" className={cn('flex flex-col items-center justify-center text-center animate-fade-in', compact ? 'py-8 px-4' : 'py-14 px-6', className)}>
       <div className="w-12 h-12 rounded-full bg-danger-soft flex items-center justify-center mb-3 ring-8 ring-danger-soft/50">
@@ -39,7 +40,7 @@ export function ErrorState({ title = 'Something went wrong', description, onRetr
       {description && <p className="text-sm text-ink-muted mt-1 max-w-sm">{description}</p>}
       {onRetry && (
         <Button variant="secondary" size="sm" icon={RefreshCw} onClick={onRetry} className="mt-4">
-          Try again
+          {t('Try again')}
         </Button>
       )}
     </div>

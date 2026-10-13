@@ -3,17 +3,18 @@ import { Package, Store, TrendingUp } from 'lucide-react';
 import api from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 import { BusinessDot, Card, CardHeader, EmptyState, Table, THead, TBody, TH, TR, TD, TableState, cn } from '../../components/ui';
+import { t, locale } from '../../i18n';
 
-const money = (v) => `RM ${(Number(v) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const timeOf = (v) => (v ? new Date(String(v).replace(' ', 'T')).toLocaleTimeString('en-MY', { hour: 'numeric', minute: '2-digit' }) : '');
+const money = (v) => `RM ${(Number(v) || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const timeOf = (v) => (v ? new Date(String(v).replace(' ', 'T')).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' }) : '');
 const hourLabel = (h) => `${((h + 11) % 12) + 1}${h < 12 ? 'am' : 'pm'}`;
 
 function sinceLabel(v) {
   if (!v) return null;
   const mins = Math.round((Date.now() - new Date(String(v).replace(' ', 'T')).getTime()) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h ago`;
+  if (mins < 1) return t('just now');
+  if (mins < 60) return t('{mins}m ago', { mins });
+  if (mins < 24 * 60) return t('{value}h ago', { value: Math.floor(mins / 60) });
   return timeOf(v);
 }
 
@@ -21,7 +22,7 @@ function sinceLabel(v) {
 export function DayDelta({ data }) {
   const prev = data?.previous;
   if (!prev) return null;
-  return `Day before: ${money(prev.revenue)}`;
+  return t('Day before: {revenue}', { revenue: money(prev.revenue) });
 }
 
 /**
@@ -65,21 +66,21 @@ export default function DayInsights({ day, isToday, dayLabel, businessId, branch
 
   const first = loading && !data;
   const totals = data?.totals;
-  const when = isToday ? 'today' : `on ${dayLabel}`;
+  const when = isToday ? t('today') : t('on {day}', { day: dayLabel });
 
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
         <Card className="xl:col-span-2">
-          <CardHeader title="Sales by hour" description={`${dayLabel} · when customers bought`} />
+          <CardHeader title={t('Sales by hour')} description={t('{dayLabel} · when customers bought', { dayLabel })} />
           <div className="p-5">{first ? <div className="skeleton h-48" /> : <HourlyChart hours={data?.by_hour || []} />}</div>
         </Card>
         <Card>
-          <CardHeader title="Best sellers" description={`Most items sold ${when}`} />
+          <CardHeader title={t('Best sellers')} description={t('Most items sold {when}', { when })} />
           {first ? (
             <div className="p-5 space-y-3">{[0, 1, 2].map(i => <div key={i} className="skeleton h-10" />)}</div>
           ) : (data?.top_products || []).length === 0 ? (
-            <EmptyState compact icon={Package} title="Nothing sold yet" />
+            <EmptyState compact icon={Package} title={t('Nothing sold yet')} />
           ) : (
             <ol className="divide-y divide-line-soft">
               {data.top_products.map((p, i) => (
@@ -90,7 +91,7 @@ export default function DayInsights({ day, isToday, dayLabel, businessId, branch
                     <div className="text-caption text-ink-muted truncate"><span className="font-mono">{p.sku}</span>{p.variant_text ? ` · ${p.variant_text}` : ''}</div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-semibold text-ink tabular-nums">{p.quantity} sold</div>
+                    <div className="text-sm font-semibold text-ink tabular-nums">{p.quantity}{t(' sold')}</div>
                     <div className="text-caption text-ink-muted tabular-nums">{money(p.revenue)}</div>
                   </div>
                 </li>
@@ -102,20 +103,20 @@ export default function DayInsights({ day, isToday, dayLabel, businessId, branch
 
       {showBranches && (
         <Card className="mb-4 overflow-hidden">
-          <CardHeader title="Sales by branch" description={`Every branch ${when}, including branches with no sales yet`} />
+          <CardHeader title={t('Sales by branch')} description={t('Every branch {when}, including branches with no sales yet', { when })} />
           <Table minWidth="44rem">
             <THead>
               <TR>
-                <TH>Branch</TH>
-                <TH numeric>Receipts</TH>
-                <TH numeric>Items</TH>
-                <TH>Share of sales</TH>
-                <TH numeric>Total sales</TH>
-                <TH numeric>Last sale</TH>
+                <TH>{t('Branch')}</TH>
+                <TH numeric>{t('Receipts')}</TH>
+                <TH numeric>{t('Items')}</TH>
+                <TH>{t('Share of sales')}</TH>
+                <TH numeric>{t('Total sales')}</TH>
+                <TH numeric>{t('Last sale')}</TH>
               </TR>
             </THead>
             <TBody>
-              <TableState colSpan={6} loading={first} empty={!first && (data?.branches || []).length === 0} emptyIcon={Store} emptyTitle="No active branches" />
+              <TableState colSpan={6} loading={first} empty={!first && (data?.branches || []).length === 0} emptyIcon={Store} emptyTitle={t('No active branches')} />
               {(data?.branches || []).map((b, i) => {
                 const share = totals?.revenue ? (b.revenue / totals.revenue) * 100 : 0;
                 return (
@@ -143,7 +144,7 @@ export default function DayInsights({ day, isToday, dayLabel, businessId, branch
                     <TD numeric>
                       {b.last_sale_at
                         ? <span className="text-ink-secondary">{isToday ? sinceLabel(b.last_sale_at) : timeOf(b.last_sale_at)}</span>
-                        : <span className="text-ink-subtle">No sales</span>}
+                        : <span className="text-ink-subtle">{t('No sales')}</span>}
                     </TD>
                   </TR>
                 );
@@ -176,8 +177,8 @@ function HourlyChart({ hours }) {
     return (
       <div className="flex h-48 flex-col items-center justify-center rounded-lg border border-dashed border-line text-center">
         <TrendingUp className="mb-2 h-5 w-5 text-ink-subtle" aria-hidden="true" />
-        <p className="text-sm font-medium text-ink">No sales yet</p>
-        <p className="text-caption text-ink-muted">Bars appear here hour by hour as sales come in.</p>
+        <p className="text-sm font-medium text-ink">{t('No sales yet')}</p>
+        <p className="text-caption text-ink-muted">{t('Bars appear here hour by hour as sales come in.')}</p>
       </div>
     );
   }
@@ -191,7 +192,7 @@ function HourlyChart({ hours }) {
             <div className="h-px flex-1 -translate-y-1/2 bg-line-soft" />
           </div>
         ))}
-        <div className="absolute inset-y-0 left-16 right-0 flex items-end gap-[2px]" role="img" aria-label={`Sales per hour; busiest ${peak ? hourLabel(peak.hour) : ''}`}>
+        <div className="absolute inset-y-0 left-16 right-0 flex items-end gap-[2px]" role="img" aria-label={t('Sales per hour; busiest {value}', { value: peak ? hourLabel(peak.hour) : '' })}>
           {shown.map(h => {
             const pct = (h.revenue / niceMax) * 100;
             const isHover = hover === h.hour;
@@ -208,7 +209,7 @@ function HourlyChart({ hours }) {
                 {isHover && (
                   <div className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-caption text-white shadow-popover" style={{ bottom: `calc(${Math.min(pct, 62)}% + 6px)` }}>
                     <div className="font-semibold">{hourLabel(h.hour)}–{hourLabel((h.hour + 1) % 24)}</div>
-                    <div className="tabular-nums">{money(h.revenue)} · {h.sales_count} receipt{h.sales_count === 1 ? '' : 's'}</div>
+                    <div className="tabular-nums">{money(h.revenue)}{t(' · {sales_count} {sales_count|receipt|receipts}', { sales_count: h.sales_count })}</div>
                   </div>
                 )}
               </div>

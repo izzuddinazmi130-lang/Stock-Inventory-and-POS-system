@@ -26,7 +26,8 @@ import PopUpStores from './pages/stores/PopUpStores';
 import AddProductPage from './pages/products/AddProductPage';
 import DamageProducts from './pages/products/DamageProducts';
 import LowStock from './pages/products/LowStock';
-import SalesHistory from './pages/sales/SalesHistory';
+import SalesHistory from './pages/sales/SalesHistory';
+import { t } from './i18n';
 
 // Dev-only component gallery (never linked in the sidebar, not built into production routes)
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/dev/Styleguide')) : null;
@@ -45,7 +46,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return (
       <div className="min-h-screen bg-page flex items-center justify-center" role="status" aria-live="polite">
         <span className="w-5 h-5 rounded-full border-2 border-line border-t-accent animate-spin" aria-hidden="true" />
-        <span className="sr-only">Checking your session…</span>
+        <span className="sr-only">{t('Checking your session…')}</span>
       </div>
     );
   }

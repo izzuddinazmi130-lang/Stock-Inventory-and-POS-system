@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Package, PackageMinus, AlertTriangle, Receipt, BarChart3, Building2, Users, History, Store, ScanLine,
-} from 'lucide-react';
+} from 'lucide-react';
+import { t } from '../i18n';
 
 // Sidebar items per role. Visibility matches what each role could reach before the redesign;
 // the routes themselves are still guarded in App.jsx and by the API.
@@ -9,50 +10,50 @@ export function navigationFor(user) {
   if (!user) return [];
   if (user.role === 'super_admin') {
     return [
-      { items: [{ to: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true }] },
+      { items: [{ to: '/dashboard', label: t('Overview'), icon: LayoutDashboard, exact: true }] },
       {
-        label: 'Inventory',
+        label: t('Inventory'),
         items: [
-          { to: '/products', label: 'Products', icon: Package, match: ['/products', '/qr/generate'] },
-          { to: '/low-stock', label: 'Low stock', icon: PackageMinus },
-          { to: '/damage', label: 'Damage records', icon: AlertTriangle },
-          { to: '/reports', label: 'Stock reports', icon: BarChart3 },
+          { to: '/products', label: t('Products'), icon: Package, match: ['/products', '/qr/generate'] },
+          { to: '/low-stock', label: t('Low stock'), icon: PackageMinus },
+          { to: '/damage', label: t('Damage records'), icon: AlertTriangle },
+          { to: '/reports', label: t('Stock reports'), icon: BarChart3 },
         ],
       },
       {
-        label: 'Sales',
+        label: t('Sales'),
         items: [
-          { to: '/sales', label: 'Sales history', icon: Receipt },
-          { to: '/stores', label: 'Pop-up stores', icon: Store },
+          { to: '/sales', label: t('Sales history'), icon: Receipt },
+          { to: '/stores', label: t('Pop-up stores'), icon: Store },
         ],
       },
       {
-        label: 'Manage',
+        label: t('Manage'),
         items: [
-          { to: '/businesses', label: 'Businesses', icon: Building2, match: ['/businesses', '/branches'] },
-          { to: '/users', label: 'Users', icon: Users },
-          { to: '/audit', label: 'Activity log', icon: History },
+          { to: '/businesses', label: t('Businesses'), icon: Building2, match: ['/businesses', '/branches'] },
+          { to: '/users', label: t('Users'), icon: Users },
+          { to: '/audit', label: t('Activity log'), icon: History },
         ],
       },
     ];
   }
   return [
-    { items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true }] },
+    { items: [{ to: '/dashboard', label: t('Dashboard'), icon: LayoutDashboard, exact: true }] },
     {
-      label: 'Selling',
+      label: t('Selling'),
       items: [
-        { to: '/qr/scan', label: 'Point of sale', icon: ScanLine, match: ['/qr'] },
-        { to: '/sales', label: 'Sales history', icon: Receipt },
-        { to: `/branches/${user.branch_id}/stores`, label: 'Pop-up stores', icon: Store, match: ['/branches', '/stores'] },
+        { to: '/qr/scan', label: t('Point of sale'), icon: ScanLine, match: ['/qr'] },
+        { to: '/sales', label: t('Sales history'), icon: Receipt },
+        { to: `/branches/${user.branch_id}/stores`, label: t('Pop-up stores'), icon: Store, match: ['/branches', '/stores'] },
       ],
     },
     {
-      label: 'Inventory',
+      label: t('Inventory'),
       items: [
-        { to: '/products', label: 'Products', icon: Package },
-        { to: '/low-stock', label: 'Low stock', icon: PackageMinus },
-        { to: '/damage', label: 'Damage records', icon: AlertTriangle },
-        { to: '/reports', label: 'Stock reports', icon: BarChart3 },
+        { to: '/products', label: t('Products'), icon: Package },
+        { to: '/low-stock', label: t('Low stock'), icon: PackageMinus },
+        { to: '/damage', label: t('Damage records'), icon: AlertTriangle },
+        { to: '/reports', label: t('Stock reports'), icon: BarChart3 },
       ],
     },
   ];

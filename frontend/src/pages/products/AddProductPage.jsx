@@ -12,6 +12,7 @@ import {
   Package, ChevronRight, ChevronLeft, Building2, Store, Hash, Check, CheckCircle2, QrCode, Printer,
   Sparkles, Plus, Minus, Pencil, Info, AlertTriangle,
 } from 'lucide-react';
+import { t } from '../../i18n';
 
 function getAttributeOptions(options) {
   if (Array.isArray(options)) return options;
@@ -30,10 +31,10 @@ const toMoney = (v) => parseFloat(v) || 0;
 
 // Per-product numbers. With sizes, each size row has its own copy of these.
 const PRICE_FIELDS = [
-  { key: 'selling_price', label: 'Customer price', hint: 'Normal walk-in price.' },
-  { key: 'price_dealer',  label: 'Dealer price',   hint: 'For resellers / wholesale.' },
-  { key: 'price_staff',   label: 'Staff price',    hint: 'Employee purchase price.' },
-  { key: 'unit_price',    label: 'Cost price',     hint: 'What you paid. Internal only.' },
+  { key: 'selling_price', label: t('Customer price'), hint: t('Normal walk-in price.') },
+  { key: 'price_dealer',  label: t('Dealer price'),   hint: t('For resellers / wholesale.') },
+  { key: 'price_staff',   label: t('Staff price'),    hint: t('Employee purchase price.') },
+  { key: 'unit_price',    label: t('Cost price'),     hint: t('What you paid. Internal only.') },
 ];
 const ROW_FIELDS = ['quantity', 'minimum_quantity', ...PRICE_FIELDS.map(p => p.key)];
 
@@ -58,7 +59,7 @@ const EMPTY_FORM = {
 function StepBar({ steps, current }) {
   const currentIdx = steps.findIndex(s => s.key === current);
   return (
-    <ol className="flex items-center mb-6" aria-label="Progress">
+    <ol className="flex items-center mb-6" aria-label={t('Progress')}>
       {steps.map((s, i) => {
         const done = i < currentIdx;
         const active = i === currentIdx;
@@ -110,10 +111,10 @@ export default function AddProductPage() {
   const isSuperAdmin = user?.role === 'super_admin';
 
   const steps = useMemo(() => [
-    ...(isSuperAdmin ? [{ key: 'where', label: 'Where' }] : []),
-    { key: 'details', label: 'Product details' },
-    { key: 'pricing', label: 'Stock & prices' },
-    { key: 'review', label: 'Review' },
+    ...(isSuperAdmin ? [{ key: 'where', label: t('Where') }] : []),
+    { key: 'details', label: t('Product details') },
+    { key: 'pricing', label: t('Stock & prices') },
+    { key: 'review', label: t('Review') },
   ], [isSuperAdmin]);
 
   const [step, setStep] = useState(isSuperAdmin ? 'where' : 'details');
@@ -249,13 +250,13 @@ export default function AddProductPage() {
   const validate = (which) => {
     const e = {};
     if (which === 'where') {
-      if (!selectedBiz) e.business = 'Choose a business.';
-      if (selectedBranches.length === 0) e.branches = 'Choose at least one branch.';
+      if (!selectedBiz) e.business = t('Choose a business.');
+      if (selectedBranches.length === 0) e.branches = t('Choose at least one branch.');
     }
     if (which === 'details') {
-      if (!form.item_name.trim()) e.item_name = 'Enter the product name.';
-      if (!form.category) e.category = 'Choose a category.';
-      if (sizeAttribute && form.size_variants.length === 0) e.sizes = `Pick at least one ${sizeAttribute.label.toLowerCase()}.`;
+      if (!form.item_name.trim()) e.item_name = t('Enter the product name.');
+      if (!form.category) e.category = t('Choose a category.');
+      if (sizeAttribute && form.size_variants.length === 0) e.sizes = t('Pick at least one {value}.', { value: sizeAttribute.label.toLowerCase() });
       // Every product (or every size) needs its own SKU
       const rows = hasSizes ? form.size_variants.map(row => ({ key: `${row.size}.sku`, sku: row.sku })) : (sizeAttribute ? [] : [{ key: 'sku', sku: form.sku }]);
       const seen = {};
@@ -264,7 +265,7 @@ export default function AddProductPage() {
         const problem = skuFormatError(value) || (skuCheck(value)?.state === 'taken' ? skuCheck(value).message : '');
         if (problem) { e[key] = problem; return; }
         const lower = value.toLowerCase();
-        if (seen[lower]) { e[key] = 'Same SKU as another size. Each size needs its own SKU.'; e[seen[lower]] = e[seen[lower]] || e[key]; }
+        if (seen[lower]) { e[key] = t('Same SKU as another size. Each size needs its own SKU.'); e[seen[lower]] = e[seen[lower]] || e[key]; }
         else seen[lower] = key;
       });
     }
@@ -272,9 +273,9 @@ export default function AddProductPage() {
       const rows = hasSizes ? form.size_variants : [form];
       rows.forEach(row => {
         const prefix = hasSizes ? `${row.size}.` : '';
-        if (row.quantity !== '' && (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 0)) e[`${prefix}quantity`] = 'Whole number, 0 or more.';
-        if (row.minimum_quantity !== '' && (!Number.isInteger(Number(row.minimum_quantity)) || Number(row.minimum_quantity) < 0)) e[`${prefix}minimum_quantity`] = 'Whole number, 0 or more.';
-        PRICE_FIELDS.forEach(p => { if (row[p.key] !== '' && Number(row[p.key]) < 0) e[`${prefix}${p.key}`] = 'Cannot be negative.'; });
+        if (row.quantity !== '' && (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 0)) e[`${prefix}quantity`] = t('Whole number, 0 or more.');
+        if (row.minimum_quantity !== '' && (!Number.isInteger(Number(row.minimum_quantity)) || Number(row.minimum_quantity) < 0)) e[`${prefix}minimum_quantity`] = t('Whole number, 0 or more.');
+        PRICE_FIELDS.forEach(p => { if (row[p.key] !== '' && Number(row[p.key]) < 0) e[`${prefix}${p.key}`] = t('Cannot be negative.'); });
       });
     }
     setErrors(e);
@@ -289,10 +290,10 @@ export default function AddProductPage() {
     const list = [];
     const rows = hasSizes ? form.size_variants : [{ ...form, size: null }];
     rows.forEach(row => {
-      const label = row.size ? `Size ${row.size}: ` : '';
-      if (toMoney(row.selling_price) === 0) list.push(`${label}customer price is RM 0.00.`);
+      const label = row.size ? t('Size {size}: ', { size: row.size }) : '';
+      if (toMoney(row.selling_price) === 0) list.push(label + t('customer price is RM 0.00.'));
       if (toMoney(row.unit_price) > 0 && toMoney(row.selling_price) > 0 && toMoney(row.selling_price) < toMoney(row.unit_price)) {
-        list.push(`${label}customer price is lower than the cost price.`);
+        list.push(label + t('customer price is lower than the cost price.'));
       }
     });
     return list;
@@ -335,7 +336,7 @@ export default function AddProductPage() {
         setCreatedProduct(res.data);
         go('done');
       } else {
-        setError(res.data.message || 'Failed to create product.');
+        setError(res.data.message || t('Failed to create product.'));
       }
     } catch (err) {
       const message = err.response?.data?.message || err.message;
@@ -357,11 +358,11 @@ export default function AddProductPage() {
 
   const whereLabel = (
     <>
-      <strong className="text-ink">{selectedBizObj?.name || 'Business'}</strong>
+      <strong className="text-ink">{selectedBizObj?.name || t('Business')}</strong>
       {' · '}
       {selectedBranchObjs.length === 0 ? '—'
         : selectedBranchObjs.length === 1 ? selectedBranchObjs[0].name
-        : `${selectedBranchObjs[0].name} + ${selectedBranchObjs.length - 1} more`}
+        : t('{name} + {value} more', { name: selectedBranchObjs[0].name, value: selectedBranchObjs.length - 1 })}
     </>
   );
 
@@ -369,9 +370,9 @@ export default function AddProductPage() {
   return (
     <Layout>
       <PageHeader
-        breadcrumbs={[{ label: 'Products', to: '/products' }, { label: 'Add product' }]}
-        title="Add product"
-        description={step === 'done' ? 'Print the QR labels and stick them on the stock.' : 'Create a product in the catalog and give it starting stock.'}
+        breadcrumbs={[{ label: t('Products'), to: '/products' }, { label: t('Add product') }]}
+        title={t('Add product')}
+        description={step === 'done' ? t('Print the QR labels and stick them on the stock.') : t('Create a product in the catalog and give it starting stock.')}
       />
 
       <div className="max-w-3xl mx-auto">
@@ -382,10 +383,10 @@ export default function AddProductPage() {
           <div className="mb-4 px-4 py-2.5 bg-surface border border-line rounded-xl shadow-card flex items-center justify-between gap-3 text-sm text-ink-secondary">
             <span className="flex items-center gap-2 min-w-0">
               {selectedBizObj ? <BusinessDot business={selectedBizObj} /> : <Store className="w-4 h-4 text-ink-muted flex-shrink-0" aria-hidden="true" />}
-              <span className="truncate">Adding to {whereLabel}</span>
+              <span className="truncate">{t('Adding to ')}{whereLabel}</span>
             </span>
             {isSuperAdmin && (
-              <Button variant="link" size="sm" onClick={() => go('where')}>Change</Button>
+              <Button variant="link" size="sm" onClick={() => go('where')}>{t('Change')}</Button>
             )}
           </div>
         )}
@@ -396,14 +397,14 @@ export default function AddProductPage() {
         {step === 'where' && (
           <Card
             icon={Building2}
-            title="Where is this product sold?"
-            description="Choose the business, then every branch that will stock it. Each branch gets its own stock count."
+            title={t('Where is this product sold?')}
+            description={t('Choose the business, then every branch that will stock it. Each branch gets its own stock count.')}
             footer={<>
-              <Button variant="secondary" to="/products">Cancel</Button>
-              <Button iconRight={ChevronRight} onClick={() => next('where', 'details')}>Next: Product details</Button>
+              <Button variant="secondary" to="/products">{t('Cancel')}</Button>
+              <Button iconRight={ChevronRight} onClick={() => next('where', 'details')}>{t('Next: Product details')}</Button>
             </>}
           >
-            <Field label="Business" required error={errors.business}>
+            <Field label={t('Business')} required error={errors.business}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {businesses.map(biz => {
                   const active = String(selectedBiz) === String(biz.id);
@@ -417,7 +418,7 @@ export default function AddProductPage() {
                       <span className="flex items-center gap-2 text-sm font-semibold text-ink">
                         <BusinessDot business={biz} /> {biz.name}
                       </span>
-                      <span className="block text-caption text-ink-muted capitalize mt-0.5">{biz.industry || 'General'}</span>
+                      <span className="block text-caption text-ink-muted capitalize mt-0.5">{biz.industry || t('General')}</span>
                     </ButtonBase>
                   );
                 })}
@@ -425,19 +426,19 @@ export default function AddProductPage() {
             </Field>
 
             {selectedBiz && (
-              <Field label="Branches" required error={errors.branches}>
+              <Field label={t('Branches')} required error={errors.branches}>
                 {branches.length === 0 ? (
-                  <p className="text-sm text-ink-muted">This business has no branches yet. Add one under Businesses first.</p>
+                  <p className="text-sm text-ink-muted">{t('This business has no branches yet. Add one under Businesses first.')}</p>
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-caption text-ink-muted tabular-nums">{selectedBranches.length} of {branches.length} selected</span>
+                      <span className="text-caption text-ink-muted tabular-nums">{selectedBranches.length}{t(' of {length} selected', { length: branches.length })}</span>
                       <Button
                         variant="link"
                         size="sm"
                         onClick={() => { setSelectedBranches(selectedBranches.length === branches.length ? [] : branches.map(b => b.id)); setErrors(e => ({ ...e, branches: undefined })); }}
                       >
-                        {selectedBranches.length === branches.length ? 'Clear all' : 'Select all'}
+                        {selectedBranches.length === branches.length ? t('Clear all') : t('Select all')}
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -460,7 +461,7 @@ export default function AddProductPage() {
                             <span className="min-w-0">
                               <span className="block text-sm font-semibold text-ink truncate">{br.name}</span>
                               <span className="block text-caption text-ink-muted font-mono">
-                                {br.branch_code || `BR${br.id}`}{Number(br.is_active) === 0 && <span className="ml-1 font-sans text-warning-fg">· inactive</span>}
+                                {br.branch_code || `BR${br.id}`}{Number(br.is_active) === 0 && <span className="ml-1 font-sans text-warning-fg">{t('· inactive')}</span>}
                               </span>
                             </span>
                           </ButtonBase>
@@ -478,21 +479,21 @@ export default function AddProductPage() {
         {step === 'details' && (
           <Card
             icon={Package}
-            title="Product details"
-            description="What the product is. Stock and prices come next."
+            title={t('Product details')}
+            description={t('What the product is. Stock and prices come next.')}
             footer={<>
               {isSuperAdmin
-                ? <Button variant="secondary" icon={ChevronLeft} onClick={() => go('where')}>Back</Button>
-                : <Button variant="secondary" to="/products">Cancel</Button>}
-              <Button iconRight={ChevronRight} onClick={() => next('details', 'pricing')}>Next: Stock &amp; prices</Button>
+                ? <Button variant="secondary" icon={ChevronLeft} onClick={() => go('where')}>{t('Back')}</Button>
+                : <Button variant="secondary" to="/products">{t('Cancel')}</Button>}
+              <Button iconRight={ChevronRight} onClick={() => next('details', 'pricing')}>{t('Next: Stock & prices')}</Button>
             </>}
           >
-            <Field label="Product name" required error={errors.item_name}>
+            <Field label={t('Product name')} required error={errors.item_name}>
               <Input
                 autoFocus
                 value={form.item_name}
                 onChange={e => setField('item_name', e.target.value)}
-                placeholder="e.g. Kaftan Safira"
+                placeholder={t('e.g. Kaftan Safira')}
                 error={errors.item_name}
                 maxLength={200}
               />
@@ -503,7 +504,7 @@ export default function AddProductPage() {
                 <Input
                   value={form.sku}
                   onChange={e => setField('sku', e.target.value)}
-                  placeholder="e.g. KF-SAFIRA-01"
+                  placeholder={t('e.g. KF-SAFIRA-01')}
                   error={Boolean(skuError(form.sku, 'sku'))}
                   maxLength={50}
                   autoComplete="off"
@@ -515,17 +516,17 @@ export default function AddProductPage() {
               </Field>
             )}
 
-            <Field label="Category" required error={errors.category}>
+            <Field label={t('Category')} required error={errors.category}>
               {configLoaded && categories.length === 0 ? (
                 <Alert tone="warning">
-                  This business has no categories yet.{' '}
+                  {t('This business has no categories yet. ')}
                   {isSuperAdmin
-                    ? <Link to={`/businesses/${selectedBiz}/forms`} className="font-semibold underline">Set them up in Product form</Link>
-                    : 'Ask HQ to add categories for your business.'}
+                    ? <Link to={`/businesses/${selectedBiz}/forms`} className="font-semibold underline">{t('Set them up in Product form')}</Link>
+                    : t('Ask HQ to add categories for your business.')}
                 </Alert>
               ) : (
                 <Select value={form.category} onChange={e => setField('category', e.target.value)} error={errors.category}>
-                  <option value="">Choose a category…</option>
+                  <option value="">{t('Choose a category…')}</option>
                   {categories.map(category => <option key={category.id} value={category.name}>{category.name}</option>)}
                 </Select>
               )}
@@ -540,7 +541,7 @@ export default function AddProductPage() {
                     <Field key={attr.attribute_key} label={attr.label} optional>
                       {attr.input_type === 'select' ? (
                         <Select value={value} onChange={e => setValue(e.target.value)}>
-                          <option value="">Choose…</option>
+                          <option value="">{t('Choose…')}</option>
                           {getAttributeOptions(attr.options).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </Select>
                       ) : (
@@ -554,10 +555,10 @@ export default function AddProductPage() {
 
             {sizeAttribute && (
               <Field
-                label={`${sizeAttribute.label}s you are adding`}
+                label={t('{label}s you are adding', { label: sizeAttribute.label })}
                 required
                 error={errors.sizes}
-                hint="Each size becomes its own product with its own SKU, stock and prices. You’ll type each size’s SKU below."
+                hint={t('Each size becomes its own product with its own SKU, stock and prices. You’ll type each size’s SKU below.')}
               >
                 <div className="flex flex-wrap gap-2">
                   {getAttributeOptions(sizeAttribute.options).map(size => {
@@ -578,7 +579,7 @@ export default function AddProductPage() {
             )}
 
             {hasSizes && (
-              <Field label={`SKU for each ${sizeAttribute?.label?.toLowerCase() || 'size'}`} required hint={SKU_HINT}>
+              <Field label={t('SKU for each {value}', { value: sizeAttribute?.label?.toLowerCase() || 'size' })} required hint={SKU_HINT}>
                 <div className="space-y-2">
                   {form.size_variants.map(row => {
                     const err = skuError(row.sku, `${row.size}.sku`);
@@ -589,8 +590,8 @@ export default function AddProductPage() {
                           <Input
                             value={row.sku || ''}
                             onChange={e => updateSizeRow(row.size, 'sku', e.target.value)}
-                            placeholder={`e.g. KF-SAFIRA-${row.size}`}
-                            aria-label={`SKU for size ${row.size}`}
+                            placeholder={t('e.g. KF-SAFIRA-{size}', { size: row.size })}
+                            aria-label={t('SKU for size {size}', { size: row.size })}
                             error={Boolean(err)}
                             maxLength={50}
                             autoComplete="off"
@@ -612,16 +613,16 @@ export default function AddProductPage() {
               <Switch
                 checked={form.mark_as_new}
                 onChange={v => setField('mark_as_new', v)}
-                label="Mark as new arrival"
-                description="Shows a “NEW” badge on the product for a while."
+                label={t('Mark as new arrival')}
+                description={t('Shows a “NEW” badge on the product for a while.')}
               />
               {form.mark_as_new && (
-                <Field label="Show the badge for">
+                <Field label={t('Show the badge for')}>
                   <Select value={form.new_duration_days || 14} onChange={e => setField('new_duration_days', parseInt(e.target.value, 10))} className="sm:max-w-[12rem]">
-                    <option value={7}>7 days</option>
-                    <option value={14}>14 days</option>
-                    <option value={30}>30 days</option>
-                    <option value={60}>60 days</option>
+                    <option value={7}>{t('7 days')}</option>
+                    <option value={14}>{t('14 days')}</option>
+                    <option value={30}>{t('30 days')}</option>
+                    <option value={60}>{t('60 days')}</option>
                   </Select>
                 </Field>
               )}
@@ -633,35 +634,35 @@ export default function AddProductPage() {
         {step === 'pricing' && (
           <Card
             icon={Hash}
-            title="Stock & prices"
+            title={t('Stock & prices')}
             description={selectedBranches.length > 1
-              ? `The starting stock is added in each of the ${selectedBranches.length} selected branches.`
-              : 'How many you have now, and what to charge.'}
+              ? t('The starting stock is added in each of the {length} selected branches.', { length: selectedBranches.length })
+              : t('How many you have now, and what to charge.')}
             footer={<>
-              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('details')}>Back</Button>
-              <Button iconRight={ChevronRight} onClick={() => next('pricing', 'review')}>Next: Review</Button>
+              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('details')}>{t('Back')}</Button>
+              <Button iconRight={ChevronRight} onClick={() => next('pricing', 'review')}>{t('Next: Review')}</Button>
             </>}
           >
             {!hasSizes ? (
               <>
                 <section>
-                  <h3 className="text-sm font-semibold text-ink mb-3">Stock</h3>
+                  <h3 className="text-sm font-semibold text-ink mb-3">{t('Stock')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="Starting stock" hint="How many you have now. 0 is fine." error={errors.quantity}>
+                    <Field label={t('Starting stock')} hint={t('How many you have now. 0 is fine.')} error={errors.quantity}>
                       <div className="flex items-center gap-2">
-                        <IconButton icon={Minus} label="One less" variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', Math.max(0, toInt(form.quantity) - 1))} />
+                        <IconButton icon={Minus} label={t('One less')} variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', Math.max(0, toInt(form.quantity) - 1))} />
                         <Input type="number" min="0" step="1" inputMode="numeric" placeholder="0" value={form.quantity} onChange={e => setField('quantity', e.target.value)} className="text-center font-mono font-semibold" error={errors.quantity} />
-                        <IconButton icon={Plus} label="One more" variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', toInt(form.quantity) + 1)} />
+                        <IconButton icon={Plus} label={t('One more')} variant="secondary" size="md" tooltip={false} onClick={() => setField('quantity', toInt(form.quantity) + 1)} />
                       </div>
                     </Field>
-                    <Field label="Low-stock alert at" hint="Flag the product when stock drops to this number." error={errors.minimum_quantity}>
+                    <Field label={t('Low-stock alert at')} hint={t('Flag the product when stock drops to this number.')} error={errors.minimum_quantity}>
                       <Input type="number" min="0" step="1" value={form.minimum_quantity} onChange={e => setField('minimum_quantity', e.target.value)} className="font-mono" error={errors.minimum_quantity} />
                     </Field>
                   </div>
                 </section>
                 <section>
-                  <h3 className="text-sm font-semibold text-ink">Prices</h3>
-                  <p className="text-caption text-ink-muted mt-0.5 mb-3">The POS charges one of the first three, depending on who is buying.</p>
+                  <h3 className="text-sm font-semibold text-ink">{t('Prices')}</h3>
+                  <p className="text-caption text-ink-muted mt-0.5 mb-3">{t('The POS charges one of the first three, depending on who is buying.')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {PRICE_FIELDS.map(p => (
                       <Field key={p.key} label={p.label} hint={p.hint} error={errors[p.key]}>
@@ -677,24 +678,24 @@ export default function AddProductPage() {
                   <div className="flex items-start gap-2 mb-3">
                     <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" aria-hidden="true" />
                     <p className="text-caption text-accent-fg">
-                      <strong>Same for every size?</strong> Fill these in and press <em>Apply to all sizes</em>. Then change any size in the table below.
+                      <strong>{t('Same for every size?')}</strong>{' '}{t('Fill these in and press')}{' '}<em>{t('Apply to all sizes')}</em>{t('. Then change any size in the table below.')}
                     </p>
                   </div>
                   <SizeGrid
-                    rows={[{ key: '__all', label: 'All sizes', values: form }]}
+                    rows={[{ key: '__all', label: t('All sizes'), values: form }]}
                     onChange={(_, key, value) => setField(key, value)}
                     errors={{}}
                   />
                   <div className="flex justify-end mt-3">
                     <Button size="sm" onClick={applyDefaultsToAllSizes}>
-                      Apply to all {form.size_variants.length} sizes
+                      {t('Apply to all {length} sizes', { length: form.size_variants.length })}
                     </Button>
                   </div>
                 </section>
                 <section>
-                  <h3 className="text-sm font-semibold text-ink mb-3">Each size</h3>
+                  <h3 className="text-sm font-semibold text-ink mb-3">{t('Each size')}</h3>
                   <SizeGrid
-                    rows={form.size_variants.map(row => ({ key: row.size, label: `Size ${row.size}`, values: row }))}
+                    rows={form.size_variants.map(row => ({ key: row.size, label: t('Size {size}', { size: row.size }), values: row }))}
                     onChange={(size, key, value) => updateSizeRow(size, key, value)}
                     errors={errors}
                   />
@@ -708,22 +709,22 @@ export default function AddProductPage() {
         {step === 'review' && (
           <Card
             icon={Sparkles}
-            title="Review and create"
-            description="Check everything below. Use Edit to go back and change a section."
+            title={t('Review and create')}
+            description={t('Check everything below. Use Edit to go back and change a section.')}
             footer={<>
-              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('pricing')}>Back</Button>
+              <Button variant="secondary" icon={ChevronLeft} onClick={() => go('pricing')}>{t('Back')}</Button>
               <Button icon={CheckCircle2} loading={loading} onClick={handleSubmit}>
-                {loading ? 'Creating…' : `Create ${hasSizes ? `${form.size_variants.length} products` : 'product'}`}
+                {loading ? t('Creating…') : t('Create {value}', { value: hasSizes ? `${form.size_variants.length} products` : 'product' })}
               </Button>
             </>}
           >
             {warnings.length > 0 && (
-              <Alert tone="warning" title="Please double-check">
+              <Alert tone="warning" title={t('Please double-check')}>
                 <ul className="list-disc pl-4 space-y-0.5">{warnings.map(w => <li key={w}>{w}</li>)}</ul>
               </Alert>
             )}
 
-            <ReviewSection title="Where" onEdit={isSuperAdmin ? () => go('where') : null}>
+            <ReviewSection title={t('Where')} onEdit={isSuperAdmin ? () => go('where') : null}>
               <div className="text-sm text-ink-secondary">{selectedBizObj?.name}</div>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {selectedBranchObjs.map(br => (
@@ -732,35 +733,35 @@ export default function AddProductPage() {
               </div>
             </ReviewSection>
 
-            <ReviewSection title="Product" onEdit={() => go('details')}>
+            <ReviewSection title={t('Product')} onEdit={() => go('details')}>
               <div className="font-semibold text-ink">{form.item_name}</div>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 <Badge tone="accent">{form.category}</Badge>
                 {otherAttributes.map(attr => form.variants?.[attr.attribute_key] && (
                   <Badge key={attr.attribute_key}>{attr.label}: {form.variants[attr.attribute_key]}</Badge>
                 ))}
-                {form.mark_as_new && <Badge tone="violet" icon={Sparkles}>New for {form.new_duration_days} days</Badge>}
+                {form.mark_as_new && <Badge tone="violet" icon={Sparkles}>{t('New for {new_duration_days} days', { new_duration_days: form.new_duration_days })}</Badge>}
               </div>
               {!hasSizes && (
                 <div className="text-caption text-ink-muted mt-2">
-                  SKU: <span className="font-mono font-semibold text-ink">{normalizeSku(form.sku)}</span>
+                  {t('SKU:')}{' '}<span className="font-mono font-semibold text-ink">{normalizeSku(form.sku)}</span>
                 </div>
               )}
             </ReviewSection>
 
-            <ReviewSection title="Stock & prices" onEdit={() => go('pricing')}>
+            <ReviewSection title={t('Stock & prices')} onEdit={() => go('pricing')}>
               <div className="border border-line rounded-lg overflow-hidden">
                 <Table dense minWidth="32rem">
                   <THead>
                     <TR>
-                      {hasSizes && <TH>Size</TH>}
-                      {hasSizes && <TH>SKU</TH>}
-                      <TH numeric>Stock</TH>
-                      <TH numeric>Alert at</TH>
-                      <TH numeric>Customer</TH>
-                      <TH numeric>Dealer</TH>
-                      <TH numeric>Staff</TH>
-                      <TH numeric>Cost</TH>
+                      {hasSizes && <TH>{t('Size')}</TH>}
+                      {hasSizes && <TH>{t('SKU')}</TH>}
+                      <TH numeric>{t('Stock')}</TH>
+                      <TH numeric>{t('Alert at')}</TH>
+                      <TH numeric>{t('Customer')}</TH>
+                      <TH numeric>{t('Dealer')}</TH>
+                      <TH numeric>{t('Staff')}</TH>
+                      <TH numeric>{t('Cost')}</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -780,7 +781,7 @@ export default function AddProductPage() {
                 </Table>
               </div>
               {selectedBranches.length > 1 && (
-                <p className="text-caption text-ink-muted mt-2">Stock shown is per branch ({selectedBranches.length} branches).</p>
+                <p className="text-caption text-ink-muted mt-2">{t('Stock shown is per branch ({length} branches).', { length: selectedBranches.length })}</p>
               )}
             </ReviewSection>
           </Card>
@@ -801,18 +802,18 @@ export default function AddProductPage() {
                     <CheckCircle2 className="w-6 h-6 text-success-fg" aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-display text-lg font-semibold text-ink truncate">{first.item_name || 'Product'} is ready</h2>
+                    <h2 className="font-display text-lg font-semibold text-ink truncate">{first.item_name || t('Product')}{' '}{t('is ready')}</h2>
                     <p className="text-sm text-ink-muted mt-0.5">
-                      {created.length} {hasSizes ? (created.length === 1 ? 'size' : 'sizes') : (created.length === 1 ? 'item' : 'items')} added to {whereLabel}.
+                      {hasSizes ? t('{n} {n|size|sizes}', { n: created.length }) : t('{n} {n|item|items}', { n: created.length })}{' '}{t('added to {whereLabel}.', { whereLabel })}
                     </p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-line-soft text-center">
                   {[
-                    ['Category', form.category || '—'],
-                    [hasSizes ? 'Sizes' : 'Items', created.length],
-                    ['Branches', createdProduct.total_branches ?? selectedBranchObjs.length],
-                    ['Total stock', created.reduce((s, p) => s + (parseInt(p.quantity, 10) || 0), 0)],
+                    [t('Category'), form.category || '—'],
+                    [hasSizes ? t('Sizes') : t('Items'), created.length],
+                    [t('Branches'), createdProduct.total_branches ?? selectedBranchObjs.length],
+                    [t('Total stock'), created.reduce((s, p) => s + (parseInt(p.quantity, 10) || 0), 0)],
                   ].map(([label, value]) => (
                     <div key={label} className="px-3 py-3">
                       <dt className="text-caption text-ink-muted">{label}</dt>
@@ -824,13 +825,13 @@ export default function AddProductPage() {
 
               {noPrice && (
                 <Alert tone="warning">
-                  Some items have no customer price (RM 0.00). They will ring up free at the POS until you set a price in <Link to="/products" className="font-semibold underline">Products</Link>.
+                  {t('Some items have no customer price (RM 0.00). They will ring up free at the POS until you set a price in')}{' '}<Link to="/products" className="font-semibold underline">{t('Products')}</Link>.
                 </Alert>
               )}
 
               {/* One label card per created SKU */}
               <div>
-                <h3 className="text-sm font-semibold text-ink mb-2">QR labels</h3>
+                <h3 className="text-sm font-semibold text-ink mb-2">{t('QR labels')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {created.map(product => (
                     <UiCard key={product.id} className="p-4 flex gap-4">
@@ -848,11 +849,11 @@ export default function AddProductPage() {
                         <div className="mt-2 flex items-baseline gap-3 text-caption">
                           <span className={cn('font-semibold text-sm tabular-nums', parseFloat(product.selling_price) > 0 ? 'text-ink' : 'text-warning-fg')}>{money(product.selling_price)}</span>
                           <span className={parseInt(product.quantity, 10) > 0 ? 'text-ink-muted' : 'text-warning-fg'}>
-                            {parseInt(product.quantity, 10) || 0} in stock
+                            {parseInt(product.quantity, 10) || 0}{' '}{t('in stock')}
                           </span>
                         </div>
                         <Button variant="link" size="sm" icon={Printer} to={`/qr/generate?product_id=${product.id}`} className="mt-auto pt-2 self-start">
-                          Print label
+                          {t('Print label')}
                         </Button>
                       </div>
                     </UiCard>
@@ -861,8 +862,8 @@ export default function AddProductPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <Button variant="secondary" icon={Plus} onClick={startAnother} className="flex-1">Add another product here</Button>
-                <Button icon={Package} onClick={() => navigate('/products')} className="flex-1">Go to products</Button>
+                <Button variant="secondary" icon={Plus} onClick={startAnother} className="flex-1">{t('Add another product here')}</Button>
+                <Button icon={Package} onClick={() => navigate('/products')} className="flex-1">{t('Go to products')}</Button>
               </div>
             </div>
           );
@@ -877,7 +878,7 @@ function ReviewSection({ title, onEdit, children }) {
     <section className="pb-5 border-b border-line-soft last:border-0 last:pb-0">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-ink">{title}</h3>
-        {onEdit && <Button variant="link" size="sm" icon={Pencil} onClick={onEdit}>Edit</Button>}
+        {onEdit && <Button variant="link" size="sm" icon={Pencil} onClick={onEdit}>{t('Edit')}</Button>}
       </div>
       {children}
     </section>
@@ -887,19 +888,19 @@ function ReviewSection({ title, onEdit, children }) {
 // Compact table of stock/price inputs, one row per size (or a single "All sizes" row)
 function SizeGrid({ rows, onChange, errors }) {
   const cols = [
-    { key: 'quantity', label: 'Stock', int: true },
-    { key: 'minimum_quantity', label: 'Alert at', int: true },
-    { key: 'selling_price', label: 'Customer RM' },
-    { key: 'price_dealer', label: 'Dealer RM' },
-    { key: 'price_staff', label: 'Staff RM' },
-    { key: 'unit_price', label: 'Cost RM' },
+    { key: 'quantity', label: t('Stock'), int: true },
+    { key: 'minimum_quantity', label: t('Alert at'), int: true },
+    { key: 'selling_price', label: t('Customer RM') },
+    { key: 'price_dealer', label: t('Dealer RM') },
+    { key: 'price_staff', label: t('Staff RM') },
+    { key: 'unit_price', label: t('Cost RM') },
   ];
   return (
     <div className="border border-line rounded-lg overflow-hidden bg-surface">
       <Table dense minWidth="40rem">
         <THead>
           <TR>
-            <TH className="w-24"><span className="sr-only">Row</span></TH>
+            <TH className="w-24"><span className="sr-only">{t('Row')}</span></TH>
             {cols.map(c => <TH key={c.key} className="px-1.5">{c.label}</TH>)}
           </TR>
         </THead>
@@ -934,7 +935,7 @@ function SizeGrid({ rows, onChange, errors }) {
         </TBody>
       </Table>
       {rows.some(r => cols.some(c => errors[`${r.key}.${c.key}`])) && (
-        <p className="mt-1 text-caption text-danger-fg flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" /> Fix the highlighted boxes: stock must be a whole number, and nothing can be negative.</p>
+        <p className="mt-1 text-caption text-danger-fg flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />{' '}{t('Fix the highlighted boxes: stock must be a whole number, and nothing can be negative.')}</p>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import {
   Badge, BusinessBranchFilter, Button, Card, FilterBar, Pagination, Input, KpiCard, Modal, PageHeader, SearchInput, Tabs,
   Table, THead, TBody, TH, TR, TD, TableState,
 } from '../../components/ui';
+import { t as tr, locale } from '../../i18n';
 
 // Format relative time (e.g. "Just now", "5m ago", "2h ago")
 function formatRelativeTime(dateString) {
@@ -18,26 +19,26 @@ function formatRelativeTime(dateString) {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffSec < 30) return 'Just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return past.toLocaleDateString('en-MY', { month: 'short', day: 'numeric' });
+  if (diffSec < 30) return tr('Just now');
+  if (diffSec < 60) return tr('{diffSec}s ago', { diffSec });
+  if (diffMin < 60) return tr('{diffMin}m ago', { diffMin });
+  if (diffHour < 24) return tr('{diffHour}h ago', { diffHour });
+  if (diffDay < 7) return tr('{diffDay}d ago', { diffDay });
+  return past.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 // Clean IP address
 function formatIp(ip) {
   if (!ip) return '127.0.0.1';
   let clean = ip.replace(/^::ffff:/, '');
-  if (clean === '::1' || clean === '127.0.0.1') return '127.0.0.1 (Localhost)';
+  if (clean === '::1' || clean === '127.0.0.1') return tr('127.0.0.1 (Localhost)');
   return clean;
 }
 
 // Parse device / user agent
 function parseUserAgent(ua) {
-  if (!ua) return 'Web Browser';
-  let browser = 'Browser';
+  if (!ua) return tr('Web Browser');
+  let browser = tr('Browser');
   let os = '';
   if (ua.includes('Edg/')) browser = 'Microsoft Edge';
   else if (ua.includes('Chrome/')) browser = 'Google Chrome';
@@ -81,183 +82,183 @@ function parseAuditRecord(log) {
 
   if (action === 'LOGIN') {
     category = 'auth';
-    badgeLabel = 'Sign In';
+    badgeLabel = tr('Sign In');
     tone = 'accent';
     ActionIcon = LogIn;
     const email = newData?.email || log.user_email || '';
-    summary = 'Signed in';
-    targetLabel = email ? `Account: ${email}` : `User #${log.entity_id || log.user_id}`;
-    if (email) detailsBadges.push({ label: 'User', value: email });
+    summary = tr('Signed in');
+    targetLabel = email ? tr('Account: {email}', { email }) : tr('User #{value}', { value: log.entity_id || log.user_id });
+    if (email) detailsBadges.push({ label: tr('User'), value: email });
   } else if (action === 'LOGOUT') {
     category = 'auth';
-    badgeLabel = 'Sign Out';
+    badgeLabel = tr('Sign Out');
     tone = 'neutral';
     ActionIcon = LogOut;
-    summary = 'Signed out';
-    targetLabel = log.user_name ? `${log.user_name}` : `User #${log.entity_id || log.user_id}`;
+    summary = tr('Signed out');
+    targetLabel = log.user_name ? `${log.user_name}` : tr('User #{value}', { value: log.entity_id || log.user_id });
   } else if (action === 'CREATE_DAMAGE_REPORT') {
     category = 'damage';
-    badgeLabel = 'Damage Logged';
+    badgeLabel = tr('Damage Logged');
     tone = 'danger';
     ActionIcon = AlertTriangle;
     const sku = newData?.sku || '';
     const qty = newData?.quantity || 1;
     const totalVal = newData?.total_value ? `RM ${parseFloat(newData.total_value).toFixed(2)}` : '';
     const reason = newData?.reason_category ? newData.reason_category.replace(/_/g, ' ') : '';
-    summary = `Reported ${qty} damaged units for SKU: ${sku || `Product #${newData?.product_id}`}`;
-    targetLabel = `Damage Report #DR-${log.entity_id}`;
+    summary = tr('Reported {qty} damaged units for SKU: {sku}', { qty, sku: sku || tr('Product #{id}', { id: newData?.product_id }) });
+    targetLabel = tr('Damage Report #DR-{entity_id}', { entity_id: log.entity_id });
     if (sku) detailsBadges.push({ label: 'SKU', value: sku });
-    if (qty) detailsBadges.push({ label: 'Quantity', value: `-${qty} units` });
-    if (totalVal) detailsBadges.push({ label: 'Loss', value: totalVal });
-    if (reason) detailsBadges.push({ label: 'Reason', value: reason });
+    if (qty) detailsBadges.push({ label: tr('Quantity'), value: `-${qty} units` });
+    if (totalVal) detailsBadges.push({ label: tr('Loss'), value: totalVal });
+    if (reason) detailsBadges.push({ label: tr('Reason'), value: reason });
   } else if (action === 'CREATE_ITEM') {
     category = 'catalog';
-    badgeLabel = 'Product Created';
+    badgeLabel = tr('Product Created');
     tone = 'success';
     ActionIcon = Package;
     const name = newData?.name || newData?.item_name || '';
     const sku = newData?.sku || newData?.item_code || '';
-    summary = `Added new item "${name || 'Product'}" to catalog`;
-    targetLabel = sku ? `SKU: ${sku}` : `Product #${log.entity_id}`;
-    if (name) detailsBadges.push({ label: 'Item', value: name });
+    summary = tr('Added new item “{name}” to catalog', { name: name || tr('Product') });
+    targetLabel = sku ? tr('SKU: {sku}', { sku }) : tr('Product #{entity_id}', { entity_id: log.entity_id });
+    if (name) detailsBadges.push({ label: tr('Item'), value: name });
     if (sku) detailsBadges.push({ label: 'SKU', value: sku });
-    if (newData?.category) detailsBadges.push({ label: 'Category', value: newData.category });
+    if (newData?.category) detailsBadges.push({ label: tr('Category'), value: newData.category });
   } else if (action === 'UPDATE_ITEM') {
     category = 'catalog';
-    badgeLabel = 'Product Edited';
+    badgeLabel = tr('Product Edited');
     tone = 'warning';
     ActionIcon = Package;
     const name = newData?.item_name || newData?.name || oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
-    summary = `Updated catalog details for "${name || 'Product'}"`;
-    targetLabel = sku ? `SKU: ${sku}` : `Product #${log.entity_id}`;
+    summary = tr('Updated catalog details for “{name}”', { name: name || tr('Product') });
+    targetLabel = sku ? tr('SKU: {sku}', { sku }) : tr('Product #{entity_id}', { entity_id: log.entity_id });
     if (sku) detailsBadges.push({ label: 'SKU', value: sku });
-    if (newData?.status) detailsBadges.push({ label: 'Status', value: newData.status });
-    if (newData?.selling_price) detailsBadges.push({ label: 'Price', value: `RM ${parseFloat(newData.selling_price).toFixed(2)}` });
+    if (newData?.status) detailsBadges.push({ label: tr('Status'), value: newData.status });
+    if (newData?.selling_price) detailsBadges.push({ label: tr('Price'), value: `RM ${parseFloat(newData.selling_price).toFixed(2)}` });
   } else if (action === 'DELETE_ITEM') {
     category = 'catalog';
-    badgeLabel = 'Product Deleted';
+    badgeLabel = tr('Product Deleted');
     tone = 'danger';
     ActionIcon = Package;
     const name = oldData?.name || oldData?.item_name || '';
     const sku = oldData?.sku || oldData?.item_code || '';
-    summary = `Permanently removed "${name || 'Product'}" from catalog`;
-    targetLabel = sku ? `SKU: ${sku}` : `Product #${log.entity_id}`;
-    if (name) detailsBadges.push({ label: 'Item', value: name });
+    summary = tr('Permanently removed “{name}” from catalog', { name: name || tr('Product') });
+    targetLabel = sku ? tr('SKU: {sku}', { sku }) : tr('Product #{entity_id}', { entity_id: log.entity_id });
+    if (name) detailsBadges.push({ label: tr('Item'), value: name });
     if (sku) detailsBadges.push({ label: 'SKU', value: sku });
   } else if (action === 'STOCK_IN') {
     category = 'inventory';
-    badgeLabel = 'Stock Inward';
+    badgeLabel = tr('Stock Inward');
     tone = 'success';
     ActionIcon = Boxes;
-    summary = `Restocked inventory balance`;
-    targetLabel = `Item #${log.entity_id}`;
+    summary = tr('Restocked inventory balance');
+    targetLabel = tr('Item #{entity_id}', { entity_id: log.entity_id });
     if (oldData?.old_qty !== undefined && newData?.new_qty !== undefined) {
-      detailsBadges.push({ label: 'Balance', value: `${oldData.old_qty} → ${newData.new_qty} units` });
+      detailsBadges.push({ label: tr('Balance'), value: tr('{from} → {to} units', { from: oldData.old_qty, to: newData.new_qty }) });
     }
   } else if (action === 'STOCK_OUT' || action === 'QR_SCAN_DEDUCT') {
     category = 'inventory';
-    badgeLabel = action === 'QR_SCAN_DEDUCT' ? 'QR Stock Out' : 'Stock Out';
+    badgeLabel = action === 'QR_SCAN_DEDUCT' ? tr('QR Stock Out') : tr('Stock Out');
     tone = 'info';
     ActionIcon = Boxes;
     summary = action === 'QR_SCAN_DEDUCT' 
-      ? `Stocked out inventory via QR scanner scan`
-      : `Stocked out items for order fulfillment or sale`;
-    targetLabel = `Item #${log.entity_id}`;
+      ? tr('Stocked out inventory via QR scanner scan')
+      : tr('Stocked out items for order fulfillment or sale');
+    targetLabel = tr('Item #{entity_id}', { entity_id: log.entity_id });
     if (oldData?.old_qty !== undefined && newData?.new_qty !== undefined) {
-      detailsBadges.push({ label: 'Balance', value: `${oldData.old_qty} → ${newData.new_qty} units` });
+      detailsBadges.push({ label: tr('Balance'), value: tr('{from} → {to} units', { from: oldData.old_qty, to: newData.new_qty }) });
     }
   } else if (action.includes('STOCK_ADJUST') || action === 'STOCK_ADJUSTMENT') {
     category = 'inventory';
-    badgeLabel = 'Stock Adjusted';
+    badgeLabel = tr('Stock Adjusted');
     tone = 'violet';
     ActionIcon = Boxes;
-    summary = `Manual stock count adjustment recorded`;
-    targetLabel = `Item #${log.entity_id}`;
+    summary = tr('Manual stock count adjustment recorded');
+    targetLabel = tr('Item #{entity_id}', { entity_id: log.entity_id });
     if (oldData?.old_qty !== undefined && newData?.new_qty !== undefined) {
-      detailsBadges.push({ label: 'Adjustment', value: `${oldData.old_qty} → ${newData.new_qty} units` });
+      detailsBadges.push({ label: tr('Adjustment'), value: tr('{from} → {to} units', { from: oldData.old_qty, to: newData.new_qty }) });
     }
   } else if (action === 'APPROVE_USER' || action === 'USER_APPROVAL') {
     category = 'users';
-    badgeLabel = 'User Approved';
+    badgeLabel = tr('User Approved');
     tone = 'success';
     ActionIcon = CheckCircle;
-    summary = `Approved operator registration and granted system access`;
-    targetLabel = `User #${log.entity_id}`;
+    summary = tr('Approved operator registration and granted system access');
+    targetLabel = tr('User #{entity_id}', { entity_id: log.entity_id });
   } else if (action === 'REJECT_USER' || action === 'USER_REJECTION') {
     category = 'users';
-    badgeLabel = 'User Declined';
+    badgeLabel = tr('User Declined');
     tone = 'danger';
     ActionIcon = User;
-    summary = `Declined pending user registration request`;
-    targetLabel = `User #${log.entity_id}`;
+    summary = tr('Declined pending user registration request');
+    targetLabel = tr('User #{entity_id}', { entity_id: log.entity_id });
   } else if (action === 'DELETE_USER') {
     category = 'users';
-    badgeLabel = 'User Removed';
+    badgeLabel = tr('User Removed');
     tone = 'danger';
     ActionIcon = User;
     const name = oldData?.full_name || '';
     const email = oldData?.email || '';
-    summary = `Deactivated user account ${name ? `"${name}"` : ''}`;
-    targetLabel = email ? email : `User #${log.entity_id}`;
-    if (name) detailsBadges.push({ label: 'Name', value: name });
-    if (email) detailsBadges.push({ label: 'Email', value: email });
+    summary = tr('Deactivated user account {value}', { value: name ? `"${name}"` : '' });
+    targetLabel = email ? email : tr('User #{entity_id}', { entity_id: log.entity_id });
+    if (name) detailsBadges.push({ label: tr('Name'), value: name });
+    if (email) detailsBadges.push({ label: tr('Email'), value: email });
   } else if (action === 'USER_SUSPENDED') {
     category = 'users';
-    badgeLabel = 'User Suspended';
+    badgeLabel = tr('User Suspended');
     tone = 'warning';
     ActionIcon = User;
-    summary = `Suspended user account access`;
-    targetLabel = `User #${log.entity_id}`;
+    summary = tr('Suspended user account access');
+    targetLabel = tr('User #{entity_id}', { entity_id: log.entity_id });
   } else if (action === 'USER_ACTIVATED') {
     category = 'users';
-    badgeLabel = 'User Activated';
+    badgeLabel = tr('User Activated');
     tone = 'success';
     ActionIcon = CheckCircle;
-    summary = `Reactivated suspended user account`;
-    targetLabel = `User #${log.entity_id}`;
+    summary = tr('Reactivated suspended user account');
+    targetLabel = tr('User #{entity_id}', { entity_id: log.entity_id });
   } else if (action === 'CREATE_USER') {
     category = 'users';
-    badgeLabel = 'User Created';
+    badgeLabel = tr('User Created');
     tone = 'accent';
     ActionIcon = User;
     const name = newData?.full_name || '';
     const email = newData?.email || '';
-    summary = `Created user account for ${name || email || 'operator'}`;
-    targetLabel = email ? email : `User #${log.entity_id}`;
-    if (email) detailsBadges.push({ label: 'Email', value: email });
-    if (newData?.role) detailsBadges.push({ label: 'Role', value: newData.role });
+    summary = tr('Created user account for {value}', { value: name || email || 'operator' });
+    targetLabel = email ? email : tr('User #{entity_id}', { entity_id: log.entity_id });
+    if (email) detailsBadges.push({ label: tr('Email'), value: email });
+    if (newData?.role) detailsBadges.push({ label: tr('Role'), value: newData.role });
   } else if (action === 'POS_SALE_TRANSACTION' || action === 'POS_STOCK_IN_TRANSACTION') {
     const sale = action === 'POS_SALE_TRANSACTION';
     category = 'inventory';
-    badgeLabel = sale ? 'POS sale' : 'POS restock';
+    badgeLabel = sale ? tr('POS sale') : tr('POS restock');
     tone = sale ? 'info' : 'success';
     ActionIcon = sale ? ShoppingCart : Boxes;
     const units = oldData?.total_quantity;
     summary = sale
-      ? `Sold ${units ?? ''} item${units === 1 ? '' : 's'} at the point of sale`.replace('  ', ' ')
-      : `Received ${units ?? ''} unit${units === 1 ? '' : 's'} at the point of sale`.replace('  ', ' ');
-    targetLabel = newData?.receipt_no ? `Receipt ${newData.receipt_no}` : '';
-    if (sale && newData?.grand_total !== undefined) detailsBadges.push({ label: 'Total', value: `RM ${parseFloat(newData.grand_total).toFixed(2)}` });
-    if (sale && newData?.payment_method) detailsBadges.push({ label: 'Paid', value: newData.payment_method.replace('_', ' ') });
-    if (sale && newData?.price_tier && newData.price_tier !== 'customer') detailsBadges.push({ label: 'Price type', value: newData.price_tier });
+      ? (units == null ? tr('Sold items at the point of sale') : tr('Sold {units} {units|item|items} at the point of sale', { units }))
+      : (units == null ? tr('Received stock at the point of sale') : tr('Received {units} {units|unit|units} at the point of sale', { units }));
+    targetLabel = newData?.receipt_no ? tr('Receipt {receipt_no}', { receipt_no: newData.receipt_no }) : '';
+    if (sale && newData?.grand_total !== undefined) detailsBadges.push({ label: tr('Total'), value: `RM ${parseFloat(newData.grand_total).toFixed(2)}` });
+    if (sale && newData?.payment_method) detailsBadges.push({ label: tr('Paid'), value: newData.payment_method.replace('_', ' ') });
+    if (sale && newData?.price_tier && newData.price_tier !== 'customer') detailsBadges.push({ label: tr('Price type'), value: newData.price_tier });
   } else if (action.includes('STORE')) {
     category = 'stores';
     badgeLabel = action.replace(/_/g, ' ');
     tone = 'violet';
     ActionIcon = Store;
-    summary = `Updated pop-up store or event outlet details`;
-    targetLabel = `Store #${log.entity_id}`;
+    summary = tr('Updated pop-up store or event outlet details');
+    targetLabel = tr('Store #{entity_id}', { entity_id: log.entity_id });
   } else if (action.includes('BRANCH')) {
     category = 'branches';
     badgeLabel = action.replace(/_/g, ' ');
     tone = 'info';
     ActionIcon = Building2;
-    summary = `Updated branch warehouse configuration`;
-    targetLabel = `Branch #${log.entity_id}`;
+    summary = tr('Updated branch warehouse configuration');
+    targetLabel = tr('Branch #{entity_id}', { entity_id: log.entity_id });
   } else {
-    summary = log.action ? log.action.replace(/_/g, ' ') : 'System event';
-    targetLabel = rawEntity ? `${rawEntity} #${log.entity_id || ''}` : 'System';
+    summary = log.action ? log.action.replace(/_/g, ' ') : tr('System event');
+    targetLabel = rawEntity ? `${rawEntity} #${log.entity_id || ''}` : tr('System');
   }
 
   return {
@@ -276,12 +277,12 @@ function parseAuditRecord(log) {
 }
 
 const CATEGORY_TABS = [
-  { id: 'all', label: 'All activity' },
-  { id: 'auth', label: 'Sign-ins' },
-  { id: 'damage', label: 'Damage' },
-  { id: 'inventory', label: 'Stock' },
-  { id: 'catalog', label: 'Products' },
-  { id: 'users', label: 'Users' }
+  { id: 'all', label: tr('All activity') },
+  { id: 'auth', label: tr('Sign-ins') },
+  { id: 'damage', label: tr('Damage') },
+  { id: 'inventory', label: tr('Stock') },
+  { id: 'catalog', label: tr('Products') },
+  { id: 'users', label: tr('Users') }
 ];
 
 export default function AuditLogs() {
@@ -322,7 +323,7 @@ export default function AuditLogs() {
       }
     } catch (err) {
       console.error('Audit fetch error:', err);
-      setLoadError(err.response?.data?.message || 'Could not load the activity log.');
+      setLoadError(err.response?.data?.message || tr('Could not load the activity log.'));
     } finally {
       setLoading(false);
     }
@@ -395,19 +396,19 @@ export default function AuditLogs() {
   return (
     <Layout>
       <PageHeader
-        title="Activity log"
-        description="A permanent record of sign-ins, stock changes, damage reports and admin actions."
-        actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchAuditLogs} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>Refresh</Button>}
+        title={tr('Activity log')}
+        description={tr('A permanent record of sign-ins, stock changes, damage reports and admin actions.')}
+        actions={<Button variant="secondary" icon={RefreshCw} onClick={fetchAuditLogs} disabled={loading} className={loading ? '[&>svg]:animate-spin' : ''}>{tr('Refresh')}</Button>}
       />
 
       <div className="kpi-grid grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <KpiCard loading={firstLoad} label="Activities" value={stats.total} icon={History} tone="accent" meta="In the current view" />
-        <KpiCard loading={firstLoad} label="Stock and damage" value={stats.inventory + stats.damage} icon={Boxes} tone="warning" meta={`${stats.damage} damage · ${stats.inventory} stock`} />
-        <KpiCard loading={firstLoad} label="Sign-ins and sign-outs" value={stats.auth} icon={Shield} tone="success" meta="Account sessions" />
+        <KpiCard loading={firstLoad} label={tr('Activities')} value={stats.total} icon={History} tone="accent" meta={tr('In the current view')} />
+        <KpiCard loading={firstLoad} label={tr('Stock and damage')} value={stats.inventory + stats.damage} icon={Boxes} tone="warning" meta={tr('{damage} damage · {inventory} stock', { damage: stats.damage, inventory: stats.inventory })} />
+        <KpiCard loading={firstLoad} label={tr('Sign-ins and sign-outs')} value={stats.auth} icon={Shield} tone="success" meta={tr('Account sessions')} />
       </div>
 
       <FilterBar onReset={resetFilters} resetVisible={hasFilters}>
-        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by person, email, SKU, action or note…" aria-label="Search the activity log" />
+        <SearchInput wrapperClassName="md:flex-1 md:min-w-[16rem]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={tr('Search by person, email, SKU, action or note…')} aria-label={tr('Search the activity log')} />
         <BusinessBranchFilter
           businesses={businesses}
           branches={branches}
@@ -417,13 +418,13 @@ export default function AuditLogs() {
           onBranchChange={setBranchId}
           businessClassName="md:w-44"
         />
-        <Input type="date" className="md:w-44" aria-label="Date" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+        <Input type="date" className="md:w-44" aria-label={tr('Date')} value={filterDate} onChange={e => setFilterDate(e.target.value)} />
       </FilterBar>
 
       <Card className="overflow-hidden">
         <div className="px-5 pt-3 border-b border-line-soft">
           <Tabs
-            label="Event type"
+            label={tr('Event type')}
             value={activeCategory}
             onChange={setActiveCategory}
             className="border-b-0"
@@ -433,11 +434,11 @@ export default function AuditLogs() {
         <Table minWidth="58rem">
           <THead>
             <TR>
-              <TH>When</TH>
-              <TH>Who</TH>
-              <TH>Event</TH>
-              <TH>Details</TH>
-              <TH>Device</TH>
+              <TH>{tr('When')}</TH>
+              <TH>{tr('Who')}</TH>
+              <TH>{tr('Event')}</TH>
+              <TH>{tr('Details')}</TH>
+              <TH>{tr('Device')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -448,13 +449,13 @@ export default function AuditLogs() {
               onRetry={fetchAuditLogs}
               empty={!loading && !loadError && filteredLogs.length === 0}
               emptyIcon={History}
-              emptyTitle="No matching activity"
-              emptyDescription="Try another date, tab or search."
-              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>Clear filters</Button> : null}
+              emptyTitle={tr('No matching activity')}
+              emptyDescription={tr('Try another date, tab or search.')}
+              emptyAction={hasFilters ? <Button variant="secondary" size="sm" onClick={resetFilters}>{tr('Clear filters')}</Button> : null}
             />
             {pageLogs.map((log, i) => {
               const { badgeLabel, tone, ActionIcon, summary, targetLabel, detailsBadges, cleanIp, deviceInfo } = log.parsed;
-              const actorName = log.user_name || 'System';
+              const actorName = log.user_name || tr('System');
               const actorEmail = log.user_email || log.user_role || 'system';
               const initials = actorName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'SY';
               const when = new Date(log.created_at);
@@ -463,7 +464,7 @@ export default function AuditLogs() {
                   <TD className="whitespace-nowrap">
                     <div className="text-sm text-ink">{formatRelativeTime(log.created_at)}</div>
                     <div className="text-caption text-ink-muted tabular-nums">
-                      {when.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
+                      {when.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {when.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </TD>
                   <TD className="whitespace-nowrap">
@@ -500,9 +501,9 @@ export default function AuditLogs() {
           page={Math.min(page, totalPages)}
           totalPages={totalPages}
           onChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          prevLabel="Newer"
-          nextLabel="Older"
-          summary={filteredLogs.length ? `${filteredLogs.length} ${filteredLogs.length === 1 ? 'activity' : 'activities'}` : undefined}
+          prevLabel={tr('Newer')}
+          nextLabel={tr('Older')}
+          summary={filteredLogs.length ? tr('{n} {n|activity|activities}', { n: filteredLogs.length }) : undefined}
         />
       </Card>
 
@@ -511,9 +512,9 @@ export default function AuditLogs() {
           size="lg"
           icon={inspectLog.parsed.ActionIcon}
           title={inspectLog.parsed.summary}
-          description={<>{new Date(inspectLog.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'medium' })} · {formatRelativeTime(inspectLog.created_at)} · <span className="font-mono">Log #{inspectLog.id}</span></>}
+          description={<>{new Date(inspectLog.created_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'medium' })} · {formatRelativeTime(inspectLog.created_at)} · <span className="font-mono">{tr('Log #{id}', { id: inspectLog.id })}</span></>}
           onClose={() => setInspectLog(null)}
-          footer={<Button variant="secondary" onClick={() => setInspectLog(null)}>Close</Button>}
+          footer={<Button variant="secondary" onClick={() => setInspectLog(null)}>{tr('Close')}</Button>}
         >
           <div className="flex flex-wrap gap-1.5">
             <Badge tone={inspectLog.parsed.tone} icon={inspectLog.parsed.ActionIcon}>{inspectLog.parsed.badgeLabel}</Badge>
@@ -522,27 +523,27 @@ export default function AuditLogs() {
 
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="p-3 bg-subtle rounded-lg">
-              <dt className="text-caption text-ink-muted">Done by</dt>
-              <dd className="font-medium text-ink mt-0.5">{inspectLog.user_name || 'System'}</dd>
+              <dt className="text-caption text-ink-muted">{tr('Done by')}</dt>
+              <dd className="font-medium text-ink mt-0.5">{inspectLog.user_name || tr('System')}</dd>
               <dd className="text-caption text-ink-muted">{inspectLog.user_email || inspectLog.user_role}</dd>
             </div>
             <div className="p-3 bg-subtle rounded-lg">
-              <dt className="text-caption text-ink-muted">From</dt>
+              <dt className="text-caption text-ink-muted">{tr('From')}</dt>
               <dd className="font-mono font-medium text-ink mt-0.5">{inspectLog.parsed.cleanIp}</dd>
               <dd className="text-caption text-ink-muted truncate" title={inspectLog.user_agent}>{inspectLog.parsed.deviceInfo}</dd>
             </div>
             <div className="p-3 bg-subtle rounded-lg sm:col-span-2">
-              <dt className="text-caption text-ink-muted">Record</dt>
-              <dd className="font-mono text-caption text-ink mt-0.5">{inspectLog.entity_type || 'N/A'} · ID {inspectLog.entity_id || 'N/A'}</dd>
+              <dt className="text-caption text-ink-muted">{tr('Record')}</dt>
+              <dd className="font-mono text-caption text-ink mt-0.5">{inspectLog.entity_type || 'N/A'}{' '}{tr('· ID')}{' '}{inspectLog.entity_id || 'N/A'}</dd>
             </div>
           </dl>
 
           {fieldDiffs.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-ink mb-2">What changed <span className="text-ink-muted font-normal tabular-nums">({fieldDiffs.length})</span></h3>
+              <h3 className="text-sm font-semibold text-ink mb-2">{tr('What changed')}{' '}<span className="text-ink-muted font-normal tabular-nums">({fieldDiffs.length})</span></h3>
               <div className="border border-line rounded-lg overflow-hidden">
                 <Table dense>
-                  <THead><TR><TH>Field</TH><TH>Before</TH><TH>After</TH></TR></THead>
+                  <THead><TR><TH>{tr('Field')}</TH><TH>{tr('Before')}</TH><TH>{tr('After')}</TH></TR></THead>
                   <TBody>
                     {fieldDiffs.map((diff, i) => (
                       <TR key={i}>
@@ -559,18 +560,18 @@ export default function AuditLogs() {
 
           <details className="border border-line rounded-lg bg-subtle group">
             <summary className="px-3 py-2.5 text-sm font-medium text-ink-secondary cursor-pointer select-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
-              Raw data (JSON)
+              {tr('Raw data (JSON)')}
             </summary>
             <div className="px-3 pb-3 space-y-2">
               {inspectLog.new_values && (
                 <div>
-                  <p className="text-caption text-ink-muted mb-1">New values</p>
+                  <p className="text-caption text-ink-muted mb-1">{tr('New values')}</p>
                   <pre className="p-3 bg-ink text-white/90 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed">{JSON.stringify(inspectLog.parsed.newData, null, 2)}</pre>
                 </div>
               )}
               {inspectLog.old_values && (
                 <div>
-                  <p className="text-caption text-ink-muted mb-1">Old values</p>
+                  <p className="text-caption text-ink-muted mb-1">{tr('Old values')}</p>
                   <pre className="p-3 bg-ink text-white/70 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed">{JSON.stringify(inspectLog.parsed.oldData, null, 2)}</pre>
                 </div>
               )}

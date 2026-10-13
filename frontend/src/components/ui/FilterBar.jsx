@@ -1,7 +1,8 @@
 import React from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { cn } from './cn';
-import Button from './Button';
+import Button from './Button';
+import { t } from '../../i18n';
 
 /**
  * Row of filters above a list. Children wrap on small screens; `actions` sit on the right.
@@ -16,7 +17,7 @@ export default function FilterBar({ children, actions, className, onReset, reset
       {(actions || (onReset && resetVisible)) && (
         <div className="col-span-2 flex items-center justify-end gap-2 md:ml-auto">
           {onReset && resetVisible && (
-            <Button variant="ghost" size="sm" icon={SlidersHorizontal} onClick={onReset}>Reset filters</Button>
+            <Button variant="ghost" size="sm" icon={SlidersHorizontal} onClick={onReset}>{t('Reset filters')}</Button>
           )}
           {actions}
         </div>

@@ -5,7 +5,8 @@ import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
 import { Breadcrumbs, SegmentedControl } from '../../components/ui';
 import QrGenerator from './QrGenerator';
-import QrScanner from './QrScanner';
+import QrScanner from './QrScanner';
+import { t } from '../../i18n';
 
 export default function QrHub() {
   const location = useLocation();
@@ -17,7 +18,7 @@ export default function QrHub() {
 
   // QR labels belong to products for head office (reached from Products); for a branch they sit next to the till
   const crumbs = tab === 'generate'
-    ? (isSuperAdmin ? { section: 'Inventory', items: [{ label: 'Products', to: '/products' }, { label: 'Print QR labels' }] } : { items: [{ label: 'Print QR labels' }] })
+    ? (isSuperAdmin ? { section: t('Inventory'), items: [{ label: t('Products'), to: '/products' }, { label: t('Print QR labels') }] } : { items: [{ label: t('Print QR labels') }] })
     : { items: undefined };
 
   // Head office has no till: /qr/scan goes to Sales history, and QR labels stand alone
@@ -27,14 +28,14 @@ export default function QrHub() {
     <Layout>
       <Breadcrumbs section={crumbs.section} items={crumbs.items} className="mb-3" />
       {!isSuperAdmin && <SegmentedControl
-        label="Point of sale or QR labels"
+        label={t('Point of sale or QR labels')}
         size="lg"
         value={tab}
         onChange={setTab}
         className="mb-6"
         tabs={[
-          { value: 'scan', label: 'Point of sale', icon: ScanLine },
-          { value: 'generate', label: 'Print QR labels', icon: QrCode },
+          { value: 'scan', label: t('Point of sale'), icon: ScanLine },
+          { value: 'generate', label: t('Print QR labels'), icon: QrCode },
         ]}
       />}
       {tab === 'scan' ? <QrScanner embedded /> : <QrGenerator embedded />}

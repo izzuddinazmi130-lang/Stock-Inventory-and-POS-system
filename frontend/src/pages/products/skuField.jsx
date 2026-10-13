@@ -1,18 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import api from '../../services/api';
+import { t } from '../../i18n';
 
 // Same rules as the server: letters, numbers, spaces and - _ . / # + ( ), starting with a letter or number, max 50.
 const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._/#+()-]{0,49}$/;
 
-export const SKU_HINT = 'Use the same SKU as on your other sales platforms so sales can be matched. Each SKU must be unique.';
+export const SKU_HINT = t('Use the same SKU as on your other sales platforms so sales can be matched. Each SKU must be unique.');
 
 export const normalizeSku = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
 
 export function skuFormatError(sku) {
-  if (!sku) return 'Enter the SKU.';
-  if (sku.length > 50) return 'SKU can be at most 50 characters.';
-  if (!SKU_PATTERN.test(sku)) return 'Use letters, numbers, spaces and - _ . / # + ( ) only, starting with a letter or number.';
+  if (!sku) return t('Enter the SKU.');
+  if (sku.length > 50) return t('SKU can be at most 50 characters.');
+  if (!SKU_PATTERN.test(sku)) return t('Use letters, numbers, spaces and - _ . / # + ( ) only, starting with a letter or number.');
   return '';
 }
 
@@ -56,7 +57,7 @@ export function useSkuCheck(skus, excludeId) {
 /** Small line under a SKU box: "Checking…" or "Available". Errors are shown by the field itself. */
 export function SkuStatus({ status }) {
   if (!status) return null;
-  if (status.state === 'checking') return <p className="mt-1 flex items-center gap-1 text-caption text-ink-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Checking…</p>;
-  if (status.state === 'ok') return <p className="mt-1 flex items-center gap-1 text-caption text-success-fg"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />Available</p>;
+  if (status.state === 'checking') return <p className="mt-1 flex items-center gap-1 text-caption text-ink-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />{t('Checking…')}</p>;
+  if (status.state === 'ok') return <p className="mt-1 flex items-center gap-1 text-caption text-success-fg"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />{t('Available')}</p>;
   return null;
 }
