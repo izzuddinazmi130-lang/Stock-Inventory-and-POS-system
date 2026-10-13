@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { isEmail } = require('../utils/validate');
 const pool = require('../config/db');
-const { authenticateToken, recordAuditLog, JWT_SECRET } = require('../middleware/auth');
+const { authenticateToken, recordAuditLog, clientIp, JWT_SECRET } = require('../middleware/auth');
 const { isMailConfigured, sendMail, resetCodeEmail } = require('../utils/mailer');
 
 // Sign the user in on this device: a 7-day session cookie
@@ -187,7 +187,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 // ── Forgot password: a 6-digit code sent by email ─────────────────────────────────────────────
 const CODE_MINUTES = 15;        // a code works for 15 minutes
 const MAX_TRIES = 5;            // wrong codes before the code is cancelled
-const MAX_CODES = 3;            // codes per account per 15 minutes
+const MAX_CODES = 5;            // codes per account per 15 minutes
 const RESEND_SECONDS = 60;      // wait between two codes
 const SENT_MESSAGE = 'If this email has an account, we’ve sent a 6-digit code to it. It expires in 15 minutes.';
 const BAD_CODE = 'This code is wrong or has expired. Request a new code.';
@@ -222,7 +222,7 @@ router.post('/forgot-password', async (req, res) => {
     if (!isMailConfigured()) {
       return res.status(503).json({ success: false, code: 'EMAIL_OFF', message: 'Password reset by email is not set up yet. Ask your HQ Super Admin to reset your password.' });
     }
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    const ip = clientIp(req);
     if (tooManyFromIp(ip)) {
       return res.status(429).json({ success: false, message: 'Too many requests. Please wait a few minutes and try again.' });
     }
@@ -235,8 +235,11 @@ router.post('/forgot-password', async (req, res) => {
        FROM password_resets WHERE user_id = ? AND created_at > NOW() - INTERVAL ? MINUTE`,
       [user.id, CODE_MINUTES]
     );
-    // Quietly skip when codes were just sent (the earlier email is still valid)
+    // Skip when a code was just sent or too many were sent (the earlier email is still valid). The answer stays
+    // the same so it can't reveal which emails have accounts; HQ can see the skipped request in the activity log.
     if (recent.n >= MAX_CODES || (recent.last_at && recent.since < RESEND_SECONDS)) {
+      await recordAuditLog(user.id, user.role, 'PASSWORD_RESET_LIMITED', 'users', user.id, null,
+        { email: user.email, reason: recent.n >= MAX_CODES ? 'too_many_codes' : 'too_soon' }, req);
       return res.json({ success: true, message: SENT_MESSAGE });
     }
 

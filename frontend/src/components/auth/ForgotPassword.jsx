@@ -131,7 +131,7 @@ export default function ForgotPassword({ initialEmail = '', onBack, onDone, cont
         <form ref={formRef} onSubmit={resetPassword} noValidate className="space-y-4">
           <p className="flex items-start gap-2 rounded-lg bg-subtle px-3 py-2.5 text-caption text-ink-secondary">
             <MailCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
-            <span>{t('Sent to {email}. Not there? Check the spam folder.', { email: email.trim() })}</span>
+            <span>{t('Sent to {email}. Not there? Check the spam folder. If you asked more than once, use the code in the newest email. Up to 5 codes can be sent in 15 minutes.', { email: email.trim() })}</span>
           </p>
           <Field label={t('6-digit code')} labelClassName={labelClassName} required hideRequiredMark error={errors.code}>
             <Input className={cn(controlClassName, 'tracking-[0.4em] font-semibold tabular-nums')} name="reset_code" inputMode="numeric"

@@ -1388,7 +1388,7 @@ const ms = {
   "Enter the email of your account. We’ll email you a 6-digit code.": "Masukkan e-mel akaun anda. Kami akan e-melkan kod 6 digit.",
   "Enter the code from the email and choose a new password.": "Masukkan kod daripada e-mel dan pilih kata laluan baharu.",
   "Send code": "Hantar kod",
-  "Sent to {email}. Not there? Check the spam folder.": "Dihantar ke {email}. Tiada? Semak folder spam.",
+  "Sent to {email}. Not there? Check the spam folder. If you asked more than once, use the code in the newest email. Up to 5 codes can be sent in 15 minutes.": "Dihantar ke {email}. Tiada? Semak folder spam. Jika anda minta lebih daripada sekali, guna kod dalam e-mel yang terbaru. Maksimum 5 kod boleh dihantar dalam 15 minit.",
   "6-digit code": "Kod 6 digit",
   "Change password and sign in": "Tukar kata laluan dan log masuk",
   "Use a different email": "Guna e-mel lain",
@@ -1403,6 +1403,9 @@ const ms = {
   "Reset code sent": "Kod set semula dihantar",
   "Asked for a password reset code by email": "Meminta kod set semula kata laluan melalui e-mel",
   "Reset the password with an emailed code": "Set semula kata laluan dengan kod daripada e-mel",
+  "Reset code not sent": "Kod set semula tidak dihantar",
+  "Asked for a reset code again, but 5 were already sent in 15 minutes": "Meminta kod set semula lagi, tetapi 5 kod sudah dihantar dalam 15 minit",
+  "Asked for a reset code again within a minute (the earlier email is still valid)": "Meminta kod set semula lagi dalam masa seminit (e-mel sebelumnya masih sah)",
 
   // ── Messages from the server
   "A photo is too large. Each photo can be at most 5 MB.": "Gambar terlalu besar. Setiap gambar maksimum 5 MB.",

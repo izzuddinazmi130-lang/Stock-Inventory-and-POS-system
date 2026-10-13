@@ -72,9 +72,21 @@ const requireRole = (...allowedRoles) => {
   };
 };
 
+// The device's real address. Phones reach the API through the frontend server on this PC, which passes the
+// phone's address in X-Forwarded-For; that header is only trusted when the request comes from this PC itself
+// (anyone else could write any address into it).
+const LOOPBACK = /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/;
+const clientIp = (req) => {
+  if (!req) return '127.0.0.1';
+  const remote = req.socket?.remoteAddress || '';
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const ip = LOOPBACK.test(remote) && forwarded ? forwarded : remote;
+  return (ip || '127.0.0.1').replace(/^::ffff:/, '');
+};
+
 const recordAuditLog = async (userId, userRole, action, entityType = null, entityId = null, oldValues = null, newValues = null, req = null) => {
   try {
-    const ip = req ? (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') : '127.0.0.1';
+    const ip = clientIp(req);
     const ua = req ? req.headers['user-agent'] : null;
 
     await pool.query(
@@ -101,5 +113,6 @@ module.exports = {
   authenticateToken,
   requireRole,
   recordAuditLog,
+  clientIp,
   JWT_SECRET
 };

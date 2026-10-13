@@ -14,9 +14,11 @@ export default defineConfig(({ mode }) => ({
     // Listen on the local network too, so phones and tablets on the same Wi-Fi can open the app
     host: true,
     proxy: {
+      // xfwd: pass the phone's / PC's own address to the API (activity log, sign-in limits)
       '/api': {
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
+        xfwd: true,
         secure: false
       },
       '/uploads': {
@@ -28,6 +30,7 @@ export default defineConfig(({ mode }) => ({
       '/socket.io': {
         target: 'http://127.0.0.1:5000',
         ws: true,
+        xfwd: true,
         changeOrigin: true
       }
     }

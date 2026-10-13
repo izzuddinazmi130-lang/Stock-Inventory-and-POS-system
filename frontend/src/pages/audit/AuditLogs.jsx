@@ -96,7 +96,7 @@ function parseAuditRecord(log) {
     ActionIcon = LogOut;
     summary = tr('Signed out');
     targetLabel = log.user_name ? `${log.user_name}` : tr('User #{value}', { value: log.entity_id || log.user_id });
-  } else if (['CHANGE_PASSWORD', 'RESET_PASSWORD', 'PASSWORD_RESET_REQUESTED', 'PASSWORD_RESET_BY_EMAIL'].includes(action)) {
+  } else if (['CHANGE_PASSWORD', 'RESET_PASSWORD', 'PASSWORD_RESET_REQUESTED', 'PASSWORD_RESET_BY_EMAIL', 'PASSWORD_RESET_LIMITED'].includes(action)) {
     category = 'auth';
     tone = action === 'PASSWORD_RESET_REQUESTED' ? 'neutral' : 'warning';
     ActionIcon = KeyRound;
@@ -104,6 +104,7 @@ function parseAuditRecord(log) {
     if (action === 'CHANGE_PASSWORD') { badgeLabel = tr('Password changed'); summary = newData?.after_reset ? tr('Replaced the temporary password with their own') : tr('Changed their own password'); }
     else if (action === 'RESET_PASSWORD') { badgeLabel = tr('Password reset'); summary = tr('HQ set a temporary password for {name}', { name: newData?.full_name || email || tr('a user') }); }
     else if (action === 'PASSWORD_RESET_REQUESTED') { badgeLabel = tr('Reset code sent'); summary = tr('Asked for a password reset code by email'); }
+    else if (action === 'PASSWORD_RESET_LIMITED') { badgeLabel = tr('Reset code not sent'); summary = newData?.reason === 'too_many_codes' ? tr('Asked for a reset code again, but 5 were already sent in 15 minutes') : tr('Asked for a reset code again within a minute (the earlier email is still valid)'); }
     else { badgeLabel = tr('Password reset'); summary = tr('Reset the password with an emailed code'); }
     targetLabel = email ? tr('Account: {email}', { email }) : tr('User #{value}', { value: log.entity_id || log.user_id });
   } else if (action === 'CREATE_DAMAGE_REPORT') {

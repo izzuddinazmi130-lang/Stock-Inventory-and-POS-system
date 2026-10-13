@@ -44,14 +44,14 @@ function resetCodeEmail({ name, code, minutes, lang }) {
   const lines = ms
     ? {
         subject: `Kod set semula kata laluan HQ Inventory: ${code}`,
-        intro: 'Seseorang (diharap anda) meminta untuk set semula kata laluan akaun HQ Inventory anda. Masukkan kod ini di halaman log masuk:',
+        intro: 'Seseorang meminta untuk set semula kata laluan akaun HQ Inventory anda. Masukkan kod ini di halaman log masuk:',
         expiry: `Kod ini tamat dalam ${minutes} minit dan hanya boleh digunakan sekali.`,
         ignore: 'Jika anda tidak meminta ini, abaikan e-mel ini. Kata laluan anda tidak akan berubah.',
         never: 'Jangan kongsi kod ini dengan sesiapa. Staf HQ tidak akan meminta kod ini.',
       }
     : {
         subject: `Your HQ Inventory password reset code: ${code}`,
-        intro: 'Someone (hopefully you) asked to reset the password for your HQ Inventory account. Enter this code on the sign-in page:',
+        intro: 'Someone asked to reset the password for your HQ Inventory account. Enter this code on the sign-in page:',
         expiry: `The code expires in ${minutes} minutes and works only once.`,
         ignore: "If you didn't ask for this, ignore this email. Your password won't change.",
         never: 'Never share this code. HQ staff will never ask you for it.',
