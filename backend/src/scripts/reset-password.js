@@ -38,7 +38,7 @@ const pick = (n) => Array.from(crypto.randomBytes(n), b => ALPHABET[b % ALPHABET
   const temporary = given || `${pick(4)}-${pick(4)}-${pick(2)}`;
 
   await pool.query(
-    'UPDATE users SET password_hash = ?, must_change_password = 1, updated_at = NOW() WHERE id = ?',
+    'UPDATE users SET password_hash = ?, must_change_password = 1, password_changed_at = NOW(), updated_at = NOW() WHERE id = ?',
     [await bcrypt.hash(temporary, 10), user.id]
   );
   await pool.query(
