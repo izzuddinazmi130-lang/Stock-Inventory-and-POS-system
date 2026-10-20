@@ -13,11 +13,16 @@ const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// In production only the real site may call the API; the localhost addresses are for development
+const ALLOWED_ORIGINS = IS_PRODUCTION
+  ? [CLIENT_URL]
+  : [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
 // Socket.io initialization
 const io = new Server(server, {
   cors: {
-    origin: [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: ALLOWED_ORIGINS,
     credentials: true
   }
 });
@@ -77,12 +82,37 @@ io.on('connection', (socket) => {
 
 // Middleware
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  origin: ALLOWED_ORIGINS,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// A few basic security headers (no extra package needed)
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+  });
+  next();
+});
+
+// Server errors (500 and up) never show internal details such as database messages to the browser.
+// The real message is written to the server log, and the person sees a generic one.
+app.use((req, res, next) => {
+  const send = res.json.bind(res);
+  res.json = (body) => {
+    if (res.statusCode >= 500 && body && typeof body === 'object' && typeof body.message === 'string') {
+      console.error(`[${res.statusCode}] ${req.method} ${req.originalUrl}: ${body.message}`);
+      body = { ...body, message: 'Something went wrong on the server. Please try again, or contact HQ if it keeps happening.' };
+    }
+    return send(body);
+  };
+  next();
+});
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -126,7 +156,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ success: false, message: 'The request could not be read (invalid JSON).' });
   }
   console.error('Unhandled server error:', err);
-  res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
 // Start server

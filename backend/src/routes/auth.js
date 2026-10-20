@@ -17,7 +17,7 @@ function startSession(res, user) {
   );
   res.cookie('token', token, {
     httpOnly: true,
-    secure: false, // set true in production HTTPS
+    secure: process.env.COOKIE_SECURE === 'true', // set COOKIE_SECURE=true in backend/.env when the site runs on HTTPS
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
@@ -38,6 +38,35 @@ const publicUser = (user) => ({
   must_change_password: Boolean(user.must_change_password)
 });
 
+// Sign-in attempts that failed, per address and per account (in memory). Stops password guessing:
+// 8 wrong tries from one address, or 8 on one account, block further tries for 15 minutes.
+const LOGIN_MAX_FAILS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginFails = new Map();
+const failKeyIp = (ip) => `ip:${ip}`;
+const failKeyAccount = (name) => `acct:${String(name).toLowerCase()}`;
+const recentFails = (key) => {
+  const now = Date.now();
+  const hits = (loginFails.get(key) || []).filter(t => now - t < LOGIN_WINDOW_MS);
+  if (hits.length) loginFails.set(key, hits); else loginFails.delete(key);
+  return hits;
+};
+const loginBlocked = (...keys) => keys.some(k => recentFails(k).length >= LOGIN_MAX_FAILS);
+const noteLoginFail = (...keys) => {
+  keys.forEach(k => loginFails.set(k, [...recentFails(k), Date.now()]));
+  if (loginFails.size > 5000) loginFails.clear();
+};
+const clearLoginFails = (...keys) => keys.forEach(k => loginFails.delete(k));
+const TOO_MANY_LOGINS = 'Too many sign-in attempts. Please wait 15 minutes and try again.';
+
+// A stored password must be a bcrypt hash. Anything else (for example the "-" placeholder used while a first
+// Super Admin is being created) can never match, so it can't be used to sign in.
+const isBcryptHash = (h) => typeof h === 'string' && /^\$2[aby]\$/.test(h);
+// Used when no account matches, so "no such account" takes as long to answer as "wrong password"
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+const checkPassword = async (plain, stored) =>
+  isBcryptHash(stored) ? bcrypt.compare(String(plain), stored.replace(/^\$2y\$/, '$2a$')) : false;
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -47,7 +76,12 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please enter both email/username and password.' });
     }
 
-    const inputClean = email.trim();
+    const inputClean = String(email).trim();
+    const ipKey = failKeyIp(clientIp(req));
+    const acctKey = failKeyAccount(inputClean);
+    if (loginBlocked(ipKey, acctKey)) {
+      return res.status(429).json({ success: false, message: TOO_MANY_LOGINS });
+    }
 
     // Query user by email or username joined with branch and business
     const [users] = await pool.query(`
@@ -61,11 +95,16 @@ router.post('/login', async (req, res) => {
       WHERE u.email = ? OR u.username = ?
     `, [inputClean, inputClean]);
 
-    if (users.length === 0) {
+    const user = users[0];
+
+    // Check the password first, so the account's status is only shown to someone who knows the password
+    const passwordMatch = user
+      ? await checkPassword(password, user.password_hash)
+      : (await bcrypt.compare(String(password), DUMMY_HASH), false);
+    if (!user || !passwordMatch) {
+      noteLoginFail(ipKey, acctKey);
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
-
-    const user = users[0];
 
     // Check account status
     if (user.status === 'suspended') {
@@ -87,19 +126,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verify password
-    let passwordMatch = false;
-    if (user.password_hash.startsWith('$2y$') || user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$')) {
-      // Modern bcrypt standard ($2y$ converted to $2a$ for bcryptjs compatibility if needed)
-      const formattedHash = user.password_hash.replace(/^\$2y\$/, '$2a$');
-      passwordMatch = await bcrypt.compare(password, formattedHash);
-    } else {
-      passwordMatch = (password === user.password_hash);
-    }
-
-    if (!passwordMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
-    }
+    clearLoginFails(ipKey, acctKey);
 
     // Update last_login
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
@@ -164,8 +191,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
     const [rows] = await pool.query('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);
     if (!rows.length) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const hash = rows[0].password_hash.replace(/^\$2y\$/, '$2a$');
-    const matches = hash.startsWith('$2') ? await bcrypt.compare(current_password, hash) : current_password === rows[0].password_hash;
+    const matches = await checkPassword(current_password, rows[0].password_hash);
     if (!matches) {
       return res.status(400).json({ success: false, code: 'wrong_password', message: 'Your current password is incorrect.' });
     }
