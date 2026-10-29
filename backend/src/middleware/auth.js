@@ -76,11 +76,16 @@ const requireRole = (...allowedRoles) => {
 // phone's address in X-Forwarded-For; that header is only trusted when the request comes from this PC itself
 // (anyone else could write any address into it).
 const LOOPBACK = /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/;
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
 const clientIp = (req) => {
   if (!req) return '127.0.0.1';
   const remote = req.socket?.remoteAddress || '';
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const ip = LOOPBACK.test(remote) && forwarded ? forwarded : remote;
+  const chain = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  const forwarded = chain[0] || '';
+  let ip = LOOPBACK.test(remote) && forwarded ? forwarded : remote;
+  // Behind the hosting company's reverse proxy (set TRUST_PROXY=true in .env): the proxy adds the visitor's real
+  // address at the END of X-Forwarded-For, so use the last entry. Anything the visitor typed sits before it.
+  if (TRUST_PROXY && chain.length) ip = chain[chain.length - 1];
   return (ip || '127.0.0.1').replace(/^::ffff:/, '');
 };
 

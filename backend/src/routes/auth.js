@@ -40,7 +40,8 @@ const publicUser = (user) => ({
 
 // Sign-in attempts that failed, per address and per account (in memory). Stops password guessing:
 // 8 wrong tries from one address, or 8 on one account, block further tries for 15 minutes.
-const LOGIN_MAX_FAILS = 8;
+const LOGIN_MAX_FAILS = 8;       // wrong tries on one account
+const LOGIN_MAX_FAILS_IP = 30;   // wrong tries from one address (higher, because staff may share one office address)
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const loginFails = new Map();
 const failKeyIp = (ip) => `ip:${ip}`;
@@ -51,7 +52,8 @@ const recentFails = (key) => {
   if (hits.length) loginFails.set(key, hits); else loginFails.delete(key);
   return hits;
 };
-const loginBlocked = (...keys) => keys.some(k => recentFails(k).length >= LOGIN_MAX_FAILS);
+const loginBlocked = (ipKey, acctKey) =>
+  recentFails(ipKey).length >= LOGIN_MAX_FAILS_IP || recentFails(acctKey).length >= LOGIN_MAX_FAILS;
 const noteLoginFail = (...keys) => {
   keys.forEach(k => loginFails.set(k, [...recentFails(k), Date.now()]));
   if (loginFails.size > 5000) loginFails.clear();
