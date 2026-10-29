@@ -10,7 +10,8 @@ const { resolveScope, handleScopeError } = require('../middleware/scope');
 const { emitToBusiness } = require('../utils/realtime');
 
 // Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../uploads/damage-reports');
+const { UPLOAD_ROOT } = require('../config/uploads');
+const uploadDir = path.join(UPLOAD_ROOT, 'damage-reports');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -423,7 +424,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // Remove evidence photo files from disk (best-effort, after commit)
     photos.forEach(p => {
-      const filePath = path.join(__dirname, '../..', p.photo_path);
+      const filePath = path.join(UPLOAD_ROOT, String(p.photo_path).replace(/^\/uploads\//, ''));
       fs.unlink(filePath, (err) => {
         if (err && err.code !== 'ENOENT') {
           console.error('Failed to delete damage photo file:', filePath, err.message);

@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -115,7 +116,7 @@ app.use((req, res, next) => {
 });
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(require('./config/uploads').UPLOAD_ROOT));
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -134,6 +135,17 @@ app.use('/api/sales', require('./routes/sales'));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', system: 'HQ Multi-Role Inventory API', timestamp: new Date().toISOString() });
 });
+
+// Production: serve the built frontend (frontend/dist) from this same server, so the page, the API and the
+// live updates share one address. In development the Vite server does this instead, so nothing is served here.
+const DIST = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(path.join(DIST, 'index.html'))) {
+  app.use(express.static(DIST, { index: false, maxAge: '1h' }));
+  app.get(/^\/(?!api\/|uploads\/|socket\.io\/).*/, (req, res) => {
+    res.set('Cache-Control', 'no-cache');
+    res.sendFile(path.join(DIST, 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
